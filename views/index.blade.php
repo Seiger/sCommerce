@@ -1,7 +1,6 @@
 @extends('manager::template.page')
 @section('content')
-    <div class="notifier"><div class="notifier-txt"></div></div>
-    <h1><i class="@lang('sCommerce::global.icon')" data-tooltip="<b>sCommerce</b> - @lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
+    <h1><i class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
 
     <div class="sectionBody">
         <div class="tab-pane" id="resourcesPane">

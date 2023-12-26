@@ -1,7 +1,13 @@
-<?php if (!defined('IN_MANAGER_MODE') || IN_MANAGER_MODE != 'true') die("No access");
+<?php
 /**
  * E-commerce management module
  */
+
+use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Facades\sCommerce;
+
+if (!defined('IN_MANAGER_MODE') || IN_MANAGER_MODE != 'true') die("No access");
+
 $sCommerceController = new sCommerceController();
 $editor = '';
 $tabs = [];
@@ -16,6 +22,6 @@ $data['sCommerceController'] = $sCommerceController;
 $data['editor'] = $editor;
 $data['tabs'] = $tabs;
 $data['get'] = $get;
-$data['url'] = $sCommerceController->url;
+$data['moduleUrl'] = sCommerce::moduleUrl();
 
 echo $sCommerceController->view('index', $data);

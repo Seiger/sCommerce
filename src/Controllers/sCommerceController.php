@@ -1,17 +1,9 @@
 <?php namespace Seiger\sCommerce\Controllers;
 
+use Seiger\sCommerce\Facades\sCommerce;
+
 class sCommerceController
 {
-    public $url;
-
-    /**
-     * Construct
-     */
-    public function __construct()
-    {
-        $this->url = $this->moduleUrl();
-    }
-
     /**
      * Show tab page with sOffer files
      *
@@ -46,16 +38,6 @@ class sCommerceController
             $lang = ['base'];
         }
         return $lang;
-    }
-
-    /**
-     * Module url
-     *
-     * @return string
-     */
-    protected function moduleUrl(): string
-    {
-        return 'index.php?a=112&id=' . md5(__('sCommerce::global.title'));
     }
 
     /**
