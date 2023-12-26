@@ -17,13 +17,13 @@ for online commerce with all the necessary tools.
 ## Features
 
 - [x] Products catalog.
-- [] Filters.
-- [] Promo codes.
-- [] List of orders.
-- [] Order statuses.
-- [] Integration with payment systems.
-- [] Integration with warehouses.
-- [] Integration with trading platforms.
+- [ ] Filters.
+- [ ] Promo codes.
+- [ ] List of orders.
+- [ ] Order statuses.
+- [ ] Integration with payment systems.
+- [ ] Integration with warehouses.
+- [ ] Integration with trading platforms.
 
 ## Install by artisan package installer
 
