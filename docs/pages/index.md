@@ -34,6 +34,7 @@ for online commerce with all the necessary tools.
 
 ## Minimum requirements
 
+- Evolution CMS 3.2.0
 - PHP 8.1.0
 - Composer 2.2.0
 - PostgreSQL 10.23.0
