@@ -5,6 +5,13 @@ description: Getting started with sCommerce
 permalink: /getting-started/
 ---
 
+## Minimum requirements
+
+- PHP >= 8.1.0
+- MySQL >= 8.0.3
+- MariaDB >= 10.5.2
+- SQLite >= 3.25.0
+
 ## Install by artisan package
 
 Go to You /core/ folder

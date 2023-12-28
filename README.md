@@ -25,6 +25,13 @@ for online commerce with all the necessary tools.
 - [ ] Integration with warehouses.
 - [ ] Integration with trading platforms.
 
+## Minimum requirements
+
+- PHP >= 8.1.0
+- MySQL >= 8.0.3
+- MariaDB >= 10.5.2
+- SQLite >= 3.25.0
+
 ## Install by artisan package installer
 
 Go to You /core/ folder:
