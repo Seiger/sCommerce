@@ -3,3 +3,5 @@
   links:
     - title: "Getting Started"
       url: "getting-started"
+    - title: "Management tabs"
+      url: "management"
