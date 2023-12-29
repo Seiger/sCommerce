@@ -16,4 +16,9 @@
     'main_menu_order' => 'Order in the menu',
     'main_menu_order_help' => 'The display order of this menu item in the administrator panel (provided that the display in the main menu is enabled).',
     'settings_save_success' => 'The new configuration has been successfully saved.',
+    'total_products' => 'Total number of products',
+    'publisheds' => 'Published',
+    'unpublisheds' => 'Not published',
+    'search_among_products' => 'Search among products',
+    'items_on_page' => 'Items on the page',
 ];
