@@ -5,8 +5,6 @@ description: Management tabs sCommerce
 permalink: /management/
 ---
 
-## Management
-
 After installing the module, you can use it immediately. Path to the module in the 
 administrator panel **Admin Panel -> Modules -> Commerce**.
 

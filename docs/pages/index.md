@@ -23,6 +23,7 @@ for online commerce with all the necessary tools.
 
 ## Features
 
+- [ ] Orders list.
 - [x] Products catalog.
 - [ ] Filters.
 - [ ] Promo codes.
