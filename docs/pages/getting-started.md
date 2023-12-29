@@ -37,9 +37,20 @@ php artisan vendor:publish --provider="Seiger\sCommerce\sCommerceServiceProvider
 php artisan migrate
 ```
 
+## Management
+
+After installing the module, you can use it immediately. Path to the module in the 
+administrator panel **Admin Panel -> Modules -> Commerce**.
+
+You can also fix quick access to the module through the main menu of the Admin Panel. 
+This can be done on the configuration tab (only available for the administrator role).
+
+[Management tabs]({{ site.baseurl }}/management/){: .btn .btn-sky}
+
 ## Extra
 
-If you write your own code that can integrate with the sCommerce module, you can check the presence of this module in the system through a configuration variable.
+If you write your own code that can integrate with the sCommerce module, 
+you can check the presence of this module in the system through a configuration variable.
 
 ```php
 if (evo()->getConfig('check_sCommerce', false)) {
@@ -47,4 +58,5 @@ if (evo()->getConfig('check_sCommerce', false)) {
 }
 ```
 
-If the plugin is installed, the result of ```evo()->getConfig('check_sCommerce', false)``` will always be ```true```. Otherwise, you will get an ```false```.
+If the plugin is installed, the result of ```evo()->getConfig('check_sCommerce', false)``` 
+will always be ```true```. Otherwise, you will get an ```false```.

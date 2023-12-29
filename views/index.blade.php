@@ -28,8 +28,8 @@
                 @else
                     <div class="tab-page {{$tab}}Tab" id="{{$tab}}Tab">
                         <h2 class="tab">
-                            <a onclick="javascript:tabSave('&get={{$tab}}{{${$tab.'_url'} ?? ''}}');" href="{!!$url!!}&get={{$tab}}{{${$tab.'_url'} ?? ''}}">
-                                <span><i class="@lang('sCommerce::global.'.$tab.'_icon')" data-tooltip="@lang('sCommerce::global.'.$tab.'_help')"></i> @lang('sArticles::global.'.$tab)</span>
+                            <a onclick="javascript:tabSave('&get={{$tab}}{{${$tab.'_url'} ?? ''}}');" href="{!!$moduleUrl!!}&get={{$tab}}{{${$tab.'_url'} ?? ''}}">
+                                <span><i class="@lang('sCommerce::global.'.$tab.'_icon')" data-tooltip="@lang('sCommerce::global.'.$tab.'_help')"></i> @lang('sCommerce::global.'.$tab)</span>
                             </a>
                         </h2>
                         <script>tpResources.addTabPage(document.getElementById('{{$tab}}Tab'));</script>
@@ -93,7 +93,7 @@
                 $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
             });
 
-            /* Delete item */
+            // Delete item
             $(document).on("click", "[data-delete]", function(e) {
                 var _this = $(this);
                 console.log(_this.attr('data-delete'));
@@ -115,6 +115,14 @@
                     .set({transition:'zoom'});
                 return false;
             });
+
+            // Flash messages
+            @if (session()->has('success'))
+            alertify.success("{{session('success')}}");
+            @endif
+            @if (session()->has('error'))
+            alertify.success("{{session('error')}}");
+            @endif
         });
 
         // Save tab content on the fly

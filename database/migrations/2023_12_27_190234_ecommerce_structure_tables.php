@@ -12,11 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | The product's tables structure
+        |--------------------------------------------------------------------------
+        */
         Schema::create('s_products', function (Blueprint $table) {
             $table->id('id');
             $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
             $table->unsignedTinyInteger('availability')->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
-            $table->unsignedInteger('category')->default(0)->index()->comment('ID Resource as Category');
+            $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
             $table->string('code')->index()->comment('It is the Product code');
             $table->string('alias', 512)->index()->comment('It using for generate url');
             $table->unsignedTinyInteger('type')->default(0)->comment('0-Simple|1-Variable|2-Optional');
@@ -35,8 +40,8 @@ return new class extends Migration
 
         Schema::create('s_product_translates', function (Blueprint $table) {
             $table->id('tid');
-            $table->foreignId('product')->constrained('s_products')->cascadeOnDelete()->index()->comment('Product ID');
-            $table->string('lang', 4)->index()->default('base');
+            $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
+            $table->string('lang', 10)->index()->default('base');
             $table->string('pagetitle', 255)->index()->default('');
             $table->string('longtitle', 512)->default('');
             $table->mediumText('introtext')->default('');
@@ -49,6 +54,12 @@ return new class extends Migration
             $table->unique(['product', 'lang']);
             $table->timestamps();
         });
+
+        Schema::create('s_product_category', function (Blueprint $table) {
+            $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
+            $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
+            $table->timestamps();
+        });
     }
 
     /**
@@ -56,6 +67,13 @@ return new class extends Migration
      */
     public function down(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | The product's tables structure
+        |--------------------------------------------------------------------------
+        */
+        Schema::dropIfExists('s_product_category');
+        Schema::dropIfExists('s_product_translates');
         Schema::dropIfExists('s_products');
     }
 };

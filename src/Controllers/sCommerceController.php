@@ -15,6 +15,28 @@ class sCommerceController
     }
 
     /**
+     * Save management of basic functionality section
+     *
+     * @return bool
+     */
+    public function saveBasicConfigs(): bool
+    {
+        $prf = 'scom_';
+        $tbl = evo()->getDatabase()->getFullTableName('system_settings');
+        if (request()->has('in_main_menu') && request()->in_main_menu != evo()->getConfig($prf . 'in_main_menu')) {
+            $in_main_menu = request()->in_main_menu;
+            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}in_main_menu', '{$in_main_menu}')");
+            evo()->setConfig($prf . 'in_main_menu', $in_main_menu);
+        }
+        if (request()->has('main_menu_order') && request()->main_menu_order != evo()->getConfig($prf . 'main_menu_order')) {
+            $main_menu_order = request()->main_menu_order;
+            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}main_menu_order', '{$main_menu_order}')");
+            evo()->setConfig($prf . 'main_menu_order', $main_menu_order);
+        }
+        return true;
+    }
+
+    /**
      * Default language
      *
      * @return string
