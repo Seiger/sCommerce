@@ -118,10 +118,10 @@
 
             // Flash messages
             @if (session()->has('success'))
-            alertify.success("{{session('success')}}");
+                alertify.success("{{session('success')}}");
             @endif
             @if (session()->has('error'))
-            alertify.success("{{session('error')}}");
+                alertify.success("{{session('error')}}");
             @endif
         });
 

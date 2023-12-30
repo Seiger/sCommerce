@@ -1,3 +1,6 @@
+@php
+    $order = request()->has('order') ? request()->input('order') : 'id';
+@endphp
 <div class="row-col pl-0 scom-conters">
     <div class="d-flex flex-row align-items-center">
         <div class="scom-conters-item scom-all pl-0">@lang('sCommerce::global.total_products'): <span>{{$total??0}}</span></div>
@@ -19,19 +22,46 @@
     </div>
 </form>
 <div class="table-responsive seiger__module-table">
-    <table class="table table-condensed table-hover sectionTrans seiger-subs-table">
+    <table class="table table-condensed table-hover sectionTrans scom-table">
         <thead>
         <tr>
-            <th class="sorting @if(request()->input('order') == 'email') sorted @endif" data-order="email" @if(request()->input('order') == 'email') @if(request()->input('direc') == 'asc') data-direc="desc" @else data-direc="asc" @endif @else data-direc="asc" @endif>
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">E-mail підписника <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            <th class="sorting @if($order == 'id') sorted @endif" data-order="id">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">ID <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
-            <th class="sorting @if(request()->input('order') == 'created_at') sorted @endif" data-order="created_at" @if(request()->input('order') == 'created_at') @if(request()->input('direc') == 'asc') data-direc="desc" @else data-direc="asc" @endif @else data-direc="asc" @endif>
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">Дата підписки <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            <th class="sorting @if($order == 'sku') sorted @endif" data-order="sku">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.sku') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
-            <th class="sorting @if(request()->input('order') == 'status') sorted @endif" data-order="status" @if(request()->input('order') == 'status') @if(request()->input('direc') == 'asc') data-direc="desc" @else data-direc="asc" @endif @else data-direc="asc" @endif>
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">Статус <i class="fas fa-sort" style="color: #036efe;"></i></button></th>
-            <th style="width:8%; text-align: center;" id="action-btns">Блокування</th>
-            <th style="width:8%; text-align: center;">Видалення</th>
+            <th class="sorting @if($order == 'pagetitle') sorted @endif" data-order="pagetitle">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.product_name') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'price_regular') sorted @endif" data-order="price_regular">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'price_special') sorted @endif" data-order="price_special">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'price_opt_regular') sorted @endif" data-order="price_opt_regular">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'price_opt_special') sorted @endif" data-order="price_opt_special">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'quantity') sorted @endif" data-order="quantity">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.quantity') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'availability') sorted @endif" data-order="availability">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.availability') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'category') sorted @endif" data-order="category">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.category') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'websites') sorted @endif" data-order="websites">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.websites') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th class="sorting @if($order == 'published') sorted @endif" data-order="published">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.visibility') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
+            <th id="action-btns">@lang('global.onlineusers_action')</th>
         </tr>
         </thead>
         <tbody>
@@ -178,8 +208,8 @@
             document.querySelector('#search').submit();
         })
         // cookies
+        const cookieName = "scom_products_page_items";
         const cookieItems = document.querySelectorAll('[data-items]');
-        const cookieName = "s_mailer_page_items";
         const actualCount = document.querySelector('[data-actual]');
         const cookieValue = document.cookie.split('; ').find(row => row.startsWith(cookieName + '='))?.split('=')[1];
         console.log(cookieValue);
@@ -187,7 +217,7 @@
         if (cookieValue !== undefined) {
             actualCount.setAttribute('data-actual', cookieValue);
         } else {
-            setCookie('s_mailer_page_items', 50, 30)
+            setCookie(cookieName, 50, 30)
         }
         // Function to set a cookie
         function setCookie(name, value, days) {
@@ -206,7 +236,7 @@
             cookieItem.addEventListener('click', (e) => {
                 let itemValue = cookieItem.getAttribute('data-items')
                 console.log(itemValue);
-                setCookie('s_mailer_page_items', itemValue, 30)
+                setCookie(cookieName, itemValue, 30)
             })
         })
     </script>
