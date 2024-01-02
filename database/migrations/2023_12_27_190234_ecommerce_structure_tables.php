@@ -24,7 +24,6 @@ return new class extends Migration
             $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
             $table->string('sku')->index()->comment('It is the SKU Product code');
             $table->string('alias', 512)->index()->comment('It using for generate url');
-            $table->unsignedTinyInteger('type')->default(0)->comment('0-Simple|1-Variable|2-Optional');
             $table->unsignedInteger('position')->default(0)->comment('Position the product in list');
             $table->unsignedInteger('views')->default(0)->comment('Count view the product');
             $table->integer('quantity')->default(0)->comment('Quantity products in stock');
@@ -38,6 +37,8 @@ return new class extends Migration
             $table->jsonb('similar')->default(new Expression('(JSON_ARRAY())'));
             $table->jsonb('tmplvars')->default(new Expression('(JSON_ARRAY())'));
             $table->jsonb('votes')->default(new Expression('(JSON_ARRAY())'));
+            $table->enum('type', ['simple', 'variable', 'optional'])->default('simple');
+            $table->string('representation')->default('default')->comment('Representation of product fields in the backend');
             $table->timestamps();
         });
 

@@ -32,4 +32,6 @@
     'visibility' => 'Visibility',
     'websites' => 'Websites',
     'category' => 'Category',
+    'representation_products_fields' => 'Presentation of the list of products',
+    'show_field' => 'Show Field',
 ];

@@ -32,4 +32,6 @@
     'availability' => 'Доступность',
     'websites' => 'Сайти',
     'category' => 'Категория',
+    'representation_products_fields' => 'Представление списка товаров',
+    'show_field' => 'Отображать поле',
 ];

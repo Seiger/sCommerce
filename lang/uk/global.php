@@ -32,4 +32,6 @@
     'visibility' => 'Видимість',
     'websites' => 'Сайти',
     'category' => 'Категорія',
+    'representation_products_fields' => 'Представлення списку товарів',
+    'show_field' => 'Відображати поле',
 ];

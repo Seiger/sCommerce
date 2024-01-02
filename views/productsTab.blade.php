@@ -25,84 +25,107 @@
     <table class="table table-condensed table-hover sectionTrans scom-table">
         <thead>
         <tr>
-            <th class="sorting @if($order == 'id') sorted @endif" data-order="id">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">ID <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'sku') sorted @endif" data-order="sku">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.sku') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
+            @if (evo()->getConfig('scom_show_field_products_id', 1) == 1)
+                <th class="sorting @if($order == 'id') sorted @endif" data-order="id">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">ID <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('scom_show_field_products_sku', 1) == 1)
+                <th class="sorting @if($order == 'sku') sorted @endif" data-order="sku">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.sku') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
             <th class="sorting @if($order == 'pagetitle') sorted @endif" data-order="pagetitle">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.product_name') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
-            <th class="sorting @if($order == 'price_regular') sorted @endif" data-order="price_regular">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'price_special') sorted @endif" data-order="price_special">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'price_opt_regular') sorted @endif" data-order="price_opt_regular">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'price_opt_special') sorted @endif" data-order="price_opt_special">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'quantity') sorted @endif" data-order="quantity">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.quantity') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'availability') sorted @endif" data-order="availability">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.availability') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'category') sorted @endif" data-order="category">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.category') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'websites') sorted @endif" data-order="websites">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.websites') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'published') sorted @endif" data-order="published">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.visibility') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
+            @if (evo()->getConfig('scom_show_field_products_price', 1) == 1)
+                <th class="sorting @if($order == 'price_regular') sorted @endif" data-order="price_regular">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('scom_show_field_products_price_special', 1) == 1)
+                <th class="sorting @if($order == 'price_special') sorted @endif" data-order="price_special">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('scom_show_field_products_price_opt', 1) == 1)
+                <th class="sorting @if($order == 'price_opt_regular') sorted @endif" data-order="price_opt_regular">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('scom_show_field_products_price_opt_special', 1) == 1)
+                <th class="sorting @if($order == 'price_opt_special') sorted @endif" data-order="price_opt_special">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('scom_show_field_products_quantity', 1) == 1)
+                <th class="sorting @if($order == 'quantity') sorted @endif" data-order="quantity">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.quantity') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('scom_show_field_products_availability', 1) == 1)
+                <th class="sorting @if($order == 'availability') sorted @endif" data-order="availability">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.availability') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('scom_show_field_products_category', 1) == 1)
+                <th class="sorting @if($order == 'category') sorted @endif" data-order="category">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.category') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('check_sMultisite', false) && evo()->getConfig('scom_show_field_products_websites', 1) == 1)
+                <th class="sorting @if($order == 'websites') sorted @endif" data-order="websites">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.websites') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (evo()->getConfig('scom_show_field_products_visibility', 1) == 1)
+                <th class="sorting @if($order == 'published') sorted @endif" data-order="published">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.visibility') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
             <th id="action-btns">@lang('global.onlineusers_action')</th>
         </tr>
         </thead>
         <tbody>
-        @foreach($subscribers as $subscriber)
-            <tr style="height: 42px;" id="subscriber-{{$subscriber->id}}">
-                <td>{{$subscriber->email}}</td>
+        @foreach($products as $product)
+            <tr style="height: 42px;" id="product-{{$product->id}}">
+                @if (evo()->getConfig('scom_show_field_products_id', 1) == 1)
+                    <td>{{$product->id}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_sku', 1) == 1)
+                    <td>{{$product->sku}}</td>
+                @endif
                 <td>
-                    <span class="seiger-sub-date">{{Carbon\Carbon::parse($subscriber->created_at)->format('d.m.Y H:i')}}</span>
+                    <img src="{{$product->coverSrc}}" alt="{{$product->coverSrc}}" class="post-thumbnail">
+                    <a href="{{$product->link}}" target="_blank"><b>{{$product->pagetitle}}</b></a>
                 </td>
-                <td>
-                    @if($subscriber->blocked == 0 && $subscriber->subscribe == 1)
-                        <span class="seiger-subs-active seiger-subs-status-title">Активний</span>
-                    @else
-                        @if($subscriber->subscribe == 0)
-                            <span class="seiger-subs-unsubs seiger-subs-status-title">Відписався</span>
-                        @else
-                            <span class="seiger-subs-block seiger-subs-status-title">Заблокований</span>
-                        @endif
-                    @endif
-                </td>
-                <td style="text-align:center;">
-                    <button class="seiger-sub-lock-status border-0 js_lock p-0">
-                        @if($subscriber->blocked == 0 && $subscriber->subscribe == 1)
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                            <path d="M13.3331 9.73333C13.3331 9.02609 13.614 8.34781 14.1141 7.84772C14.6142 7.34762 15.2925 7.06667 15.9997 7.06667C16.707 7.06667 17.3853 7.34762 17.8854 7.84772C18.3855 8.34781 18.6664 9.02609 18.6664 9.73333V10.2667H19.7331V9.73333C19.7331 8.74319 19.3397 7.7936 18.6396 7.09347C17.9395 6.39333 16.9899 6 15.9997 6C15.0096 6 14.06 6.39333 13.3599 7.09347C12.6597 7.7936 12.2664 8.74319 12.2664 9.73333V12.4H10.6664C10.2421 12.4 9.83509 12.5686 9.53504 12.8686C9.23498 13.1687 9.06641 13.5757 9.06641 14V20.4C9.06641 20.8243 9.23498 21.2313 9.53504 21.5314C9.83509 21.8314 10.2421 22 10.6664 22H21.3331C21.7574 22 22.1644 21.8314 22.4644 21.5314C22.7645 21.2313 22.9331 20.8243 22.9331 20.4V14C22.9331 13.5757 22.7645 13.1687 22.4644 12.8686C22.1644 12.5686 21.7574 12.4 21.3331 12.4H13.3331V9.73333Z" fill="#009891"/>
-                        </svg>
-                        @else
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M19.7331 9.73333V12.4H21.3331C21.7574 12.4 22.1644 12.5686 22.4644 12.8686C22.7645 13.1687 22.9331 13.5757 22.9331 14V20.4C22.9331 20.8243 22.7645 21.2313 22.4644 21.5314C22.1644 21.8314 21.7574 22 21.3331 22H10.6664C10.2421 22 9.83509 21.8314 9.53504 21.5314C9.23498 21.2313 9.06641 20.8243 9.06641 20.4V14C9.06641 13.5757 9.23498 13.1687 9.53504 12.8686C9.83509 12.5686 10.2421 12.4 10.6664 12.4H12.2664V9.73333C12.2664 8.74319 12.6597 7.7936 13.3599 7.09347C14.06 6.39333 15.0096 6 15.9997 6C16.9899 6 17.9395 6.39333 18.6396 7.09347C19.3397 7.7936 19.7331 8.74319 19.7331 9.73333ZM13.3331 9.73333C13.3331 9.02609 13.614 8.34781 14.1141 7.84772C14.6142 7.34762 15.2925 7.06667 15.9997 7.06667C16.707 7.06667 17.3853 7.34762 17.8854 7.84772C18.3855 8.34781 18.6664 9.02609 18.6664 9.73333V12.4H13.3331V9.73333Z" fill="#5F2D8C"/>
-                        </svg>
-                        @endif
-                    </button>
-                </td>
-                <td style="text-align:center;">
-                    <button class="seiger-sub-remove border-0 js_delete p-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none">
-                            <rect x="13.6328" y="0.558838" width="1.80855" height="17.9902" transform="rotate(45 13.6328 0.558838)" fill="#EF4B67"/>
-                            <rect x="0.912109" y="1.83777" width="1.80855" height="17.9902" transform="rotate(-45 0.912109 1.83777)" fill="#EF4B67"/>
-                        </svg>
-                    </button>
-                </td>
+                @if (evo()->getConfig('scom_show_field_products_price', 1) == 1)
+                    <td>{{$product->price_regular}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_price_special', 1) == 1)
+                    <td>{{$product->price_special}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_price_opt', 1) == 1)
+                    <td>{{$product->price_opt_regular}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_price_opt_special', 1) == 1)
+                    <td>{{$product->price_opt_special}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_quantity', 1) == 1)
+                    <td>{{$product->quantity}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_availability', 1) == 1)
+                    <td>{{$product->availability}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_category', 1) == 1)
+                    <td>{{$product->category}}</td>
+                @endif
+                @if (evo()->getConfig('check_sMultisite', false) && evo()->getConfig('scom_show_field_products_websites', 1) == 1)
+                    <td>{{$product->websites}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_visibility', 1) == 1)
+                    <td>{{$product->published}}</td>
+                @endif
             </tr>
         @endforeach
         </tbody>
@@ -110,7 +133,7 @@
 </div>
 <div class="seiger__bottom">
     <div class="seiger__bottom-item"></div>
-    {{--<div class="paginator">{{$subscribers->render()}}</div>--}}
+    {{--<div class="paginator">{{$products->render()}}</div>--}}
     <div class="seiger__list">
         <span class="seiger__label">@lang('sCommerce::global.items_on_page')</span>
         <div class="dropdown">
@@ -189,13 +212,13 @@
         //dropdown
 
         document.addEventListener("click", function (event) {
-        const dropdowns = document.querySelectorAll('.dropdown');
+            const dropdowns = document.querySelectorAll('.dropdown');
 
             dropdowns.forEach(function(dropdown) {
                 if (!dropdown.contains(event.target)) {
-                dropdown.classList.remove('active')
+                    dropdown.classList.remove('active')
                 } else {
-                dropdown.classList.toggle('active')
+                    dropdown.classList.toggle('active')
                 }
             });
         });
