@@ -102,7 +102,7 @@
             <label for="main_menu_order" class="warning">@lang('sCommerce::global.main_menu_order')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.main_menu_order_help')"></i>
         </div>
-        <div class="input-group col col-3 col-md-2 col-lg-1">
+        <div class="input-group col col-4 col-md-3 col-lg-2">
             <div class="input-group-prepend">
                 <span class="btn btn-secondary" onclick="let elm = document.form.main_menu_order;let v=parseInt(elm.value+'')-1;elm.value=v>0? v:0;elm.focus();documentDirty=true;return false;" style="cursor: pointer;"><i class="fa fa-angle-left"></i></span>
                 <span class="btn btn-secondary" onclick="let elm = document.form.main_menu_order;let v=parseInt(elm.value+'')+1;elm.value=v>0? v:0;elm.focus();documentDirty=true;return false;" style="cursor: pointer;"><i class="fa fa-angle-right"></i></span>
@@ -110,18 +110,18 @@
             <input type="text" id="main_menu_order" name="main_menu_order" class="form-control" value="{{evo()->getConfig('scom_main_menu_order', 11)}}" maxlength="11" onchange="documentDirty=true;">
         </div>
     </div>
-    {{--<div class="row form-row">
+    <div class="row form-row">
         <div class="col-auto">
-            <label for="parent" class="warning">@lang('sArticles::global.resource')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sArticles::global.resource_help')"></i>
+            <label for="catalog_root" class="warning">@lang('sCommerce::global.catalog_root')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.catalog_root_help')"></i>
         </div>
         <div class="col">
             <div>
                 @php($parentlookup = false)
-                @if(evo()->getConfig('sart_blank', 1) == 0)
+                @if(evo()->getConfig('scom_catalog_root', 1) == 0)
                     @php($parentname = evo()->getConfig('site_name'))
                 @else
-                    @php($parentlookup = evo()->getConfig('sart_blank', 1))
+                    @php($parentlookup = evo()->getConfig('scom_catalog_root', 1))
                 @endif
                 @if($parentlookup !== false && is_numeric($parentlookup))
                     @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
@@ -129,68 +129,13 @@
                         @php(evo()->webAlertAndQuit($_lang["error_no_parent"]))
                     @endif
                 @endif
-                <i id="plock" class="fa fa-folder" onclick="enableParentSelection(!allowParentSelection);"></i>
-                <b id="parentName">{{evo()->getConfig('sart_blank', 1)}} ({{entities($parentname)}})</b>
-                <input type="hidden" name="parent" value="{{evo()->getConfig('sart_blank', 1)}}" onchange="documentDirty=true;" />
-            </div>
-        </div>
-    </div>--}}
-    {{--<div class="row form-row">
-        <div class="row-col col-12">
-            <div class="row form-row">
-                <div class="col-auto">
-                    <label for="rating_on" class="warning">@lang('sArticles::global.rating')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sArticles::global.rating')"></i>
-                </div>
-                <div class="col">
-                    <input type="checkbox" id="rating_on_check" class="form-checkbox form-control" name="rating_on_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.rating_on);" @if(evo()->getConfig('sart_rating_on', 1) == 1) checked @endif>
-                    <input type="hidden" id="rating_on" name="rating_on" value="{{evo()->getConfig('sart_rating_on', 1)}}" onchange="documentDirty=true;">
-                </div>
+                <i id="plockcat" class="fa fa-folder" onclick="enableCatalogRootSelection(!allowParentSelection);"></i>
+                <b id="catalogRootName">{{evo()->getConfig('scom_catalog_root', 1)}} ({{entities($parentname)}})</b>
+                <input type="hidden" name="catalog_root" value="{{evo()->getConfig('scom_catalog_root', 1)}}" onchange="documentDirty=true;" />
             </div>
         </div>
     </div>
-    <div class="row form-row">
-        <div class="row-col col-12">
-            <div class="row form-row">
-                <div class="col-auto">
-                    <label for="comments_on" class="warning">@lang('sArticles::global.comments')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sArticles::global.comments_on_off_help')"></i>
-                </div>
-                <div class="col">
-                    <input type="checkbox" id="comments_on_check" class="form-checkbox form-control" name="comments_on_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.comments_on);" @if(evo()->getConfig('sart_comments_on', 1) == 1) checked @endif>
-                    <input type="hidden" id="comments_on" name="comments_on" value="{{evo()->getConfig('sart_comments_on', 1)}}" onchange="documentDirty=true;">
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="row-col col-12">
-            <div class="row form-row">
-                <div class="col-auto">
-                    <label for="parent" class="warning">@lang('sArticles::global.polls')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sArticles::global.polls_on_off_help')"></i>
-                </div>
-                <div class="col">
-                    <input type="checkbox" id="publishedcheck" class="form-checkbox form-control" name="publishedcheck" value="" onchange="documentDirty=true;" onclick="changestate(document.form.published);" @if(evo()->getConfig('sart_polls_on', 1) == 1) checked @endif>
-                    <input type="hidden" id="published" name="polls_on" value="{{evo()->getConfig('sart_polls_on', 1)}}" onchange="documentDirty=true;">
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="row-col col-12">
-            <div class="row form-row">
-                <div class="col-auto">
-                    <label for="features_on" class="warning">@lang('sArticles::global.features')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sArticles::global.features_on_off_help')"></i>
-                </div>
-                <div class="col">
-                    <input type="checkbox" id="features_oncheck" class="form-checkbox form-control" name="features_oncheck" value="" onchange="documentDirty=true;" onclick="changestate(document.form.features_on);" @if(evo()->getConfig('sart_features_on', 1) == 1) checked @endif>
-                    <input type="hidden" id="features_on" name="features_on" value="{{evo()->getConfig('sart_features_on', 1)}}" onchange="documentDirty=true;">
-                </div>
-            </div>
-        </div>
-    </div>
+    {{--
     @if(evo()->getConfig('which_editor', 'TinyMCE5') == 'TinyMCE5')
         @php(evo()->setConfig('tinymce5_theme', evo()->getConfig('sart_tinymce5_theme', 'custom')))
         @php($files = array_diff(scandir(MODX_BASE_PATH.'assets/plugins/tinymce5/configs'), array('.', '..', 'custom.js')))
@@ -311,17 +256,11 @@
         </div>
     </div>
     <div class="split my-3"></div>
+    <span id="parentName" class="hidden"></span>
+    <input type="hidden" name="parent" value="0"/>
 </form>
 
 @push('scripts.bot')
-    <style>
-        .close-icon{cursor:pointer;position:absolute;top:0;right:0;z-index:2;padding:0.6rem 1rem;}
-        .draft-value{display:none;}
-    </style>
-    <script>
-        $(document).on("click", ".close-icon", function () {$(this).closest('.card').remove();documentDirty=true;});
-        function addItem() {$(".widgets").append($('.draft-value').html());}
-    </script>
     <div id="actions">
         <div class="btn-group">
             <a id="Button2" class="btn btn-primary" href="javascript:void(0);" onclick="addItem();">
@@ -335,7 +274,7 @@
             </a>
         </div>
     </div>
-    <div class="draft-value">
+    <div class="draft-value hidden">
         <div class="col-sm-12">
             <div class="card">
                 <div class="card-header">
@@ -379,4 +318,36 @@
             </div>
         </div>
     </div>
+    <script>
+        let nIntervId;
+        let parentAction = null;
+        function enableCatalogRootSelection(b) {
+            let plock = document.getElementById('plockcat');
+            if (b) {
+                parent.tree.ca = "parent";
+                plock.className = "fa fa-folder-open";
+                allowParentSelection = true;
+                parentAction = 'catalogRoot';
+                if (!nIntervId) {
+                    nIntervId = setInterval(changeParent, 500);
+                }
+            } else {
+                parent.tree.ca = "open";
+                plock.className = "fa fa-folder";
+                allowParentSelection = false;
+                document.form.parent.value = 0;
+                parentAction = null;
+                clearInterval(nIntervId);
+                nIntervId = null;
+            }
+        }
+        function changeParent() {
+            if (document.form.parent.value > 0) {
+                if (parentAction == 'catalogRoot') {
+                    document.form.catalog_root.value = document.form.parent.value;
+                    document.getElementById('catalogRootName').innerHTML = document.getElementById('parentName').innerHTML;
+                }
+            }
+        }
+    </script>
 @endpush

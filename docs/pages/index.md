@@ -32,6 +32,9 @@ for online commerce with all the necessary tools.
 - [ ] Integration with payment systems.
 - [ ] Integration with warehouses.
 - [ ] Integration with trading platforms.
+- [x] Integrated with sLang.
+- [x] Integrated with sGallery.
+- [x] Integrated with sMultisite.
 
 ## Minimum requirements
 

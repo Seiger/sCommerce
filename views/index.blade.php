@@ -240,11 +240,11 @@
             documentDirty = true;
         }
 
-        var allowParentSelection = false;
+        let allowParentSelection = false;
 
         function enableParentSelection(b) {
-            var plock = document.getElementById('plock');
-            if(b) {
+            let plock = document.getElementById('plock');
+            if (b) {
                 parent.tree.ca = "parent";
                 plock.className = "fa fa-folder-open";
                 allowParentSelection = true;
@@ -258,7 +258,7 @@
         function setParent(pId, pName) {
             documentDirty = true;
             document.form.parent.value = pId;
-            var elm = document.getElementById('parentName');
+            let elm = document.getElementById('parentName');
             if (elm) {
                 elm.innerHTML = (pId + " (" + pName + ")");
             }

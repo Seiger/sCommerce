@@ -38,6 +38,11 @@ class sCommerceController
             evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}main_menu_order', '{$main_menu_order}')");
             evo()->setConfig($prf . 'main_menu_order', $main_menu_order);
         }
+        if (request()->has('catalog_root') && request()->catalog_root != evo()->getConfig($prf . 'catalog_root')) {
+            $catalog_root = request()->catalog_root;
+            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}catalog_root', '{$catalog_root}')");
+            evo()->setConfig($prf . 'catalog_root', $catalog_root);
+        }
         /*
         |--------------------------------------------------------------------------
         | Presentation of the list of products

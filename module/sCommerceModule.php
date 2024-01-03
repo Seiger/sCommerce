@@ -23,6 +23,9 @@ switch ($get) {
     default:
     case "orders":
         break;
+    case "product":
+        $tabs = ['product'];
+        break;
     case "settings":
         if (!evo()->hasPermission('settings')) {
             $back = request()->back ?? '&get=orders';

@@ -163,25 +163,18 @@
     </div>
 </div>
 @push('scripts.bot')
+    <div id="actions">
+        <div class="btn-group">
+            <a id="Button2" href="{!!$moduleUrl!!}&get=product&i=0" class="btn btn-primary" title="@lang('sCommerce::global.add_product_help')">
+                <i class="fa fa-plus"></i> <span>@lang('global.add')</span>
+            </a>
+        </div>
+    </div>
     <script>
         $('.sorting').on('click', function () {
             let order = $(this).attr('data-order');
             let direc = $(this).attr('data-direc');
-            window.location.href = '{!!$url!!}&get=subscribers&order='+order+'&direc='+direc;
-        });
-        $('.js_lock').on('click', function () {
-            let subscriber = $(this).closest('tr').attr('id').split('-')[1];
-            jQuery.ajax({
-                url: '{!!$url!!}&get=user-lock',
-                type: 'POST',
-                dataType: 'JSON',
-                data: 'subscriber=' + subscriber,
-                success: function (ajax) {
-                    if (ajax.status == 1) {
-                        window.location.reload();
-                    }
-                }
-            });
+            window.location.href = '{!!$moduleUrl!!}&get=products&order='+order+'&direc='+direc;
         });
         $('.js_delete').on('click', function () {
             let subscriber = $(this).closest('tr').attr('id').split('-')[1];
@@ -210,10 +203,8 @@
                 .set({transition:'zoom'});
         });
         //dropdown
-
         document.addEventListener("click", function (event) {
-            const dropdowns = document.querySelectorAll('.dropdown');
-
+        const dropdowns = document.querySelectorAll('.dropdown');
             dropdowns.forEach(function(dropdown) {
                 if (!dropdown.contains(event.target)) {
                     dropdown.classList.remove('active')
@@ -236,7 +227,6 @@
         const actualCount = document.querySelector('[data-actual]');
         const cookieValue = document.cookie.split('; ').find(row => row.startsWith(cookieName + '='))?.split('=')[1];
         console.log(cookieValue);
-
         if (cookieValue !== undefined) {
             actualCount.setAttribute('data-actual', cookieValue);
         } else {

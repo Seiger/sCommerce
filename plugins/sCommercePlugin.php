@@ -28,3 +28,20 @@ Event::listen('evolution.OnManagerMenuPrerender', function($params) {
         return serialize(array_merge($params['menu'], $menu));
     }
 });
+
+/**
+ * Add icon to tree
+ */
+Event::listen('evolution.OnManagerNodePrerender', function($params) {
+    if (evo()->getConfig('scom_catalog_root', 0) > 1) {
+        switch ($params['ph']['id']) {
+            case evo()->getConfig('scom_catalog_root') :
+                $params['ph']['icon'] = '<i class="' . __('sCommerce::global.icon') . '"></i>';
+                $params['ph']['icon_folder_open'] = "<i class='" . __('sCommerce::global.icon') . "'></i>";
+                $params['ph']['icon_folder_close'] = "<i class='" . __('sCommerce::global.icon') . "'></i>";
+                break;
+        }
+
+        return serialize($params['ph']);
+    }
+});
