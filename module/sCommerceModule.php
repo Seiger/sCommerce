@@ -25,6 +25,7 @@ switch ($get) {
         break;
     case "product":
         $tabs = ['product'];
+        $data['categories'] = [];
         break;
     case "settings":
         if (!evo()->hasPermission('settings')) {

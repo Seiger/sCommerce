@@ -11,7 +11,8 @@
         }
     ],
     "require": {
-        "php": "^8"
+        "php": "^8",
+        "seiger/sgallery": "*"
     },
     "autoload": {
         "psr-4": {

@@ -1,9 +1,12 @@
 <?php namespace Seiger\sCommerce\Controllers;
 
+use EvolutionCMS\Models\SiteContent;
 use Seiger\sCommerce\Facades\sCommerce;
 
 class sCommerceController
 {
+    protected $categories = [];
+
     /**
      * Show tab page with sOffer files
      *
@@ -133,6 +136,23 @@ class sCommerceController
     }
 
     /**
+     * List of categories and subcategories
+     *
+     * @return array
+     */
+    public function listCategories(): array
+    {
+        $root = SiteContent::find(evo()->getConfig('scom_catalog_root', evo()->getConfig('site_start', 1)));
+        $this->categories[$root->id] = $root->pagetitle;
+        if ($root->hasChildren()) {
+            foreach ($root->children as $item) {
+                $this->categoryCrumb($item);
+            }
+        }
+        return $this->categories;
+    }
+
+    /**
      * Price validation
      *
      * @param mixed $price
@@ -218,5 +238,23 @@ class sCommerceController
     public function view(string $tpl, array $data = [])
     {
         return \View::make('sCommerce::'.$tpl, $data);
+    }
+
+    /**
+     * Categories name as crumb
+     *
+     * @param $resource
+     * @param $crumb
+     * @return void
+     */
+    protected function categoryCrumb($resource, $crumb = ''): void
+    {
+        $crumb = trim($crumb) ? $crumb . ' > ' . $resource->pagetitle : $resource->pagetitle;
+        $this->categories[$resource->id] = $crumb;
+        if ($resource->hasChildren()) {
+            foreach ($resource->children as $item) {
+                $this->categoryCrumb($item, $crumb);
+            }
+        }
     }
 }

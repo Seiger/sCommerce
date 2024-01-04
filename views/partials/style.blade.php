@@ -4,11 +4,14 @@
     #actions .btn-group .btn .fas, #_actions .btn-group .btn .fas, .sectionTrans .btn-group .btn .fa, .sectionTrans .btn-group .btn .fas{display:none;width:1em;font-size:1em;text-align:center;}
     #copyright{position:fixed;bottom:0;right:0;}
     #copyright img{width:35px;}
+    #preview.form-control{max-width:85px;background:#CECECF;}
     input[type=checkbox], input[type=radio] {padding:0.5em;}
     span[data-actual]::before{content:attr(data-actual);}
+    ul.select2-selection__rendered{margin-left:unset;}
     .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok {color:#fff;background-color:#d9534f;border-color:#d9534f;}
     .badge.bg-seigerit{background-color:#0057B8 !important;color:#FFD700;font-size:85%;}
     .hidden{display:none;}
+    .form-row .col{margin-right:20px;}
     .tab-row-container{background:#CECECF;}
     .tab-row .tab a{color:#0D0D0D;font-family:'Roboto';font-size:14px;font-weight:400;line-height:115%;text-transform:uppercase;padding:16px;}
     .scom-conters{margin-bottom:24px;margin-top:8px;}

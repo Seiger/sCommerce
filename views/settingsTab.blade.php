@@ -255,6 +255,16 @@
             <input type="hidden" id="show_field_products_visibility" name="show_field_products_visibility" value="{{evo()->getConfig('scom_show_field_products_visibility', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="show_field_products_views" class="warning">@lang('sCommerce::global.views')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.views')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" id="show_field_products_views_check" class="form-checkbox form-control" name="show_field_products_views_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_views);" @if(evo()->getConfig('scom_show_field_products_views', 1) == 1) checked @endif>
+            <input type="hidden" id="show_field_products_views" name="show_field_products_views" value="{{evo()->getConfig('scom_show_field_products_views', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
     <div class="split my-3"></div>
     <span id="parentName" class="hidden"></span>
     <input type="hidden" name="parent" value="0"/>

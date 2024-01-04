@@ -83,6 +83,11 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.visibility') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
+            @if (evo()->getConfig('scom_show_field_products_views', 1) == 1)
+                <th class="sorting @if($order == 'views') sorted @endif" data-order="views">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.views') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
             <th id="action-btns">@lang('global.onlineusers_action')</th>
         </tr>
         </thead>
@@ -125,6 +130,9 @@
                 @endif
                 @if (evo()->getConfig('scom_show_field_products_visibility', 1) == 1)
                     <td>{{$product->published}}</td>
+                @endif
+                @if (evo()->getConfig('scom_show_field_products_views', 1) == 1)
+                    <td>{{$product->views}}</td>
                 @endif
             </tr>
         @endforeach

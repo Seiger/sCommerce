@@ -51,4 +51,8 @@
     'category_help' => 'Define the main category of the product. Used to form the main link and navigation chain.',
     'catalog_root' => 'Catalog root',
     'catalog_root_help' => 'Define the resource that will be used as the root of the product catalog by default.',
+    'to_list_products' => 'To the list of products',
+    'price_help' => 'The main price of the product is in the currency of the store.',
+    'categories' => 'Categories',
+    'categories_help' => 'List of categories in which the product should be displayed. Formed from the resource tree from the root, which is designated as a directory. If a subcategory is selected, the product will be displayed in all higher categories.',
 ];
