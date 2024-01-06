@@ -1,118 +1,100 @@
 <?php namespace Seiger\sCommerce\Controllers;
 
 use EvolutionCMS\Models\SiteContent;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Models\sProduct;
 
 class sCommerceController
 {
     protected $categories = [];
 
     /**
-     * Show tab page with sOffer files
+     * Set the products listing in the cache.
      *
-     * @return View
+     * @return void
      */
-    public function index(): View
+    public function setProductsListing(): void
     {
-        return $this->view('index');
+        $productsListing = [];
+        $products = sProduct::select('id', 'alias')->wherePublished(1)->get();
+        if ($products) {
+            foreach ($products as $product) {
+                $link = str_replace(MODX_SITE_URL, '', $product->link);
+                $productsListing[trim($link, '/')] = $product->id;
+            }
+        }
+        evo()->clearCache('full');
+        Cache::forever('productsListing', $productsListing);
     }
 
     /**
-     * Save management of basic functionality section
+     * Update database configurations
      *
-     * @return bool
+     * This method updates various database configurations based on the values provided in the request data.
+     *
+     * @return bool Returns true
      */
-    public function saveBasicConfigs(): bool
+    public function updateDBConfigs(): bool
     {
         $prf = 'scom_';
         $tbl = evo()->getDatabase()->getFullTableName('system_settings');
-        /*
-        |--------------------------------------------------------------------------
-        | Management of basic functionality
-        |--------------------------------------------------------------------------
-        */
-        if (request()->has('in_main_menu') && request()->in_main_menu != evo()->getConfig($prf . 'in_main_menu')) {
-            $in_main_menu = request()->in_main_menu;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}in_main_menu', '{$in_main_menu}')");
-            evo()->setConfig($prf . 'in_main_menu', $in_main_menu);
-        }
-        if (request()->has('main_menu_order') && request()->main_menu_order != evo()->getConfig($prf . 'main_menu_order')) {
-            $main_menu_order = request()->main_menu_order;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}main_menu_order', '{$main_menu_order}')");
-            evo()->setConfig($prf . 'main_menu_order', $main_menu_order);
-        }
-        if (request()->has('catalog_root') && request()->catalog_root != evo()->getConfig($prf . 'catalog_root')) {
-            $catalog_root = request()->catalog_root;
+
+        if (request()->has('basic__catalog_root') && request()->input('basic__catalog_root') != evo()->getConfig($prf . 'catalog_root')) {
+            $catalog_root = request()->input('basic__catalog_root');
             evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}catalog_root', '{$catalog_root}')");
             evo()->setConfig($prf . 'catalog_root', $catalog_root);
-        }
-        /*
-        |--------------------------------------------------------------------------
-        | Presentation of the list of products
-        |--------------------------------------------------------------------------
-        */
-        if (request()->has('show_field_products_id') && request()->show_field_products_id != evo()->getConfig($prf . 'show_field_products_id')) {
-            $show_field_products_id = request()->show_field_products_id;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_id', '{$show_field_products_id}')");
-            evo()->setConfig($prf . 'show_field_products_id', $show_field_products_id);
-        }
-        if (request()->has('show_field_products_sku') && request()->show_field_products_sku != evo()->getConfig($prf . 'show_field_products_sku')) {
-            $show_field_products_sku = request()->show_field_products_sku;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_sku', '{$show_field_products_sku}')");
-            evo()->setConfig($prf . 'show_field_products_sku', $show_field_products_sku);
-        }
-        if (request()->has('show_field_products_price') && request()->show_field_products_price != evo()->getConfig($prf . 'show_field_products_price')) {
-            $show_field_products_price = request()->show_field_products_price;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_price', '{$show_field_products_price}')");
-            evo()->setConfig($prf . 'show_field_products_price', $show_field_products_price);
-        }
-        if (request()->has('show_field_products_price_special') && request()->show_field_products_price_special != evo()->getConfig($prf . 'show_field_products_price_special')) {
-            $show_field_products_price_special = request()->show_field_products_price_special;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_price_special', '{$show_field_products_price_special}')");
-            evo()->setConfig($prf . 'show_field_products_price_special', $show_field_products_price_special);
-        }
-        if (request()->has('show_field_products_price_opt') && request()->show_field_products_price_opt != evo()->getConfig($prf . 'show_field_products_price_opt')) {
-            $show_field_products_price_opt = request()->show_field_products_price_opt;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_price_opt', '{$show_field_products_price_opt}')");
-            evo()->setConfig($prf . 'show_field_products_price_opt', $show_field_products_price_opt);
-        }
-        if (request()->has('show_field_products_price_opt_special') && request()->show_field_products_price_opt_special != evo()->getConfig($prf . 'show_field_products_price_opt_special')) {
-            $show_field_products_price_opt_special = request()->show_field_products_price_opt_special;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_price_opt_special', '{$show_field_products_price_opt_special}')");
-            evo()->setConfig($prf . 'show_field_products_price_opt_special', $show_field_products_price_opt_special);
-        }
-        if (request()->has('show_field_products_quantity') && request()->show_field_products_quantity != evo()->getConfig($prf . 'show_field_products_quantity')) {
-            $show_field_products_quantity = request()->show_field_products_quantity;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_quantity', '{$show_field_products_quantity}')");
-            evo()->setConfig($prf . 'show_field_products_quantity', $show_field_products_quantity);
-        }
-        if (request()->has('show_field_products_availability') && request()->show_field_products_availability != evo()->getConfig($prf . 'show_field_products_availability')) {
-            $show_field_products_availability = request()->show_field_products_availability;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_availability', '{$show_field_products_availability}')");
-            evo()->setConfig($prf . 'show_field_products_availability', $show_field_products_availability);
-        }
-        if (request()->has('show_field_products_category') && request()->show_field_products_category != evo()->getConfig($prf . 'show_field_products_category')) {
-            $show_field_products_category = request()->show_field_products_category;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_category', '{$show_field_products_category}')");
-            evo()->setConfig($prf . 'show_field_products_category', $show_field_products_category);
-        }
-        if (evo()->getConfig('check_sMultisite', false) && request()->has('show_field_products_websites') && request()->show_field_products_websites != evo()->getConfig($prf . 'show_field_products_websites')) {
-            $show_field_products_websites = request()->show_field_products_websites;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_websites', '{$show_field_products_websites}')");
-            evo()->setConfig($prf . 'show_field_products_websites', $show_field_products_websites);
-        }
-        if (request()->has('show_field_products_visibility') && request()->show_field_products_visibility != evo()->getConfig($prf . 'show_field_products_visibility')) {
-            $show_field_products_visibility = request()->show_field_products_visibility;
-            evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}show_field_products_visibility', '{$show_field_products_visibility}')");
-            evo()->setConfig($prf . 'show_field_products_visibility', $show_field_products_visibility);
         }
         return true;
     }
 
     /**
-     * Default language
+     * Update file configurations
      *
-     * @return string
+     * This method updates the file configurations based on the provided tabs array.
+     * It generates a PHP file with the updated settings and saves it in a specific location.
+     *
+     * @return bool
+     */
+    public function updateFileConfigs(): bool
+    {
+        $filters = ['basic', 'product', 'products'];
+        $all = request()->all();
+        ksort($all);
+        $config = [];
+
+        // Data array formation
+        foreach ($filters as $filter) {
+            foreach ($all as $key => $value) {
+                if (str_starts_with($key, $filter . '__')) {
+                    $key = str_replace($filter . '__', '', $key);
+                    if ($this->isInteger($value)) {
+                        $value = intval($value);
+                    }
+                    $config[$filter][$key] = $value;
+                }
+            }
+        }
+
+        // Preparation of deadlines with data
+        $string = '<?php return ' . $this->dataToString($config) . ';';
+
+        // Save the config
+        $handle = fopen(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerce.php', "w");
+        fwrite($handle, $string);
+        fclose($handle);
+
+        return true;
+    }
+
+    /**
+     * Retrieve the default language from the configuration.
+     *
+     * @return string The default language.
      */
     public function langDefault(): string
     {
@@ -120,9 +102,9 @@ class sCommerceController
     }
 
     /**
-     * Languages list
+     * Retrieve the list of languages configured in the system.
      *
-     * @return array
+     * @return array The list of languages.
      */
     public function langList(): array
     {
@@ -136,13 +118,13 @@ class sCommerceController
     }
 
     /**
-     * List of categories and subcategories
+     * Retrieve the list of categories and their respective IDs.
      *
-     * @return array
+     * @return array An associative array where the keys are the category IDs and the values are the category titles.
      */
     public function listCategories(): array
     {
-        $root = SiteContent::find(evo()->getConfig('scom_catalog_root', evo()->getConfig('site_start', 1)));
+        $root = SiteContent::find(sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)));
         $this->categories[$root->id] = $root->pagetitle;
         if ($root->hasChildren()) {
             foreach ($root->children as $item) {
@@ -153,10 +135,10 @@ class sCommerceController
     }
 
     /**
-     * Price validation
+     * Validate and sanitize a price value.
      *
-     * @param mixed $price
-     * @return float
+     * @param mixed $price The price value to be validated.
+     * @return float The validated and sanitized price value.
      */
     public function validatePrice(mixed $price): float
     {
@@ -174,13 +156,14 @@ class sCommerceController
     }
 
     /**
-     * Alias validation
+     * Validate an alias and ensure its uniqueness.
      *
-     * @param $data
-     * @param string $table
-     * @return string
+     * @param string $string The string to be used for generating the alias.
+     * @param int $id The ID of the item for which the alias is being generated.
+     * @param string $key The key representing the entity type for which the alias is being generated. (Default: 'product')
+     * @return string The valid and unique alias.
      */
-    public function validateAlias($string = '', $id = 0, $key = 'article'): string
+    public function validateAlias(string $string, int $id, string $key = 'product'): string
     {
         if (trim($string)) {
             $alias = Str::slug(trim($string), '-');
@@ -190,16 +173,7 @@ class sCommerceController
 
         switch ($key) {
             default :
-                $aliases = sArticle::where('s_articles.id', '<>', $id)->get('alias')->pluck('alias')->toArray();
-                break;
-            case "feature" :
-                $aliases = sArticlesFeature::where('s_articles_features.fid', '<>', $id)->get('alias')->pluck('alias')->toArray();
-                break;
-            case "tag" :
-                $aliases = sArticlesTag::where('s_articles_tags.tagid', '<>', $id)->get('alias')->pluck('alias')->toArray();
-                break;
-            case "author" :
-                $aliases = sArticlesAuthor::where('s_articles_authors.autid', '<>', $id)->get('alias')->pluck('alias')->toArray();
+                $aliases = sProduct::whereNot('id', $id)->get('alias')->pluck('alias')->toArray();
                 break;
         }
 
@@ -212,28 +186,16 @@ class sCommerceController
             }
             $alias = $tempAlias;
         }
+
         return $alias;
     }
 
     /**
-     * Get the error messages for the defined validation rules.
+     * Render a view using a template and data.
      *
-     * @return array
-     */
-    public function messages()
-    {
-        return [
-            'title.required' => 'A title is required',
-            'body.required' => 'A message is required',
-        ];
-    }
-
-    /**
-     * Display render
-     *
-     * @param string $tpl
-     * @param array $data
-     * @return bool
+     * @param string $tpl The template to render.
+     * @param array $data The data to pass to the view (optional).
+     * @return \View The rendered view.
      */
     public function view(string $tpl, array $data = [])
     {
@@ -241,10 +203,11 @@ class sCommerceController
     }
 
     /**
-     * Categories name as crumb
+     * Generates the breadcrumb for a given category and its children recursively.
      *
-     * @param $resource
-     * @param $crumb
+     * @param mixed $resource The category resource object.
+     * @param string $crumb The existing breadcrumb to append to.
+     *
      * @return void
      */
     protected function categoryCrumb($resource, $crumb = ''): void
@@ -256,5 +219,48 @@ class sCommerceController
                 $this->categoryCrumb($item, $crumb);
             }
         }
+    }
+
+    /**
+     * Check if the given input is an integer.
+     *
+     * @param mixed $input The input to be checked.
+     * @return bool Returns true if the input is an integer, otherwise false.
+     */
+    protected function isInteger(mixed $input): bool
+    {
+        return (ctype_digit(strval($input)));
+    }
+
+    /**
+     * Convert data to a string representation.
+     *
+     * @param mixed $data The data to convert.
+     * @return string The string representation of the data.
+     */
+    protected function dataToString(mixed $data): string
+    {
+        ob_start();
+        var_dump($data);
+        $data = ob_get_contents();
+        ob_end_clean();
+
+        $data = Str::of($data)->replaceMatches('/string\(\d+\) .*/', function ($match) {
+            return substr($match[0], (strpos($match[0], ') ') + 2)) . ',';
+        })->replaceMatches('/bool\(\w+\)/', function ($match) {
+            return str_replace(['bool(', ')'], ['', ','], $match[0]);
+        })->replaceMatches('/int\(\d+\)/', function ($match) {
+            return str_replace(['int(', ')'], ['', ','], $match[0]);
+        })->replaceMatches('/float\(\d+\)/', function ($match) {
+            return str_replace(['float(', ')'], ['', ','], $match[0]);
+        })->replaceMatches('/array\(\d+\) /', function ($match) {
+            return str_replace($match[0], '', $match[0]);
+        })->replaceMatches('/=>\n[ \t]{1,}/', function () {
+            return ' => ';
+        })->replaceMatches('/  /', function () {
+            return '    ';
+        })->remove('[')->remove(']')->replace('{', '[')->replace('}', '],')->rtrim(",\n");
+
+        return $data;
     }
 }

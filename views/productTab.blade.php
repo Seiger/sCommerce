@@ -1,9 +1,9 @@
-<h3>{{(request()->i ?? 0) == 0 ? __('sCommerce::global.new_product') : ($product->pagetitle ?? __('sCommerce::global.no_text'))}}</h3>
+<h3>{{(int)request()->input('i', 0) == 0 ? __('sCommerce::global.new_product') : ($product->pagetitle ?? __('sCommerce::global.no_text'))}}</h3>
 <div class="split my-3"></div>
 
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=productSave" onsubmit="documentDirty=false;">
-    <input type="hidden" name="back" value="&get=product&i={{request()->i ?? 0}}" />
-    <input type="hidden" name="product" value="{{request()->i ?? 0}}" />
+    <input type="hidden" name="back" value="&get=product&i={{(int)request()->input('i', 0)}}" />
+    <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}" />
     <div class="row form-row">
         <div class="row-col col-lg-3 col-md-6 col-12">
             <div class="row form-row form-row-checkbox">
@@ -12,40 +12,45 @@
                     <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.published_help')"></i>
                 </div>
                 <div class="col">
+                    {{--@dd($product)--}}
                     <input type="checkbox" id="publishedcheck" class="form-checkbox form-control" name="publishedcheck" value="" onchange="documentDirty=true;" onclick="changestate(document.form.published);" @if(isset($product->published) && $product->published) checked @endif>
                     <input type="hidden" id="published" name="published" value="{{$product->published ?? 0}}" onchange="documentDirty=true;">
-                    @if(evo()->getConfig('scom_rating_on', 1) == 1)&emsp;<i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')"> <b>{{$product->views ?? 0}}</b></i>@endif
-                    @if(evo()->getConfig('scom_rating_on', 1) == 1)&emsp;<i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')"> <b>{{$product->rating ?? 0}}</b></i>@endif
-                    @if(evo()->getConfig('scom_rating_on', 1) == 1)&emsp;<i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.quantity')"> <b>{{$product->quantity ?? 0}}</b></i>@endif
+                    @if(sCommerce::config('product.views_on', 1) == 1)&emsp;<i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')"> <b>{{$product->views ?? 0}}</b></i>@endif
+                    @if(sCommerce::config('product.rating_on', 1) == 1)&emsp;<i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')"> <b>{{$product->rating ?? 5}}</b></i>@endif
+                    @if(sCommerce::config('product.quantity_on', 1) == 1)&emsp;<i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.quantity')"> <b>{{$product->quantity ?? 0}}</b></i>@endif
                 </div>
             </div>
         </div>
-        <div class="row-col col-lg-3 col-md-6 col-12">
-            <div class="row form-row">
-                <div class="col-auto col-title">
-                    <label for="availability" class="warning">@lang('sCommerce::global.availability')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.availability_help')"></i>
-                </div>
-                <div class="col">
-                    <select id="availability" class="form-control" name="availability" onchange="documentDirty=true;">
-                        @foreach(\Seiger\sCommerce\Models\sProduct::listAvailability() as $key => $title)
-                            <option value="{{$key}}" @if($key == ($product->availability ?? 0)) selected @endif>{{$title}}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-        </div>
-        <div class="row-col col-lg-3 col-md-6 col-12">
-            <div class="row form-row">
-                <div class="col-auto col-title">
-                    <label for="sku" class="warning">@lang('sCommerce::global.sku')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.sku_help')"></i>
-                </div>
-                <div class="col">
-                    <input id="sku" class="form-control" name="sku" value="{{$product->sku ?? ''}}" onblur="documentDirty=true;">
+        @if(sCommerce::config('product.show_field_availability', 1) == 1)
+            <div class="row-col col-lg-3 col-md-6 col-12">
+                <div class="row form-row">
+                    <div class="col-auto col-title">
+                        <label for="availability" class="warning">@lang('sCommerce::global.availability')</label>
+                        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.availability_help')"></i>
+                    </div>
+                    <div class="col">
+                        <select id="availability" class="form-control" name="availability" onchange="documentDirty=true;">
+                            @foreach(\Seiger\sCommerce\Models\sProduct::listAvailability() as $key => $title)
+                                <option value="{{$key}}" @if($key == ($product->availability ?? 0)) selected @endif>{{$title}}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
+        @if(sCommerce::config('product.show_field_sku', 1) == 1)
+            <div class="row-col col-lg-3 col-md-6 col-12">
+                <div class="row form-row">
+                    <div class="col-auto col-title">
+                        <label for="sku" class="warning">@lang('sCommerce::global.sku')</label>
+                        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.sku_help')"></i>
+                    </div>
+                    <div class="col">
+                        <input id="sku" class="form-control" name="sku" value="{{$product->sku ?? ''}}" onblur="documentDirty=true;">
+                    </div>
+                </div>
+            </div>
+        @endif
         <div class="row-col col-lg-3 col-md-3 col-12">
             <div class="row form-row">
                 <div class="col-auto col-title-7">
@@ -53,22 +58,24 @@
                     <i class="fa fa-question-circle" data-tooltip="@lang('global.resource_alias_help')"></i>
                 </div>
                 <div class="input-group col">
-                    <input type="text" id="alias" class="form-control" name="alias" maxlength="255" value="{{$product->alias ?? ''}}" onchange="documentDirty=true;" spellcheck="true">
+                    <input type="text" id="alias" class="form-control" name="alias" maxlength="512" value="{{$product->alias ?? 'new-product'}}" onchange="documentDirty=true;" spellcheck="true">
                     <a id="preview" href="{{$product->link ?? '/'}}" class="btn btn-outline-secondary form-control" type="button" target="_blank">@lang('global.preview')</a>
                 </div>
             </div>
         </div>
-        <div class="row-col col-lg-3 col-md-3 col-12">
-            <div class="row form-row">
-                <div class="col-auto col-title">
-                    <label for="price" class="warning">@lang('sCommerce::global.price')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_help')"></i>
-                </div>
-                <div class="col">
-                    <input id="price" class="form-control" name="price_regular" value="{{$product->price_regular ?? ''}}" onblur="documentDirty=true;">
+        @if(sCommerce::config('product.show_field_price', 1) == 1)
+            <div class="row-col col-lg-3 col-md-3 col-12">
+                <div class="row form-row">
+                    <div class="col-auto col-title">
+                        <label for="price" class="warning">@lang('sCommerce::global.price')</label>
+                        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_help')"></i>
+                    </div>
+                    <div class="col">
+                        <input id="price" class="form-control" name="price_regular" value="{{$product->price_regular ?? ''}}" onblur="documentDirty=true;">
+                    </div>
                 </div>
             </div>
-        </div>
+        @endif
         <div class="row-col col-lg-3 col-md-3 col-12">
             <div class="row form-row">
                 <div class="col-auto col-title">
@@ -78,10 +85,10 @@
                 <div class="col">
                     <div>
                         @php($parentlookup = false)
-                        @if(($product->parent ?? evo()->getConfig('scom_catalog_root', 0)) == 0)
+                        @if(($product->parent ?? sCommerce::config('basic.catalog_root', 0)) == 0)
                             @php($parentname = evo()->getConfig('site_name'))
                         @else
-                            @php($parentlookup = ($product->parent ?? evo()->getConfig('scom_catalog_root', 1)))
+                            @php($parentlookup = ($product->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))))
                         @endif
                         @if($parentlookup !== false && is_numeric($parentlookup))
                             @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
@@ -91,7 +98,7 @@
                         @endif
                         <i id="plock" class="fa fa-folder" onclick="enableParentSelection(!allowParentSelection);"></i>
                         <b id="parentName">{{$parentlookup}} ({{entities($parentname)}})</b>
-                        <input type="hidden" name="parent" value="{{($product->parent ?? evo()->getConfig('scom_catalog_root', 1))}}" onchange="documentDirty=true;" />
+                        <input type="hidden" name="parent" value="{{($product->parent ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))}}" onchange="documentDirty=true;" />
                     </div>
                 </div>
             </div>
@@ -114,7 +121,7 @@
     </div>
 </form>
 <div class="split my-3"></div>
-@if($product->product)
+@if($product->id)
     <div class="row-col col-12">
         <div class="row form-row">
             <div class="col-auto col-title">
@@ -126,6 +133,7 @@
             </div>
         </div>
     </div>
+    <div class="split my-3"></div>
 @endif
 
 @push('scripts.bot')

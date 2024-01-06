@@ -25,12 +25,12 @@
     <table class="table table-condensed table-hover sectionTrans scom-table">
         <thead>
         <tr>
-            @if (evo()->getConfig('scom_show_field_products_id', 1) == 1)
+            @if (sCommerce::config('products.show_field_id', 1) == 1)
                 <th class="sorting @if($order == 'id') sorted @endif" data-order="id">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">ID <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_sku', 1) == 1)
+            @if (sCommerce::config('products.show_field_sku', 1) == 1)
                 <th class="sorting @if($order == 'sku') sorted @endif" data-order="sku">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.sku') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
@@ -38,52 +38,52 @@
             <th class="sorting @if($order == 'pagetitle') sorted @endif" data-order="pagetitle">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.product_name') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
-            @if (evo()->getConfig('scom_show_field_products_price', 1) == 1)
+            @if (sCommerce::config('products.show_field_price', 1) == 1)
                 <th class="sorting @if($order == 'price_regular') sorted @endif" data-order="price_regular">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_price_special', 1) == 1)
+            @if (sCommerce::config('products.show_field_price_special', 1) == 1)
                 <th class="sorting @if($order == 'price_special') sorted @endif" data-order="price_special">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_price_opt', 1) == 1)
+            @if (sCommerce::config('products.show_field_price_opt', 1) == 1)
                 <th class="sorting @if($order == 'price_opt_regular') sorted @endif" data-order="price_opt_regular">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_price_opt_special', 1) == 1)
+            @if (sCommerce::config('products.show_field_price_opt_special', 1) == 1)
                 <th class="sorting @if($order == 'price_opt_special') sorted @endif" data-order="price_opt_special">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_quantity', 1) == 1)
+            @if (sCommerce::config('products.show_field_quantity', 1) == 1)
                 <th class="sorting @if($order == 'quantity') sorted @endif" data-order="quantity">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.quantity') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_availability', 1) == 1)
+            @if (sCommerce::config('products.show_field_availability', 1) == 1)
                 <th class="sorting @if($order == 'availability') sorted @endif" data-order="availability">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.availability') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_category', 1) == 1)
+            @if (sCommerce::config('products.show_field_category', 1) == 1)
                 <th class="sorting @if($order == 'category') sorted @endif" data-order="category">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.category') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('check_sMultisite', false) && evo()->getConfig('scom_show_field_products_websites', 1) == 1)
+            @if (evo()->getConfig('check_sMultisite', false) && sCommerce::config('products.show_field_websites', 1) == 1)
                 <th class="sorting @if($order == 'websites') sorted @endif" data-order="websites">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.websites') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_visibility', 1) == 1)
+            @if (sCommerce::config('products.show_field_visibility', 1) == 1)
                 <th class="sorting @if($order == 'published') sorted @endif" data-order="published">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.visibility') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (evo()->getConfig('scom_show_field_products_views', 1) == 1)
+            @if (sCommerce::config('products.show_field_views', 1) == 1)
                 <th class="sorting @if($order == 'views') sorted @endif" data-order="views">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.views') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
@@ -92,48 +92,58 @@
         </tr>
         </thead>
         <tbody>
-        @foreach($products as $product)
-            <tr style="height: 42px;" id="product-{{$product->id}}">
-                @if (evo()->getConfig('scom_show_field_products_id', 1) == 1)
-                    <td>{{$product->id}}</td>
+        @foreach($items as $item)
+            <tr style="height: 42px;" id="product-{{$item->id}}">
+                @if (sCommerce::config('products.show_field_id', 1) == 1)
+                    <td>{{$item->id}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_sku', 1) == 1)
-                    <td>{{$product->sku}}</td>
+                @if (sCommerce::config('products.show_field_sku', 1) == 1)
+                    <td>{{$item->sku}}</td>
                 @endif
                 <td>
-                    <img src="{{$product->coverSrc}}" alt="{{$product->coverSrc}}" class="post-thumbnail">
-                    <a href="{{$product->link}}" target="_blank"><b>{{$product->pagetitle}}</b></a>
+                    <img src="{{$item->coverSrc}}" alt="{{$item->coverSrc}}" class="post-thumbnail">
+                    <a href="{{$item->link}}" target="_blank"><b>{{$item->pagetitle ?? __('sCommerce::global.no_text')}}</b></a>
                 </td>
-                @if (evo()->getConfig('scom_show_field_products_price', 1) == 1)
-                    <td>{{$product->price_regular}}</td>
+                @if (sCommerce::config('products.show_field_price', 1) == 1)
+                    <td>{{$item->price_regular}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_price_special', 1) == 1)
-                    <td>{{$product->price_special}}</td>
+                @if (sCommerce::config('products.show_field_price_special', 1) == 1)
+                    <td>{{$item->price_special}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_price_opt', 1) == 1)
-                    <td>{{$product->price_opt_regular}}</td>
+                @if (sCommerce::config('products.show_field_price_opt', 1) == 1)
+                    <td>{{$item->price_opt_regular}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_price_opt_special', 1) == 1)
-                    <td>{{$product->price_opt_special}}</td>
+                @if (sCommerce::config('products.show_field_price_opt_special', 1) == 1)
+                    <td>{{$item->price_opt_special}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_quantity', 1) == 1)
-                    <td>{{$product->quantity}}</td>
+                @if (sCommerce::config('products.show_field_quantity', 1) == 1)
+                    <td>{{$item->quantity}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_availability', 1) == 1)
-                    <td>{{$product->availability}}</td>
+                @if (sCommerce::config('products.show_field_availability', 1) == 1)
+                    <td>{{$item->availability}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_category', 1) == 1)
-                    <td>{{$product->category}}</td>
+                @if (sCommerce::config('products.show_field_category', 1) == 1)
+                    <td>{{$item->category}}</td>
                 @endif
-                @if (evo()->getConfig('check_sMultisite', false) && evo()->getConfig('scom_show_field_products_websites', 1) == 1)
-                    <td>{{$product->websites}}</td>
+                @if (evo()->getConfig('check_sMultisite', false) && sCommerce::config('products.show_field_websites', 1) == 1)
+                    <td>{{$item->websites}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_visibility', 1) == 1)
-                    <td>{{$product->published}}</td>
+                @if (sCommerce::config('products.show_field_visibility', 1) == 1)
+                    <td>{{$item->published}}</td>
                 @endif
-                @if (evo()->getConfig('scom_show_field_products_views', 1) == 1)
-                    <td>{{$product->views}}</td>
+                @if (sCommerce::config('products.show_field_views', 1) == 1)
+                    <td>{{$item->views}}</td>
                 @endif
+                    <td style="text-align:center;">
+                        <div class="btn-group">
+                            <a href="{!!$moduleUrl!!}&get=product&i={{$item->id}}" class="btn btn-outline-success">
+                                <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
+                            </a>
+                            <a href="#" data-href="{!!$moduleUrl!!}&get=articleDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">
+                                <i class="fa fa-trash"></i> <span>@lang('global.remove')</span>
+                            </a>
+                        </div>
+                    </td>
             </tr>
         @endforeach
         </tbody>
@@ -141,7 +151,7 @@
 </div>
 <div class="seiger__bottom">
     <div class="seiger__bottom-item"></div>
-    {{--<div class="paginator">{{$products->render()}}</div>--}}
+    <div class="paginator">{{$items->render()}}</div>
     <div class="seiger__list">
         <span class="seiger__label">@lang('sCommerce::global.items_on_page')</span>
         <div class="dropdown">
@@ -193,7 +203,7 @@
                     function(){
                         alertify.error("@lang('sSettings::global.deleted')");
                         jQuery.ajax({
-                            url: '{!!$url!!}&get=user-delete',
+                            url: '{!!$moduleUrl!!}&get=user-delete',
                             type: 'POST',
                             dataType: 'JSON',
                             data: 'subscriber=' + subscriber,

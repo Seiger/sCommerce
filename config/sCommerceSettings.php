@@ -1,1 +1,30 @@
-<?php return [];
+<?php return [
+    "basic" => [
+        "catalog_root" => 1,
+        "in_main_menu" => 1,
+        "main_menu_order" => 11,
+        "orders_on" => 0,
+    ],
+    "product" => [
+        "link_rule" => "root",
+        "quantity_on" => 0,
+        "rating_on" => 0,
+        "show_field_availability" => 0,
+        "show_field_price" => 1,
+        "show_field_sku" => 1,
+        "views_on" => 1,
+    ],
+    "products" => [
+        "show_field_availability" => 1,
+        "show_field_category" => 1,
+        "show_field_id" => 1,
+        "show_field_price" => 1,
+        "show_field_price_opt" => 0,
+        "show_field_price_opt_special" => 0,
+        "show_field_price_special" => 0,
+        "show_field_quantity" => 0,
+        "show_field_sku" => 1,
+        "show_field_views" => 1,
+        "show_field_visibility" => 1,
+    ],
+];

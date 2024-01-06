@@ -2,6 +2,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
     #action-btns{text-align:center;width:230px;}
     #actions .btn-group .btn .fas, #_actions .btn-group .btn .fas, .sectionTrans .btn-group .btn .fa, .sectionTrans .btn-group .btn .fas{display:none;width:1em;font-size:1em;text-align:center;}
+    #Button3{color:#fff;}
     #copyright{position:fixed;bottom:0;right:0;}
     #copyright img{width:35px;}
     #preview.form-control{max-width:85px;background:#CECECF;}

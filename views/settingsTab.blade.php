@@ -89,39 +89,16 @@
     <h3>@lang('sCommerce::global.management_base_functionality')</h3>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="in_main_menu" class="warning">@lang('sCommerce::global.in_main_menu')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.in_main_menu_help')"></i>
-        </div>
-        <div class="col">
-            <input type="checkbox" id="in_main_menucheck" class="form-checkbox form-control" name="in_main_menucheck" value="" onchange="documentDirty=true;" onclick="changestate(document.form.in_main_menu);" @if(evo()->getConfig('scom_in_main_menu', 0) == 1) checked @endif>
-            <input type="hidden" id="in_main_menu" name="in_main_menu" value="{{evo()->getConfig('scom_in_main_menu', 0)}}" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="main_menu_order" class="warning">@lang('sCommerce::global.main_menu_order')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.main_menu_order_help')"></i>
-        </div>
-        <div class="input-group col col-4 col-md-3 col-lg-2">
-            <div class="input-group-prepend">
-                <span class="btn btn-secondary" onclick="let elm = document.form.main_menu_order;let v=parseInt(elm.value+'')-1;elm.value=v>0? v:0;elm.focus();documentDirty=true;return false;" style="cursor: pointer;"><i class="fa fa-angle-left"></i></span>
-                <span class="btn btn-secondary" onclick="let elm = document.form.main_menu_order;let v=parseInt(elm.value+'')+1;elm.value=v>0? v:0;elm.focus();documentDirty=true;return false;" style="cursor: pointer;"><i class="fa fa-angle-right"></i></span>
-            </div>
-            <input type="text" id="main_menu_order" name="main_menu_order" class="form-control" value="{{evo()->getConfig('scom_main_menu_order', 11)}}" maxlength="11" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="catalog_root" class="warning">@lang('sCommerce::global.catalog_root')</label>
+            <label for="basic__catalog_root" class="warning">@lang('sCommerce::global.catalog_root')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.catalog_root_help')"></i>
         </div>
         <div class="col">
             <div>
                 @php($parentlookup = false)
-                @if(evo()->getConfig('scom_catalog_root', 1) == 0)
+                @if(sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)) == 0)
                     @php($parentname = evo()->getConfig('site_name'))
                 @else
-                    @php($parentlookup = evo()->getConfig('scom_catalog_root', 1))
+                    @php($parentlookup = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))
                 @endif
                 @if($parentlookup !== false && is_numeric($parentlookup))
                     @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
@@ -130,9 +107,42 @@
                     @endif
                 @endif
                 <i id="plockcat" class="fa fa-folder" onclick="enableCatalogRootSelection(!allowParentSelection);"></i>
-                <b id="catalogRootName">{{evo()->getConfig('scom_catalog_root', 1)}} ({{entities($parentname)}})</b>
-                <input type="hidden" name="catalog_root" value="{{evo()->getConfig('scom_catalog_root', 1)}}" onchange="documentDirty=true;" />
+                <b id="catalogRootName">{{sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))}} ({{entities($parentname)}})</b>
+                <input type="hidden" name="basic__catalog_root" value="{{sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))}}" onchange="documentDirty=true;" />
             </div>
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="basic__in_main_menu" class="warning">@lang('sCommerce::global.in_main_menu')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.in_main_menu_help')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__in_main_menu);" @if(sCommerce::config('basic.in_main_menu', 0) == 1) checked @endif>
+            <input type="hidden" id="basic__in_main_menu" name="basic__in_main_menu" value="{{sCommerce::config('basic.in_main_menu', 0)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="basic__main_menu_order" class="warning">@lang('sCommerce::global.main_menu_order')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.main_menu_order_help')"></i>
+        </div>
+        <div class="input-group col col-4 col-md-3 col-lg-2">
+            <div class="input-group-prepend">
+                <span class="btn btn-secondary" onclick="let elm = document.form.basic__main_menu_order;let v=parseInt(elm.value+'')-1;elm.value=v>0? v:0;elm.focus();documentDirty=true;return false;" style="cursor: pointer;"><i class="fa fa-angle-left"></i></span>
+                <span class="btn btn-secondary" onclick="let elm = document.form.basic__main_menu_order;let v=parseInt(elm.value+'')+1;elm.value=v>0? v:0;elm.focus();documentDirty=true;return false;" style="cursor: pointer;"><i class="fa fa-angle-right"></i></span>
+            </div>
+            <input type="text" id="basic__main_menu_order" name="basic__main_menu_order" class="form-control" value="{{sCommerce::config('basic.main_menu_order', 0)}}" maxlength="11" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="basic__orders_on" class="warning">@lang('sCommerce::global.orders_on')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.orders_on_help')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__orders_on);" @if(sCommerce::config('basic.orders_on', 1) == 1) checked @endif>
+            <input type="hidden" id="basic__orders_on" name="basic__orders_on" value="{{sCommerce::config('basic.orders_on', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     {{--
@@ -142,127 +152,202 @@
         @include('tinymce5settings::tinymce5settings', ['themes'=>$files])
     @endif--}}
     <div class="split my-3"></div>
-    <h3>@lang('sCommerce::global.representation_products_fields')</h3>
+    <h3>@lang('sCommerce::global.management_product_functionality')</h3>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="show_field_products_id" class="warning">ID</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') ID"></i>
+            <label for="product__views_on" class="warning">@lang('sCommerce::global.views')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.views_on_help')"></i>
         </div>
         <div class="col">
-            <input type="checkbox" id="show_field_products_id_check" class="form-checkbox form-control" name="show_field_products_id_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_id);" @if(evo()->getConfig('scom_show_field_products_id', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_id" name="show_field_products_id" value="{{evo()->getConfig('scom_show_field_products_id', 1)}}" onchange="documentDirty=true;">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__views_on);" @if(sCommerce::config('product.views_on', 1) == 1) checked @endif>
+            <input type="hidden" id="product__views_on" name="product__views_on" value="{{sCommerce::config('product.views_on', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="show_field_products_sku" class="warning">@lang('sCommerce::global.sku')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.sku')"></i>
+            <label for="product__rating_on" class="warning">@lang('sCommerce::global.rating')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.rating_on_help')"></i>
         </div>
         <div class="col">
-            <input type="checkbox" id="show_field_products_sku_check" class="form-checkbox form-control" name="show_field_products_sku_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_sku);" @if(evo()->getConfig('scom_show_field_products_sku', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_sku" name="show_field_products_sku" value="{{evo()->getConfig('scom_show_field_products_sku', 1)}}" onchange="documentDirty=true;">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__rating_on);" @if(sCommerce::config('product.rating_on', 1) == 1) checked @endif>
+            <input type="hidden" id="product__rating_on" name="product__rating_on" value="{{sCommerce::config('product.rating_on', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="show_field_products_price" class="warning">@lang('sCommerce::global.price')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price')"></i>
+            <label for="product__quantity_on" class="warning">@lang('sCommerce::global.quantity')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.rating_on_help')"></i>
         </div>
         <div class="col">
-            <input type="checkbox" id="show_field_products_price_check" class="form-checkbox form-control" name="show_field_products_price_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_price);" @if(evo()->getConfig('scom_show_field_products_price', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_price" name="show_field_products_price" value="{{evo()->getConfig('scom_show_field_products_price', 1)}}" onchange="documentDirty=true;">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__quantity_on);" @if(sCommerce::config('product.quantity_on', 1) == 1) checked @endif>
+            <input type="hidden" id="product__quantity_on" name="product__quantity_on" value="{{sCommerce::config('product.quantity_on', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="show_field_products_price_special" class="warning">@lang('sCommerce::global.price_special')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_special')"></i>
-        </div>
-        <div class="col">
-            <input type="checkbox" id="show_field_products_price_special_check" class="form-checkbox form-control" name="show_field_products_price_special_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_price_special);" @if(evo()->getConfig('scom_show_field_products_price_special', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_price_special" name="show_field_products_price_special" value="{{evo()->getConfig('scom_show_field_products_price_special', 1)}}" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="show_field_products_price_opt" class="warning">@lang('sCommerce::global.price_opt')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_opt')"></i>
-        </div>
-        <div class="col">
-            <input type="checkbox" id="show_field_products_price_opt_check" class="form-checkbox form-control" name="show_field_products_price_opt_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_price_opt);" @if(evo()->getConfig('scom_show_field_products_price_opt', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_price_opt" name="show_field_products_price_opt" value="{{evo()->getConfig('scom_show_field_products_price_opt', 1)}}" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="show_field_products_price_opt_special" class="warning">@lang('sCommerce::global.price_opt_special')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_opt_special')"></i>
-        </div>
-        <div class="col">
-            <input type="checkbox" id="show_field_products_price_opt_special_check" class="form-checkbox form-control" name="show_field_products_price_opt_special_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_price_opt_special);" @if(evo()->getConfig('scom_show_field_products_price_opt_special', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_price_opt_special" name="show_field_products_price_opt_special" value="{{evo()->getConfig('scom_show_field_products_price_opt_special', 1)}}" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="show_field_products_quantity" class="warning">@lang('sCommerce::global.quantity')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.quantity')"></i>
-        </div>
-        <div class="col">
-            <input type="checkbox" id="show_field_products_quantity_check" class="form-checkbox form-control" name="show_field_products_quantity_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_quantity);" @if(evo()->getConfig('scom_show_field_products_quantity', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_quantity" name="show_field_products_quantity" value="{{evo()->getConfig('scom_show_field_products_quantity', 1)}}" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="show_field_products_availability" class="warning">@lang('sCommerce::global.availability')</label>
+            <label for="product__show_field_availability" class="warning">@lang('sCommerce::global.availability')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.availability')"></i>
         </div>
         <div class="col">
-            <input type="checkbox" id="show_field_products_availability_check" class="form-checkbox form-control" name="show_field_products_availability_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_availability);" @if(evo()->getConfig('scom_show_field_products_availability', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_availability" name="show_field_products_availability" value="{{evo()->getConfig('scom_show_field_products_availability', 1)}}" onchange="documentDirty=true;">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_availability);" @if(sCommerce::config('product.show_field_availability', 1) == 1) checked @endif>
+            <input type="hidden" id="product__show_field_availability" name="product__show_field_availability" value="{{sCommerce::config('product.show_field_availability', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="show_field_products_category" class="warning">@lang('sCommerce::global.category')</label>
+            <label for="product__show_field_sku" class="warning">@lang('sCommerce::global.sku')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.sku')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_sku);" @if(sCommerce::config('product.show_field_sku', 1) == 1) checked @endif>
+            <input type="hidden" id="product__show_field_sku" name="product__show_field_sku" value="{{sCommerce::config('product.show_field_sku', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="product__show_field_price" class="warning">@lang('sCommerce::global.price')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_price);" @if(sCommerce::config('product.show_field_price', 1) == 1) checked @endif>
+            <input type="hidden" id="product__show_field_price" name="product__show_field_price" value="{{sCommerce::config('product.show_field_price', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="product__link_rule" class="warning">@lang('sCommerce::global.product_link')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.product_link_rule_help')"></i>
+        </div>
+        <div class="col col-4 col-md-3 col-lg-2">
+            <select id="product__link_rule" class="form-control" name="product__link_rule" onchange="documentDirty=true;">
+                <option value="root" @if(sCommerce::config('product.link_rule', 'root') == 'root') selected @endif>@lang('sCommerce::global.product_link_rule_root')</option>
+                <option value="catalog" @if(sCommerce::config('product.link_rule', 'root') == 'catalog') selected @endif>@lang('sCommerce::global.product_link_rule_catalog')</option>
+                <option value="category" @if(sCommerce::config('product.link_rule', 'root') == 'category') selected @endif>@lang('sCommerce::global.product_link_rule_category')</option>
+            </select>
+        </div>
+    </div>
+    <div class="split my-3"></div>
+    <h3>@lang('sCommerce::global.representation_products_fields')</h3>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_id" class="warning">ID</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') ID"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_id);" @if(sCommerce::config('products.show_field_id', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_id" name="products__show_field_id" value="{{sCommerce::config('products.show_field_id', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_sku" class="warning">@lang('sCommerce::global.sku')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.sku')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_sku);" @if(sCommerce::config('products.show_field_sku', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_sku" name="products__show_field_sku" value="{{sCommerce::config('products.show_field_sku', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_price" class="warning">@lang('sCommerce::global.price')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_price);" @if(sCommerce::config('products.show_field_price', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_price" name="products__show_field_price" value="{{sCommerce::config('products.show_field_price', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_price_special" class="warning">@lang('sCommerce::global.price_special')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_special')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_price_special);" @if(sCommerce::config('products.show_field_price_special', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_price_special" name="products__show_field_price_special" value="{{sCommerce::config('products.show_field_price_special', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_price_opt" class="warning">@lang('sCommerce::global.price_opt')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_opt')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_price_opt);" @if(sCommerce::config('products.show_field_price_opt', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_price_opt" name="products__show_field_price_opt" value="{{sCommerce::config('products.show_field_price_opt', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_price_opt_special" class="warning">@lang('sCommerce::global.price_opt_special')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_opt_special')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_price_opt_special);" @if(sCommerce::config('products.show_field_price_opt_special', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_price_opt_special" name="products__show_field_price_opt_special" value="{{sCommerce::config('products.show_field_price_opt_special', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_quantity" class="warning">@lang('sCommerce::global.quantity')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.quantity')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_quantity);" @if(sCommerce::config('products.show_field_quantity', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_quantity" name="products__show_field_quantity" value="{{sCommerce::config('products.show_field_quantity', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_availability" class="warning">@lang('sCommerce::global.availability')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.availability')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_availability);" @if(sCommerce::config('products.show_field_availability', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_availability" name="products__show_field_availability" value="{{sCommerce::config('products.show_field_availability', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_category" class="warning">@lang('sCommerce::global.category')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.category')"></i>
         </div>
         <div class="col">
-            <input type="checkbox" id="show_field_products_category_check" class="form-checkbox form-control" name="show_field_products_category_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_category);" @if(evo()->getConfig('scom_show_field_products_category', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_category" name="show_field_products_category" value="{{evo()->getConfig('scom_show_field_products_category', 1)}}" onchange="documentDirty=true;">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_category);" @if(sCommerce::config('products.show_field_category', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_category" name="products__show_field_category" value="{{sCommerce::config('products.show_field_category', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     @if(evo()->getConfig('check_sMultisite', false))
         <div class="row form-row">
             <div class="col-auto">
-                <label for="show_field_products_websites" class="warning">@lang('sCommerce::global.websites')</label>
+                <label for="products__show_field_websites" class="warning">@lang('sCommerce::global.websites')</label>
                 <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.websites')"></i>
             </div>
             <div class="col">
-                <input type="checkbox" id="show_field_products_websites_check" class="form-checkbox form-control" name="show_field_products_websites_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_websites);" @if(evo()->getConfig('scom_show_field_products_websites', 1) == 1) checked @endif>
-                <input type="hidden" id="show_field_products_websites" name="show_field_products_websites" value="{{evo()->getConfig('scom_show_field_products_websites', 1)}}" onchange="documentDirty=true;">
+                <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_websites);" @if(sCommerce::config('products.show_field_websites', 1) == 1) checked @endif>
+                <input type="hidden" id="products__show_field_websites" name="products__show_field_websites" value="{{sCommerce::config('products.show_field_websites', 1)}}" onchange="documentDirty=true;">
             </div>
         </div>
     @endif
     <div class="row form-row">
         <div class="col-auto">
-            <label for="show_field_products_visibility" class="warning">@lang('sCommerce::global.visibility')</label>
+            <label for="products__show_field_visibility" class="warning">@lang('sCommerce::global.visibility')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.visibility')"></i>
         </div>
         <div class="col">
-            <input type="checkbox" id="show_field_products_visibility_check" class="form-checkbox form-control" name="show_field_products_visibility_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_visibility);" @if(evo()->getConfig('scom_show_field_products_visibility', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_visibility" name="show_field_products_visibility" value="{{evo()->getConfig('scom_show_field_products_visibility', 1)}}" onchange="documentDirty=true;">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_visibility);" @if(sCommerce::config('products.show_field_visibility', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_visibility" name="products__show_field_visibility" value="{{sCommerce::config('products.show_field_visibility', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="show_field_products_views" class="warning">@lang('sCommerce::global.views')</label>
+            <label for="products__show_field_views" class="warning">@lang('sCommerce::global.views')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.views')"></i>
         </div>
         <div class="col">
-            <input type="checkbox" id="show_field_products_views_check" class="form-checkbox form-control" name="show_field_products_views_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.show_field_products_views);" @if(evo()->getConfig('scom_show_field_products_views', 1) == 1) checked @endif>
-            <input type="hidden" id="show_field_products_views" name="show_field_products_views" value="{{evo()->getConfig('scom_show_field_products_views', 1)}}" onchange="documentDirty=true;">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_views);" @if(sCommerce::config('products.show_field_views', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_views" name="products__show_field_views" value="{{sCommerce::config('products.show_field_views', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     <div class="split my-3"></div>
@@ -273,14 +358,14 @@
 @push('scripts.bot')
     <div id="actions">
         <div class="btn-group">
+            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}">
+                <i class="fa fa-times-circle"></i><span>@lang('global.cancel')</span>
+            </a>
             <a id="Button2" class="btn btn-primary" href="javascript:void(0);" onclick="addItem();">
                 <i class="fa fa-plus"></i><span>@lang('global.add')</span>
             </a>
             <a id="Button1" class="btn btn-success" href="javascript:void(0);" onclick="saveForm('#form');">
                 <i class="fas fa-save"></i><span>@lang('global.save')</span>
-            </a>
-            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}">
-                <i class="fa fa-times-circle"></i><span>@lang('global.cancel')</span>
             </a>
         </div>
     </div>
@@ -354,7 +439,7 @@
         function changeParent() {
             if (document.form.parent.value > 0) {
                 if (parentAction == 'catalogRoot') {
-                    document.form.catalog_root.value = document.form.parent.value;
+                    document.form.basic__catalog_root.value = document.form.parent.value;
                     document.getElementById('catalogRootName').innerHTML = document.getElementById('parentName').innerHTML;
                 }
             }

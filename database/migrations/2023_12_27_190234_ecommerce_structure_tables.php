@@ -28,10 +28,10 @@ return new class extends Migration
             $table->unsignedInteger('views')->default(0)->comment('Count view the product');
             $table->integer('quantity')->default(0)->comment('Quantity products in stock');
             $table->unsignedDecimal('price_regular', 9, 2)->default(0);
-            $table->unsignedDecimal('price_special', 9, 2)->nullable();
+            $table->unsignedDecimal('price_special', 9, 2)->default(0);
             $table->unsignedDecimal('price_opt_regular', 9, 2)->default(0);
-            $table->unsignedDecimal('price_opt_special', 9, 2)->nullable();
-            $table->unsignedDecimal('weight', 11, 4)->default(0.00);
+            $table->unsignedDecimal('price_opt_special', 9, 2)->default(0);
+            $table->unsignedDecimal('weight', 11, 4)->default(0);
             $table->string('cover', 512)->default('')->comment('Cover image file link');
             $table->jsonb('relevants')->default(new Expression('(JSON_ARRAY())'));
             $table->jsonb('similar')->default(new Expression('(JSON_ARRAY())'));

@@ -11,7 +11,7 @@ use Seiger\sCommerce\Facades\sCommerce;
  * Add Menu item
  */
 Event::listen('evolution.OnManagerMenuPrerender', function($params) {
-    if (evo()->getConfig('scom_in_main_menu', 0) == 1) {
+    if (sCommerce::config('basic.in_main_menu', 0) == 1) {
         $menu['scommerce'] = [
             'scommerce',
             'main',
@@ -22,7 +22,7 @@ Event::listen('evolution.OnManagerMenuPrerender', function($params) {
             "",
             "main",
             0,
-            evo()->getConfig('scom_main_menu_order', 11),
+            sCommerce::config('basic.main_menu_order', 11),
         ];
 
         return serialize(array_merge($params['menu'], $menu));
@@ -33,9 +33,9 @@ Event::listen('evolution.OnManagerMenuPrerender', function($params) {
  * Add icon to tree
  */
 Event::listen('evolution.OnManagerNodePrerender', function($params) {
-    if (evo()->getConfig('scom_catalog_root', 0) > 1) {
+    if (sCommerce::config('basic.catalog_root', 0) > 1) {
         switch ($params['ph']['id']) {
-            case evo()->getConfig('scom_catalog_root') :
+            case sCommerce::config('basic.catalog_root') :
                 $params['ph']['icon'] = '<i class="' . __('sCommerce::global.icon') . '"></i>';
                 $params['ph']['icon_folder_open'] = "<i class='" . __('sCommerce::global.icon') . "'></i>";
                 $params['ph']['icon_folder_close'] = "<i class='" . __('sCommerce::global.icon') . "'></i>";
