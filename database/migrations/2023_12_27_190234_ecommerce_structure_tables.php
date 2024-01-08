@@ -1,5 +1,6 @@
 <?php
 
+use EvolutionCMS\Models\SiteTemplate;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Query\Expression;
@@ -24,8 +25,9 @@ return new class extends Migration
             $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
             $table->string('sku')->index()->comment('It is the SKU Product code');
             $table->string('alias', 512)->index()->comment('It using for generate url');
-            $table->unsignedInteger('position')->default(0)->comment('Position the product in list');
-            $table->unsignedInteger('views')->default(0)->comment('Count view the product');
+            $table->unsignedInteger('position')->default(0)->index()->comment('Position the product in list');
+            $table->unsignedInteger('views')->default(0)->index()->comment('Count view the product');
+            $table->unsignedInteger('rating')->default(5)->index()->comment('Rating the product base on votes');
             $table->integer('quantity')->default(0)->comment('Quantity products in stock');
             $table->unsignedDecimal('price_regular', 9, 2)->default(0);
             $table->unsignedDecimal('price_special', 9, 2)->default(0);
@@ -62,8 +64,22 @@ return new class extends Migration
         Schema::create('s_product_category', function (Blueprint $table) {
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
-            $table->timestamps();
         });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Create a Product template
+        |--------------------------------------------------------------------------
+        */
+        $templateProduct = SiteTemplate::whereTemplatealias('s_commerce_product')->first();
+        if (!$templateProduct) {
+            $templateProduct = new SiteTemplate();
+            $templateProduct->templatealias = 's_commerce_product';
+            $templateProduct->templatename = 'sCommerce Product';
+            $templateProduct->description = 'Template for sCommerce Product';
+            $templateProduct->icon = 'fa fa-store';
+            $templateProduct->save();
+        }
     }
 
     /**
@@ -79,5 +95,12 @@ return new class extends Migration
         Schema::dropIfExists('s_product_category');
         Schema::dropIfExists('s_product_translates');
         Schema::dropIfExists('s_products');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delete a Product template
+        |--------------------------------------------------------------------------
+        */
+        $templateProduct = SiteTemplate::whereTemplatealias('s_commerce_product')->delete();
     }
 };

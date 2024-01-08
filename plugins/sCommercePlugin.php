@@ -3,9 +3,76 @@
  * Plugin for Seiger Commerce Management Module for Evolution CMS admin panel.
  */
 
+use EvolutionCMS\Models\SiteTemplate;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Seiger\sCommerce\Facades\sCommerce;
+
+/**
+ * Catch the Product by alias
+ */
+Event::listen('evolution.OnPageNotFound', function($params) {
+    $goTo = false;
+    $aliasArr = request()->segments();
+    if ($aliasArr[0] == evo()->getConfig('lang', 'base')) {
+        unset($aliasArr[0]);
+    }
+    $alias = implode('/', $aliasArr);
+    $goTo = Arr::exists(sCommerce::documentListing(), $alias);
+    if (!$goTo && evo()->getLoginUserID('mgr')) {
+        $alias = Arr::last($aliasArr);
+        $product = sCommerce::getProductByAlias($alias ?? '');
+        if ($product && isset($product->id) && (int)$product->id > 0) {
+            $goTo = true;
+        }
+    }
+    if ($goTo) {
+        evo()->sendForward(evo()->getConfig('site_start', 1));
+        exit();
+    }
+});
+
+/**
+ * Get document fields and add to array of resource fields
+ */
+Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
+    $aliasArr = request()->segments();
+    if (isset($aliasArr[0]) && $aliasArr[0] == evo()->getConfig('lang', 'base')) {
+        unset($aliasArr[0]);
+    }
+    $alias = implode('/', $aliasArr);
+    $document = sCommerce::documentListing()[$alias] ?? false;
+    if (!$document && evo()->getLoginUserID('mgr')) {
+        $alias = Arr::last($aliasArr);
+        $product = sCommerce::getProductByAlias($alias ?? '');
+        if ($product && isset($product->id) && (int)$product->id > 0) {
+            $document = (int)$product->id;
+        }
+    }
+    if ($document) {
+        $product = sCommerce::getProduct($document, evo()->getConfig('lang', 'base'));
+        $product->constructor = data_is_json($product->constructor, true);
+        $product->tmplvars = data_is_json($product->tmplvars, true);
+
+        if ($product->tmplvars && count($product->tmplvars)) {
+            foreach ($product->tmplvars as $name => $value) {
+                if (isset($params['documentObject'][$name]) && is_array($params['documentObject'][$name])) {
+                    $params['documentObject'][$name][1] = $value;
+                }
+            }
+        }
+
+        $template = SiteTemplate::whereTemplatealias('s_commerce_product')->first();
+        $product->template = $template->id ?? 0;
+        $product->hide_from_tree = false;
+        $product->content_dispo = false;
+        $product->deleted = 0;
+        $product->cacheable = 1;
+
+        unset($product->tmplvars);
+        return $params['documentObject'] = Arr::dot($product->toArray());
+    }
+});
 
 /**
  * Add Menu item

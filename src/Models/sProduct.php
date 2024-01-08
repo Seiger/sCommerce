@@ -117,7 +117,7 @@ class sProduct extends Model
      *
      * @return string The URL of the object.
      */
-    public function getLinkAttribute()
+    public function getLinkAttribute(): string
     {
         switch (sCommerce::config('product.link_rule', 'root')) {
             case "catalog" :
@@ -133,5 +133,24 @@ class sProduct extends Model
         }
 
         return $base_url . $this->alias . evo()->getConfig('friendly_url_suffix', '');
+    }
+
+    /**
+     * Retrieve the source attribute of the cover image.
+     *
+     * This method checks if the 'cover' property is not empty and the file exists. If it does, it returns the URL of the cover image.
+     * If the 'cover' property is empty or the file does not exist, it returns the URL of a default placeholder image.
+     *
+     * @return string The URL of the cover image source attribute.
+     */
+    public function getCoverSrcAttribute(): string
+    {
+        if (!empty($this->cover) && is_file(MODX_BASE_PATH . $this->cover)) {
+            $coverSrc = MODX_SITE_URL . $this->cover;
+        } else {
+            $coverSrc = MODX_SITE_URL . 'assets/images/noimage.png';
+        }
+
+        return $coverSrc;
     }
 }

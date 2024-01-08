@@ -29,8 +29,12 @@ class sCommerceServiceProvider extends ServiceProvider
             $this->publishes([
                 dirname(__DIR__) . '/config/sCommerceAlias.php' => config_path('app/aliases/sCommerce.php', true),
                 dirname(__DIR__) . '/config/sCommerceSettings.php' => config_path('seiger/settings/sCommerce.php', true),
+                dirname(__DIR__) . '/builder/richtext/config.php' => public_path('assets/modules/scommerce/builder/richtext/config.php'),
+                dirname(__DIR__) . '/builder/richtext/render.blade.php' => public_path('assets/modules/scommerce/builder/richtext/render.blade.php'),
+                dirname(__DIR__) . '/builder/richtext/template.blade.php' => public_path('assets/modules/scommerce/builder/richtext/template.blade.php'),
                 dirname(__DIR__) . '/images/noimage.png' => public_path('assets/site/noimage.png'),
                 dirname(__DIR__) . '/images/seigerit-blue.svg' => public_path('assets/site/seigerit-blue.svg'),
+                dirname(__DIR__) . '/views/s_commerce_product.blade.php' => public_path('views/s_commerce_product.blade.php'),
             ]);
         }
 

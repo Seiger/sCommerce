@@ -10,7 +10,7 @@
                     @foreach($sCommerceController->langList() as $idx => $lang)
                         <div class="tab-page content{{$lang}}Tab" id="content{{$lang}}Tab">
                             <h2 class="tab">
-                                <a onclick="javascript:tabSave('&get={{$tab}}&lang={{$lang}}{{${$tab.'_url'} ?? ''}}');" href="{!!$moduleUrl!!}&get={{$tab}}&lang={{$lang}}{{${$tab.'_url'} ?? ''}}">
+                                <a onclick="javascript:tabSave('&get={{$tab}}&lang={{$lang}}{{$iUrl}}');" href="{!!$moduleUrl!!}&get={{$tab}}&lang={{$lang}}{{$iUrl}}">
                                     <i class="fa fa-flag"></i>
                                     @lang('sCommerce::global.content')
                                     @if($lang != 'base')
@@ -28,7 +28,7 @@
                 @else
                     <div class="tab-page {{$tab}}Tab" id="{{$tab}}Tab">
                         <h2 class="tab">
-                            <a onclick="javascript:tabSave('&get={{$tab}}{{${$tab.'_url'} ?? ''}}');" href="{!!$moduleUrl!!}&get={{$tab}}{{${$tab.'_url'} ?? ''}}">
+                            <a onclick="javascript:tabSave('&get={{$tab}}{{$iUrl}}');" href="{!!$moduleUrl!!}&get={{$tab}}{{$iUrl}}">
                                 <span><i class="@lang('sCommerce::global.'.$tab.'_icon')" data-tooltip="@lang('sCommerce::global.'.$tab.'_help')"></i> @lang('sCommerce::global.'.$tab)</span>
                             </a>
                         </h2>

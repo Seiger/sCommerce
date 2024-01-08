@@ -21,6 +21,7 @@
         </div>
     </div>
 </form>
+@php($resources = \EvolutionCMS\Models\SiteContent::select('id', 'pagetitle')->whereIn('id', $items->pluck('category')->unique()->toArray())->get()->pluck('pagetitle', 'id')->toArray())
 <div class="table-responsive seiger__module-table">
     <table class="table table-condensed table-hover sectionTrans scom-table">
         <thead>
@@ -101,7 +102,7 @@
                     <td>{{$item->sku}}</td>
                 @endif
                 <td>
-                    <img src="{{$item->coverSrc}}" alt="{{$item->coverSrc}}" class="post-thumbnail">
+                    <img src="{{$item->coverSrc}}" alt="{{$item->coverSrc}}" class="product-thumbnail">
                     <a href="{{$item->link}}" target="_blank"><b>{{$item->pagetitle ?? __('sCommerce::global.no_text')}}</b></a>
                 </td>
                 @if (sCommerce::config('products.show_field_price', 1) == 1)
@@ -123,13 +124,25 @@
                     <td>{{$item->availability}}</td>
                 @endif
                 @if (sCommerce::config('products.show_field_category', 1) == 1)
-                    <td>{{$item->category}}</td>
+                    <td>
+                        @if($item->category > 1)
+                            <a href="@makeUrl($item->category)" target="_blank">{{$resources[$item->category]}}</a>
+                        @else
+                            <a href="@makeUrl(1)" target="_blank">{{evo()->getConfig('site_name')}}</a>
+                        @endif
+                    </td>
                 @endif
                 @if (evo()->getConfig('check_sMultisite', false) && sCommerce::config('products.show_field_websites', 1) == 1)
                     <td>{{$item->websites}}</td>
                 @endif
                 @if (sCommerce::config('products.show_field_visibility', 1) == 1)
-                    <td>{{$item->published}}</td>
+                    <td>
+                        @if($item->published)
+                            <span class="badge badge-success">@lang('global.page_data_published')</span>
+                        @else
+                            <span class="badge badge-dark">@lang('global.page_data_unpublished')</span>
+                        @endif
+                    </td>
                 @endif
                 @if (sCommerce::config('products.show_field_views', 1) == 1)
                     <td>{{$item->views}}</td>
@@ -139,7 +152,7 @@
                             <a href="{!!$moduleUrl!!}&get=product&i={{$item->id}}" class="btn btn-outline-success">
                                 <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
                             </a>
-                            <a href="#" data-href="{!!$moduleUrl!!}&get=articleDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">
+                            <a href="#" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">
                                 <i class="fa fa-trash"></i> <span>@lang('global.remove')</span>
                             </a>
                         </div>
@@ -244,7 +257,6 @@
         const cookieItems = document.querySelectorAll('[data-items]');
         const actualCount = document.querySelector('[data-actual]');
         const cookieValue = document.cookie.split('; ').find(row => row.startsWith(cookieName + '='))?.split('=')[1];
-        console.log(cookieValue);
         if (cookieValue !== undefined) {
             actualCount.setAttribute('data-actual', cookieValue);
         } else {

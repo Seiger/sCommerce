@@ -25,6 +25,35 @@ class sCommerce
     }
 
     /**
+     * Retrieves a product by its alias.
+     *
+     * @param string $alias The alias of the product.
+     * @return object The product object found with the given alias or an empty sProduct object if not found.
+     */
+    public function getProductByAlias(string $alias): object
+    {
+        return sProduct::whereAlias($alias)->first() ?? new sProduct();
+    }
+
+    /**
+     * Retrieves the products listing from cache or sets it if not found.
+     *
+     * @return array The products listing retrieved from cache or an empty array if not found.
+     */
+    public function documentListing(): array
+    {
+        $productsListing = Cache::get('productsListing');
+
+        if (!$productsListing) {
+            $sCommerceController = new sCommerceController();
+            $sCommerceController->setProductsListing();
+            $productsListing = Cache::get('productsListing');
+        }
+
+        return $productsListing ?? [];
+    }
+
+    /**
      * Retrieves the module URL.
      *
      * @return string The module URL.

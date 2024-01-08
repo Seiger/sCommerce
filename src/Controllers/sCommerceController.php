@@ -21,7 +21,7 @@ class sCommerceController
     public function setProductsListing(): void
     {
         $productsListing = [];
-        $products = sProduct::select('id', 'alias')->wherePublished(1)->get();
+        $products = sProduct::select('id', 'alias', 'category')->wherePublished(1)->get();
         if ($products) {
             foreach ($products as $product) {
                 $link = str_replace(MODX_SITE_URL, '', $product->link);
@@ -43,7 +43,7 @@ class sCommerceController
     {
         $prf = 'scom_';
         $tbl = evo()->getDatabase()->getFullTableName('system_settings');
-
+        
         if (request()->has('basic__catalog_root') && request()->input('basic__catalog_root') != evo()->getConfig($prf . 'catalog_root')) {
             $catalog_root = request()->input('basic__catalog_root');
             evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}catalog_root', '{$catalog_root}')");
@@ -132,6 +132,62 @@ class sCommerceController
             }
         }
         return $this->categories;
+    }
+
+    /**
+     * Initializes and returns a rich text editor for the specified elements.
+     *
+     * @param string $ids A comma-separated list of element IDs.
+     * @param string $height The height of the editor (default: '500px').
+     * @param string $editor The name of the editor to use (default: empty, will retrieve from configuration).
+     * @return string The HTML markup of the initialized rich text editor.
+     */
+    public function textEditor(string $ids, string $height = '500px', string $editor = ''): string
+    {
+        $theme = null;
+        $elements = [];
+        $options = [];
+        $ids = explode(",", $ids);
+
+        if (!trim($editor)) {
+            $editor = evo()->getConfig('which_editor', 'TinyMCE5');
+        }
+
+        foreach ($ids as $id) {
+            $elements[] = trim($id);
+            if ($theme) {
+                $options[trim($id)]['theme'] = $theme;
+            }
+        }
+
+        return implode("", evo()->invokeEvent('OnRichTextEditorInit', [
+            'editor' => $editor,
+            'elements' => $elements,
+            'height' => $height,
+            'contentType' => 'htmlmixed',
+            'options' => $options
+        ]));
+    }
+
+    /**
+     * Removes a directory and all its contents recursively.
+     *
+     * @param string $dir The path to the directory to be removed.
+     * @return void
+     */
+    public function removeDirRecursive(string $dir): void
+    {
+        if ($objs = glob($dir . "/*")) {
+            foreach($objs as $obj) {
+                if (is_dir($obj)) {
+                    $this->removeDirRecursive($obj, $keep_file);
+                } else {
+                    unlink($obj);
+                }
+            }
+        } else {
+            rmdir($dir);
+        }
     }
 
     /**

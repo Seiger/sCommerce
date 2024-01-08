@@ -9,6 +9,6 @@ class sProductTranslate extends Eloquent\Model
 
     public function product()
     {
-        return $this->belongsTo(sProduct::class, 'product');
+        return $this->belongsTo(sProduct::class, 'id', 'product');
     }
 }
