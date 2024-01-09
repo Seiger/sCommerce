@@ -10,24 +10,37 @@
 
 # Welcome to sCommerce!
 
-**sCommerce** is a set of e-commerce tools for Evolution CMS.
-The sCommerce package allows you to use Evolution CMS as a platform
-for online commerce with all the necessary tools.
+**sCommerce** stands as a comprehensive suite of **e-commerce** tools meticulously crafted
+for Evolution CMS. Tailored to empower Evolution CMS users, this dynamic package
+seamlessly integrates with the CMS platform, transforming it into a robust foundation
+for online commerce. With a focus on delivering all the necessary tools, **sCommerce**
+equips users with the essential features required to establish and manage a thriving
+**e-commerce** presence. Whether you are a developer, website administrator, or content
+management enthusiast, **sCommerce** provides a streamlined solution, unlocking the potential
+of Evolution CMS for seamless and efficient **online commerce**.
 
 ## Features
 
-- [ ] Orders list.
-- [x] Products catalog.
-- [ ] Filters.
-- [ ] Promo codes.
-- [ ] List of orders.
-- [ ] Order statuses.
-- [ ] Integration with payment systems.
-- [ ] Integration with warehouses.
-- [ ] Integration with trading platforms.
-- [x] Integrated with sLang.
-- [x] Integrated with sGallery.
-- [x] Integrated with sMultisite.
+- [ ] Order Management.
+- [ ] Order Status Management.
+- [x] Products Catalog.
+- [ ] Dynamic Filters for Product Search.
+- [ ] Promo Code System.
+- [ ] Customer Reviews and Ratings.
+- [ ] Multi-currency Support.
+- [ ] Integration with Payment Systems.
+- [ ] Integration with Warehouses.
+- [ ] Integration with Trading Platforms.
+- [x] sLang Integration.
+- [x] sGallery Integration.
+- [x] sMultisite Integration.
+- [ ] Advanced Analytics and Reporting.
+- [ ] Personalized Recommendations.
+- [ ] Social Media Integration.
+- [ ] AI-Powered Product Search.
+- [ ] Flexible Product Bundles.
+- [ ] Automated Email Marketing.
+- [ ] Wishlist and Favorites.
 
 ## Minimum requirements
 

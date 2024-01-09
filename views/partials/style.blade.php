@@ -6,6 +6,7 @@
     #copyright{position:fixed;bottom:0;right:0;}
     #copyright img{width:35px;}
     #img-preview{border:1px solid #ccc;position:fixed;top:50%;left:50%;width:600px;margin-top:-300px;margin-left:-300px;display:none;}
+    #main-logo{color:#0B78FF;}
     #preview.form-control{max-width:85px;background:#CECECF;}
     input[type=checkbox], input[type=radio] {padding:0.5em;}
     table .product-thumbnail{width:70px;height:45px;}

@@ -1,6 +1,6 @@
 @extends('manager::template.page')
 @section('content')
-    <h1><i class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
+    <h1><i id="main-logo" class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
 
     <div class="sectionBody">
         <div class="tab-pane" id="resourcesPane">
