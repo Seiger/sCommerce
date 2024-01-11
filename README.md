@@ -31,7 +31,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Integration with Payment Systems.
 - [ ] Integration with Warehouses.
 - [ ] Integration with Trading Platforms.
-- [x] sLang Integration.
+- [x] **[sLang](https://github.com/Seiger/sLang)** Integration.
 - [x] sGallery Integration.
 - [x] sMultisite Integration.
 - [ ] Advanced Analytics and Reporting.

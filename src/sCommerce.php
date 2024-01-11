@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Models\sProduct;
@@ -33,6 +34,32 @@ class sCommerce
     public function getProductByAlias(string $alias): object
     {
         return sProduct::whereAlias($alias)->first() ?? new sProduct();
+    }
+
+    /**
+     * Retrieves the products belonging to a specific category.
+     *
+     * @param int|null $category The ID of the category. If not provided, it will default to the current document identifier.
+     * @param string|null $lang The language code for the product names. If not provided, it will default to the application's locale.
+     * @param int $dept The depth of sub-categories to include in the query. Defaults to 10.
+     * @return object The products belonging to the specified category, filtered by language and category ID.
+     */
+    public function getCategoryProducts(int $category = null, string $lang = null, int $dept = 10): object
+    {
+        $sCommerceController = new sCommerceController();
+
+        if (!$lang) {
+            $lang = evo()->getLocale();
+        }
+
+        if (!$category) {
+            $category = evo()->documentIdentifier;
+        }
+
+        $categories = array_merge([$category], $sCommerceController->listAllActiveSubCategories($category, $dept));
+        $productIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->get()->pluck('product')->toArray();
+
+        return sProduct::lang($lang)->whereIn('category', $categories)->orWhereIn('id', $productIds)->active()->get();
     }
 
     /**

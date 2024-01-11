@@ -1,11 +1,24 @@
 <?php namespace Seiger\sCommerce\Models;
 
 use EvolutionCMS\Facades\UrlProcessor;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use ReflectionClass;
 use Seiger\sCommerce\Facades\sCommerce;
 
+/**
+ * Class sProduct
+ *
+ * This class represents a product in the sCommerce application.
+ * It extends the base Model class.
+ *
+ * @package App\Models
+ *
+ * @method Builder|sProduct active()
+ * @property-read string $coverSrc The URL of the cover image source attribute.
+ * @property-read string $link The URL of the product.
+ */
 class sProduct extends Model
 {
     /**
@@ -85,6 +98,17 @@ class sProduct extends Model
                         ->limit(1);
                 });
         });
+    }
+
+    /**
+     * Apply the active scope to the given query builder.
+     *
+     * @param \Illuminate\Database\Query\Builder $builder The query builder to apply the scope to.
+     * @return \Illuminate\Database\Query\Builder The modified query builder.
+     */
+    public function scopeActive($builder)
+    {
+        return $builder->where('s_products.published', '1');
     }
 
     /**

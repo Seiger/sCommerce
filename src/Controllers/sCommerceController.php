@@ -43,7 +43,7 @@ class sCommerceController
     {
         $prf = 'scom_';
         $tbl = evo()->getDatabase()->getFullTableName('system_settings');
-        
+
         if (request()->has('basic__catalog_root') && request()->input('basic__catalog_root') != evo()->getConfig($prf . 'catalog_root')) {
             $catalog_root = request()->input('basic__catalog_root');
             evo()->getDatabase()->query("REPLACE INTO {$tbl} (`setting_name`, `setting_value`) VALUES ('{$prf}catalog_root', '{$catalog_root}')");
@@ -132,6 +132,18 @@ class sCommerceController
             }
         }
         return $this->categories;
+    }
+
+    /**
+     * Retrieves a list of all active sub-categories within a specified category.
+     *
+     * @param int $category The ID of the category to retrieve sub-categories for.
+     * @param int $dept The depth of sub-categories to retrieve (default: 10).
+     * @return mixed An array of all active sub-category IDs within the specified category.
+     */
+    public function listAllActiveSubCategories(int $category, int $dept = 10)
+    {
+        return $this->getActiveChildIds($category, $dept);
     }
 
     /**
@@ -275,6 +287,28 @@ class sCommerceController
                 $this->categoryCrumb($item, $crumb);
             }
         }
+    }
+
+    /**
+     * Retrieves the active child IDs of the specified ID(s).
+     *
+     * @param int|array $id The ID(s) of the parent element(s).
+     * @param int $dept The maximum depth to traverse when retrieving child IDs (default: 10).
+     * @return array The array of active child IDs.
+     */
+    protected function getActiveChildIds(int|array $id, int $dept = 10): array
+    {
+        $id = is_array($id) ? $id : [$id];
+        $res = SiteContent::select(['id'])->whereIn('parent', $id)->active()->get()->pluck('id')->toArray();
+
+        if (count($res)) {
+            $this->categories = array_merge($this->categories, $res);
+            if ($dept) {
+                $this->getActiveChildIds($res, $dept--);
+            }
+        }
+
+        return $this->categories;
     }
 
     /**

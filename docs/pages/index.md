@@ -1,6 +1,6 @@
 ---
 layout: page
-title: sCommerce for Evolution CMS 3
+title: sCommerce for Evolution CMS
 permalink: /
 ---
 

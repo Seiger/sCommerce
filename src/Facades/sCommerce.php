@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Facades\Facade;
 
+/**
+ * @mixin \Seiger\sCommerce\sCommerce
+ */
 class sCommerce extends Facade
 {
     /**
