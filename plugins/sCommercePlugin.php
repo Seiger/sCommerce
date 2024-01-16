@@ -40,6 +40,7 @@ Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
     if (isset($aliasArr[0]) && $aliasArr[0] == evo()->getConfig('lang', 'base')) {
         unset($aliasArr[0]);
     }
+
     $alias = implode('/', $aliasArr);
     $document = sCommerce::documentListing()[$alias] ?? false;
     if (!$document && evo()->getLoginUserID('mgr')) {
@@ -49,6 +50,7 @@ Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
             $document = (int)$product->id;
         }
     }
+
     if ($document) {
         $product = sCommerce::getProduct($document, evo()->getConfig('lang', 'base'));
         $product->constructor = data_is_json($product->constructor, true);
@@ -68,6 +70,13 @@ Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
         $product->content_dispo = false;
         $product->deleted = 0;
         $product->cacheable = 1;
+
+        if (sCommerce::config('product.views_on', 1) == 1) {
+            if (!in_array($product->id, $_SESSION['s_commerce_product_views'] ?? [])) {
+                $product->increment('views');
+                $_SESSION['s_commerce_product_views'][] = $product->id;
+            }
+        }
 
         unset($product->tmplvars);
         return $params['documentObject'] = Arr::dot($product->toArray());
