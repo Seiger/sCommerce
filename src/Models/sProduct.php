@@ -4,6 +4,7 @@ use EvolutionCMS\Facades\UrlProcessor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use ReflectionClass;
 use Seiger\sCommerce\Facades\sCommerce;
 
@@ -98,6 +99,35 @@ class sProduct extends Model
                         ->limit(1);
                 });
         });
+    }
+
+    /**
+     * Apply search filters to the query
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query The query builder object
+     *
+     * @return \Illuminate\Database\Eloquent\Builder The modified query builder object
+     */
+    public function scopeSearch($query)
+    {
+        if (request()->has('search')) {
+            $fields = collect(['sku', 'pagetitle', 'longtitle', 'introtext', 'content']);
+
+            $search = Str::of(request('search'))
+                ->stripTags()
+                ->replaceMatches('/[^\p{L}\p{N}\@\.!#$%&\'*+-\/=?^_`{|}~]/iu', ' ') // allowed symbol in email
+                ->replaceMatches('/(\s){2,}/', '$1') // removing extra spaces
+                ->trim()->explode(' ')
+                ->filter(fn($word) => mb_strlen($word) > 2);
+
+            $select = collect([0]);
+
+            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN \"{$field}\" LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate points source
+
+            return $query->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
+                ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
+                ->orderByDesc('points');
+        }
     }
 
     /**

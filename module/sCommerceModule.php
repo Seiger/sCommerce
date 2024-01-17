@@ -46,7 +46,7 @@ switch ($get) {
         $order = request()->input('order', 'id');
         $direc = request()->input('direc', 'desc');
 
-        $data['items'] = sProduct::lang($sCommerceController->langDefault())->orderBy($order, $direc)->paginate($perpage);
+        $data['items'] = sProduct::lang($sCommerceController->langDefault())->search()->orderBy($order, $direc)->paginate($perpage);
         $data['total'] = sProduct::count();
         $data['active'] = sProduct::wherePublished(1)->count();
         $data['disactive'] = $data['total'] - $data['active'];
@@ -128,7 +128,7 @@ switch ($get) {
 
         if ($product) {
             $sCommerceController->removeDirRecursive(MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id);
-            
+
             $product->categories()->sync([]);
             $product->texts()->delete();
             $product->delete();
@@ -220,7 +220,7 @@ switch ($get) {
         $renders = [];
         $fields = glob(MODX_BASE_PATH . 'assets/modules/scommerce/builder/*/config.php');
         View::getFinder()->setPaths([MODX_BASE_PATH . 'assets/modules/scommerce/builder']);
-        
+
         if (count($fields)) {
             foreach ($fields as $field) {
                 $render = str_replace('config.php', 'render.blade.php', $field);
@@ -293,7 +293,7 @@ switch ($get) {
 }
 
 $data['sCommerceController'] = $sCommerceController;
-$data['editor'] = $sCommerceController->textEditor(implode(',', $editor));
+$data['editor'] = count($editor) ? $sCommerceController->textEditor(implode(',', $editor)) : '';
 $data['tabs'] = $tabs;
 $data['get'] = $get;
 $data['iUrl'] = $iUrl;

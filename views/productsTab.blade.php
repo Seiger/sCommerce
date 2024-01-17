@@ -8,19 +8,25 @@
         <div class="scom-conters-item scom-status-title scom-disactive">@lang('sCommerce::global.unpublisheds'): <span>{{$disactive??0}}</span></div>
     </div>
 </div>
-<form id="search" name="search" method="get" action="{!!$moduleUrl!!}&get=products">
+<div class="input-group">
     <div class="input-group mb-3">
-        <input name="search" value="{{request()->search ?? ''}}" type="search" class="form-control rounded-left scom-input seiger__search" placeholder="@lang('sCommerce::global.search_among_products')" aria-label="@lang('sCommerce::global.search_among_products')" aria-describedby="basic-addon2">
+        <input name="search"
+               value="{{request()->search ?? ''}}"
+               type="search"
+               class="form-control rounded-left scom-input seiger__search"
+               placeholder="@lang('sCommerce::global.search_among_products') (@lang('sCommerce::global.sku'), @lang('sCommerce::global.product_name'), @lang('global.long_title'), @lang('global.resource_summary'), @lang('sCommerce::global.content'))"
+               aria-label="@lang('sCommerce::global.search_among_products') (@lang('sCommerce::global.sku'), @lang('sCommerce::global.product_name'), @lang('global.long_title'), @lang('global.resource_summary'), @lang('sCommerce::global.content'))"
+               aria-describedby="basic-addon2" />
         <span class="scom-clear-search">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
                 <path d="M22 11.2086L20.7914 10L16 14.7914L11.2086 10L10 11.2086L14.7914 16L10 20.7914L11.2086 22L16 17.2086L20.7914 22L22 20.7914L17.2086 16L22 11.2086Z" fill="#63666B"/>
             </svg>
         </span>
         <div class="input-group-append">
-            <button class="btn btn-outline-secondary rounded-right" type="submit"><i class="fas fa-search"></i></button>
+            <button class="btn btn-outline-secondary rounded-right scom-submit-search" type="button"><i class="fas fa-search"></i></button>
         </div>
     </div>
-</form>
+</div>
 @php($resources = \EvolutionCMS\Models\SiteContent::select('id', 'pagetitle')->whereIn('id', $items->pluck('category')->unique()->toArray())->get()->pluck('pagetitle', 'id')->toArray())
 <div class="table-responsive seiger__module-table">
     <table class="table table-condensed table-hover sectionTrans scom-table">
@@ -147,16 +153,16 @@
                 @if (sCommerce::config('products.show_field_views', 1) == 1)
                     <td>{{$item->views}}</td>
                 @endif
-                    <td style="text-align:center;">
-                        <div class="btn-group">
-                            <a href="{!!$moduleUrl!!}&get=product&i={{$item->id}}" class="btn btn-outline-success">
-                                <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
-                            </a>
-                            <a href="#" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">
-                                <i class="fa fa-trash"></i> <span>@lang('global.remove')</span>
-                            </a>
-                        </div>
-                    </td>
+                <td style="text-align:center;">
+                    <div class="btn-group">
+                        <a href="{!!$moduleUrl!!}&get=product&i={{$item->id}}" class="btn btn-outline-success">
+                            <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
+                        </a>
+                        <a href="#" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">
+                            <i class="fa fa-trash"></i> <span>@lang('global.remove')</span>
+                        </a>
+                    </div>
+                </td>
             </tr>
         @endforeach
         </tbody>
@@ -235,7 +241,7 @@
         });
         //dropdown
         document.addEventListener("click", function (event) {
-        const dropdowns = document.querySelectorAll('.dropdown');
+            const dropdowns = document.querySelectorAll('.dropdown');
             dropdowns.forEach(function(dropdown) {
                 if (!dropdown.contains(event.target)) {
                     dropdown.classList.remove('active')
@@ -245,13 +251,6 @@
             });
         });
         //dropdown
-        //form clear
-        const clearFrom = document.querySelector('.seiger-clear-search');
-        const searchForm = document.querySelector('.seiger__search');
-        clearFrom?.addEventListener('click', () => {
-            searchForm.value = "";
-            document.querySelector('#search').submit();
-        })
         // cookies
         const cookieName = "scom_products_page_items";
         const cookieItems = document.querySelectorAll('[data-items]');

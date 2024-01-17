@@ -1,6 +1,6 @@
 @extends('manager::template.page')
 @section('content')
-    <h1><i id="main-logo" class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
+    <h1><i class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
 
     <div class="sectionBody">
         <div class="tab-pane" id="resourcesPane">
@@ -118,12 +118,39 @@
 
             // Flash messages
             @if (session()->has('success'))
-                alertify.success("{{session('success')}}");
+            alertify.success("{{session('success')}}");
             @endif
             @if (session()->has('error'))
-                alertify.success("{{session('error')}}");
+            alertify.success("{{session('error')}}");
             @endif
         });
+
+        // Search form
+        const searchForm = document.querySelector('input[name="search"]');
+        const submitForm = document.querySelector('.scom-submit-search');
+        const clearFrom = document.querySelector('.scom-clear-search');
+        searchForm?.addEventListener('keypress', (e) => {
+            if (e.which == 13) {
+                searchFormSend(searchForm.value);
+            }
+        });
+        submitForm?.addEventListener('click', () => {
+            searchFormSend(searchForm.value);
+        });
+        clearFrom?.addEventListener('click', () => {
+            searchForm.value = "";
+            searchFormSend(searchForm.value);
+        });
+        function searchFormSend(search) {
+            const _url = window.location.pathname;
+            const _get = new URLSearchParams(window.location.search);
+            let string = '';
+            _get.delete('search');
+            if (search.length > 0) {
+                string = '&search='+search;
+            }
+            window.location.href = _url+'?'+_get.toString()+string;
+        }
 
         // Save tab content on the fly
         const submitting = document.querySelectorAll('[data-target] a');
