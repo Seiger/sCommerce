@@ -116,6 +116,17 @@
                 return false;
             });
 
+            // Ordering
+            $('.sorting').on('click', function () {
+                const urlParams = new URLSearchParams(window.location.search);
+                const order = $(this).attr('data-order');
+                let direc = 'asc';
+                if (urlParams.get('order') == order && urlParams.get('direc') == direc) {
+                    direc = 'desc';
+                }
+                window.location.href = '{!!$moduleUrl!!}&get=products&order='+order+'&direc='+direc;
+            });
+
             // Flash messages
             @if (session()->has('success'))
             alertify.success("{{session('success')}}");

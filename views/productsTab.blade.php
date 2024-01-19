@@ -208,11 +208,6 @@
         </div>
     </div>
     <script>
-        $('.sorting').on('click', function () {
-            let order = $(this).attr('data-order');
-            let direc = $(this).attr('data-direc');
-            window.location.href = '{!!$moduleUrl!!}&get=products&order='+order+'&direc='+direc;
-        });
         $('.js_delete').on('click', function () {
             let subscriber = $(this).closest('tr').attr('id').split('-')[1];
             alertify

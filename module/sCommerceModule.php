@@ -5,6 +5,7 @@
 
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sProduct;
@@ -45,8 +46,22 @@ switch ($get) {
         $perpage = Cookie::get('scom_products_page_items', 50);
         $order = request()->input('order', 'id');
         $direc = request()->input('direc', 'desc');
+        $query = sProduct::lang($sCommerceController->langDefault())->search();
 
-        $data['items'] = sProduct::lang($sCommerceController->langDefault())->search()->orderBy($order, $direc)->paginate($perpage);
+        switch ($order) {
+            case "category":
+                $query->addSelect(
+                    '*',
+                    DB::Raw('(select `' . DB::getTablePrefix() . 'site_content`.`pagetitle` from `' . DB::getTablePrefix() . 'site_content` where `' . DB::getTablePrefix() . 'site_content`.`id` = `' . DB::getTablePrefix() . 's_products`.`category`) as cat')
+                );
+                $query->orderBy('cat', $direc);
+                break;
+            default :
+                $query->orderBy($order, $direc);
+                break;
+        }
+
+        $data['items'] = $query->paginate($perpage);
         $data['total'] = sProduct::count();
         $data['active'] = sProduct::wherePublished(1)->count();
         $data['disactive'] = $data['total'] - $data['active'];

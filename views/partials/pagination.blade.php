@@ -1,15 +1,10 @@
 @if ($paginator->hasPages())
     {{-- Full link generate --}}
     @php
-        switch (request()->get('get'))
-       {
-           //case 'comments':
-           //    $fullUrl = sCommerce::moduleUrl() . '&get='.request()->get('get');
-           //    break;
-           default:
-                $fullUrl = sCommerce::moduleUrl() . (request()->has('search') ? '&search=' . request()->search : '');
-                break;
-        }
+        $fullUrl = sCommerce::moduleUrl() . '&get='.request()->get('get');
+        $fullUrl .= (request()->has('search') ? '&search=' . request()->search : '');
+        $fullUrl .= (request()->has('order') ? '&order=' . request()->order : '');
+        $fullUrl .= (request()->has('direc') ? '&direc=' . request()->direc : '');
         $paginator->withPath($fullUrl);
     @endphp
     <style>.dark #translatePagination a {color: #444}</style>

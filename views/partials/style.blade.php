@@ -6,7 +6,6 @@
     #copyright{position:fixed;bottom:0;right:0;}
     #copyright img{width:35px;}
     #img-preview{border:1px solid #ccc;position:fixed;top:50%;left:50%;width:600px;margin-top:-300px;margin-left:-300px;display:none;}
-    #main-logo{color:#0B78FF;}
     #preview.form-control{max-width:85px;background:#CECECF;}
     input[type=checkbox], input[type=radio] {padding:0.5em;}
     table .product-thumbnail{width:70px;height:45px;}
@@ -65,6 +64,7 @@
     .seiger__list{display:flex;align-items:center;justify-content:flex-end;}
     .seiger__label{display:inline-block;color:#63666b;font-family:inherit;font-size:14px;font-weight:400;line-height:130%;margin-right:10px;white-space:nowrap;}
     .seiger__module-table{width:calc(100% + 60px);margin-left:-40px;}
+    .sorted{font-style:italic;}
     .dropdown{position:relative;}
     .dropdown .dropdown__title{padding:8px 12px;display:flex;align-items:center;border-radius:6px;border:1px solid #cececf;background:#fff;cursor:pointer;outline:none;}
     .dropdown .dropdown__title span{display:inline-block;margin-right:4px;font-family:inherit;font-size:14px;font-weight:400;line-height:120%;}
