@@ -90,9 +90,14 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.visibility') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (sCommerce::config('products.show_field_views', 1) == 1)
+            @if (sCommerce::config('product.views_on', 1) == 1 && sCommerce::config('products.show_field_views', 1) == 1)
                 <th class="sorting @if($order == 'views') sorted @endif" data-order="views">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.views') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (sCommerce::config('product.rating_on', 1) == 1 && sCommerce::config('products.show_field_rating', 1) == 1)
+                <th class="sorting @if($order == 'rating') sorted @endif" data-order="rating">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.rating') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
             <th id="action-btns">@lang('global.onlineusers_action')</th>
@@ -150,8 +155,11 @@
                         @endif
                     </td>
                 @endif
-                @if (sCommerce::config('products.show_field_views', 1) == 1)
+                @if (sCommerce::config('product.views_on', 1) == 1 && sCommerce::config('products.show_field_views', 1) == 1)
                     <td>{{$item->views}}</td>
+                @endif
+                @if (sCommerce::config('product.rating_on', 1) == 1 && sCommerce::config('products.show_field_rating', 1) == 1)
+                    <td>{{$item->rating}}</td>
                 @endif
                 <td style="text-align:center;">
                     <div class="btn-group">
@@ -199,6 +207,11 @@
         </div>
     </div>
 </div>
+@push('scripts.top')
+    <script>
+        const cookieName = "scom_products_page_items";
+    </script>
+@endpush
 @push('scripts.bot')
     <div id="actions">
         <div class="btn-group">
@@ -234,47 +247,5 @@
                 .set('labels',{ok:"@lang('global.delete')",cancel:"@lang('global.cancel')"})
                 .set({transition:'zoom'});
         });
-        //dropdown
-        document.addEventListener("click", function (event) {
-            const dropdowns = document.querySelectorAll('.dropdown');
-            dropdowns.forEach(function(dropdown) {
-                if (!dropdown.contains(event.target)) {
-                    dropdown.classList.remove('active')
-                } else {
-                    dropdown.classList.toggle('active')
-                }
-            });
-        });
-        //dropdown
-        // cookies
-        const cookieName = "scom_products_page_items";
-        const cookieItems = document.querySelectorAll('[data-items]');
-        const actualCount = document.querySelector('[data-actual]');
-        const cookieValue = document.cookie.split('; ').find(row => row.startsWith(cookieName + '='))?.split('=')[1];
-        if (cookieValue !== undefined) {
-            actualCount.setAttribute('data-actual', cookieValue);
-        } else {
-            setCookie(cookieName, 50, 30)
-        }
-        // Function to set a cookie
-        function setCookie(name, value, days) {
-            var expires = "";
-            if (days) {
-                var date = new Date();
-                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-                expires = "; expires=" + date.toUTCString();
-            }
-            document.cookie = name + "=" + value + expires + "; path=/";
-        }
-        function getCookie(name) {
-            document.cookie
-        }
-        cookieItems?.forEach(cookieItem => {
-            cookieItem.addEventListener('click', (e) => {
-                let itemValue = cookieItem.getAttribute('data-items')
-                console.log(itemValue);
-                setCookie(cookieName, itemValue, 30)
-            })
-        })
     </script>
 @endpush

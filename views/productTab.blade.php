@@ -12,7 +12,6 @@
                     <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.published_help')"></i>
                 </div>
                 <div class="col">
-                    {{--@dd($product)--}}
                     <input type="checkbox" id="publishedcheck" class="form-checkbox form-control" name="publishedcheck" value="" onchange="documentDirty=true;" onclick="changestate(document.form.published);" @if(isset($item->published) && $item->published) checked @endif>
                     <input type="hidden" id="published" name="published" value="{{$item->published ?? 0}}" onchange="documentDirty=true;">
                     @if(sCommerce::config('product.views_on', 1) == 1)&emsp;<i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')"> <b>{{$item->views ?? 0}}</b></i>@endif
@@ -80,7 +79,7 @@
             <div class="row form-row">
                 <div class="col-auto col-title">
                     <label for="parent" class="warning">@lang('sCommerce::global.category')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.category_help')"></i>
+                    <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_product_help')"></i>
                 </div>
                 <div class="col">
                     <div>

@@ -14,8 +14,10 @@ use Seiger\sCommerce\Facades\sCommerce;
  * This class represents a product in the sCommerce application.
  * It extends the base Model class.
  *
- * @package App\Models
+ * @package Seiger\sCommerce
  *
+ * @method static Builder|sProduct lang(string $locale)
+ * @method Builder|sProduct search()
  * @method Builder|sProduct active()
  * @property-read string $coverSrc The URL of the cover image source attribute.
  * @property-read string $link The URL of the product.
@@ -37,7 +39,7 @@ class sProduct extends Model
     const AVAILABILITY_ON_ORDER = 2;
 
     /**
-     * Type constants
+     * Type Product constants
      */
     const TYPE_SIMPLE = 0;
     const TYPE_OPTIONAL = 1;
@@ -62,7 +64,7 @@ class sProduct extends Model
     }
 
     /**
-     * Return list of type codes and labels
+     * Return list of type Product codes and labels
      *
      * @return array The array of types. The key of each element is the constant value, and the value of each element is the corresponding translation string.
      */
@@ -86,7 +88,7 @@ class sProduct extends Model
      * @param string $locale The locale to filter the translations by.
      * @return \Illuminate\Database\Query\Builder The modified query builder instance.
      */
-    public function scopeLang($query, $locale)
+    public static function scopeLang($query, $locale)
     {
         return $query->leftJoin('s_product_translates', function ($leftJoin) use ($locale) {
             $leftJoin->on('s_products.id', '=', 's_product_translates.product')

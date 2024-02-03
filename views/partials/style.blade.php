@@ -34,6 +34,7 @@
     .builder .row-col-wrap:hover .row-col, .builder .row-col-wrap:hover .b-resize, .builder .b-btn-wrap, .builder .b-resize, .builder .b-settings .col-12:first-child{border-color:#ccc}
     .builder .row-col-wrap:hover .b-resize, .builder .b-settings .b-btn-group label{border-color:#ccc}
     .builder .row-col-wrap:hover .b-resize:hover, .builder .b-resize:hover, .builder .b-resize:active{background-color:#1976d2}
+    .close-icon{cursor:pointer;position:absolute;top:0;right:0;z-index:2;padding:0.6rem 1rem;}
     .darkness .builder .b-resize{background-color:#ffd700}
     .darkness .builder .row-col-wrap:hover .b-resize{background-color:#65686d}
     .hidden{display:none;}
@@ -41,6 +42,7 @@
     .product-thumbnail{display:inline-block;max-width:100%;height:auto;padding:4px;line-height:1.42857143;background-color:#fff;border:1px solid #ddd;border-radius:4px;-webkit-transition: all .2s ease-in-out;-o-transition: all .2s ease-in-out;transition: all .2s ease-in-out;}
     .tab-row-container{background:#CECECF;}
     .tab-row .tab a{color:#0D0D0D;font-family:'Roboto';font-size:14px;font-weight:400;line-height:115%;text-transform:uppercase;padding:16px;}
+    .sbuttons-wraper{position:sticky;top:5px;text-align:center;}
     .scom-conters{margin-bottom:24px;margin-top:8px;}
     .scom-conters-item{margin-right:24px;}
     .scom-status-title{font-size:14px;font-weight:400;line-height:120%;}

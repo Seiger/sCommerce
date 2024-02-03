@@ -354,6 +354,16 @@
             <input type="hidden" id="products__show_field_views" name="products__show_field_views" value="{{sCommerce::config('products.show_field_views', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="products__show_field_rating" class="warning">@lang('sCommerce::global.rating')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.rating')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_rating);" @if(sCommerce::config('products.show_field_rating', 1) == 1) checked @endif>
+            <input type="hidden" id="products__show_field_rating" name="products__show_field_rating" value="{{sCommerce::config('products.show_field_rating', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
     <div class="split my-3"></div>
     <span id="parentName" class="hidden"></span>
     <input type="hidden" name="parent" value="0"/>
@@ -365,9 +375,9 @@
             <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}">
                 <i class="fa fa-times-circle"></i><span>@lang('global.cancel')</span>
             </a>
-            <a id="Button2" class="btn btn-primary" href="javascript:void(0);" onclick="addItem();">
+            {{--<a id="Button2" class="btn btn-primary" href="javascript:void(0);" onclick="addItem();">
                 <i class="fa fa-plus"></i><span>@lang('global.add')</span>
-            </a>
+            </a>--}}
             <a id="Button1" class="btn btn-success" href="javascript:void(0);" onclick="saveForm('#form');">
                 <i class="fas fa-save"></i><span>@lang('global.save')</span>
             </a>

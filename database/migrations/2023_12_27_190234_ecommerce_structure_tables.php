@@ -15,6 +15,49 @@ return new class extends Migration
     {
         /*
         |--------------------------------------------------------------------------
+        | The attributes's tables structure
+        |--------------------------------------------------------------------------
+        */
+        Schema::create('s_attributes', function (Blueprint $table) {
+            $table->id('id');
+            $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
+            $table->unsignedTinyInteger('asfilter')->default(0)->index()->comment('0-Not filter|1-Using as filter');
+            $table->unsignedInteger('position')->default(0)->index()->comment('Position the Attribute in list');
+            $table->unsignedInteger('type')->default(0)->comment('Type of input the attribute');
+            $table->string('alias', 512)->index()->comment('It using for generate url');
+            $table->tinyText('helptext')->comment('Description about this Attribute in adminpanel');
+            $table->timestamps();
+        });
+
+        Schema::create('s_attribute_translates', function (Blueprint $table) {
+            $table->id('atid');
+            $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
+            $table->string('lang', 10)->index()->default('base');
+            $table->string('pagetitle', 255)->index()->default('');
+            $table->string('longtitle', 512)->default('');
+            $table->mediumText('introtext')->default('');
+            $table->longText('content')->default('');
+            $table->unique(['attribute', 'lang']);
+            $table->timestamps();
+        });
+
+        Schema::create('s_attribute_values', function (Blueprint $table) {
+            $table->id('avid');
+            $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
+            $table->unsignedInteger('position')->default(0)->index()->comment('Position the Attribute value in list');
+            $table->string('alias', 512)->index()->comment('It using for generate url');
+            $table->tinyText('base')->default('');
+            $table->unique(['attribute', 'alias']);
+            $table->timestamps();
+        });
+
+        Schema::create('s_attribute_category', function (Blueprint $table) {
+            $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
+            $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
+        });
+
+        /*
+        |--------------------------------------------------------------------------
         | The product's tables structure
         |--------------------------------------------------------------------------
         */
@@ -28,6 +71,7 @@ return new class extends Migration
             $table->unsignedInteger('position')->default(0)->index()->comment('Position the product in list');
             $table->unsignedInteger('views')->default(0)->index()->comment('Count view the product');
             $table->unsignedInteger('rating')->default(5)->index()->comment('Rating the product base on votes');
+            $table->unsignedInteger('type')->default(0)->comment('Type the product');
             $table->integer('quantity')->default(0)->comment('Quantity products in stock');
             $table->unsignedDecimal('price_regular', 9, 2)->default(0);
             $table->unsignedDecimal('price_special', 9, 2)->default(0);
@@ -39,7 +83,6 @@ return new class extends Migration
             $table->jsonb('similar')->default(new Expression('(JSON_ARRAY())'));
             $table->jsonb('tmplvars')->default(new Expression('(JSON_ARRAY())'));
             $table->jsonb('votes')->default(new Expression('(JSON_ARRAY())'));
-            $table->enum('type', ['simple', 'variable', 'optional'])->default('simple');
             $table->string('representation')->default('default')->comment('Representation of product fields in the backend');
             $table->timestamps();
         });
@@ -52,9 +95,6 @@ return new class extends Migration
             $table->string('longtitle', 512)->default('');
             $table->mediumText('introtext')->default('');
             $table->longText('content')->default('');
-            $table->string('seotitle', 100)->default('');
-            $table->string('seodescription', 255)->default('');
-            $table->enum('seorobots', ['index,follow', 'noindex,nofollow'])->default('index,follow');
             $table->jsonb('builder')->default(new Expression('(JSON_ARRAY())'));
             $table->jsonb('constructor')->default(new Expression('(JSON_ARRAY())'));
             $table->unique(['product', 'lang']);
@@ -89,6 +129,13 @@ return new class extends Migration
     {
         /*
         |--------------------------------------------------------------------------
+        | Delete a Product template
+        |--------------------------------------------------------------------------
+        */
+        $templateProduct = SiteTemplate::whereTemplatealias('s_commerce_product')->delete();
+
+        /*
+        |--------------------------------------------------------------------------
         | The product's tables structure
         |--------------------------------------------------------------------------
         */
@@ -98,9 +145,12 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | Delete a Product template
+        | The attributes's tables structure
         |--------------------------------------------------------------------------
         */
-        $templateProduct = SiteTemplate::whereTemplatealias('s_commerce_product')->delete();
+        Schema::dropIfExists('s_attribute_category');
+        Schema::dropIfExists('s_attribute_values');
+        Schema::dropIfExists('s_attribute_translates');
+        Schema::dropIfExists('s_attributes');
     }
 };

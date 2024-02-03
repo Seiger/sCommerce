@@ -74,7 +74,7 @@
     <script>
         $(document).ready(function () {
             $('.select2').select2();
-            $('.sortable').sortable();
+            $('.sortable').sortable({update:function(event,ui){documentDirty=true}});
 
             $("table img").on("mouseenter", function () {
                 var alt = $(this).attr("alt");
@@ -96,7 +96,6 @@
             // Delete item
             $(document).on("click", "[data-delete]", function(e) {
                 var _this = $(this);
-                console.log(_this.attr('data-delete'));
                 alertify
                     .confirm(
                         "@lang('sCommerce::global.confirm_delete')",
@@ -129,10 +128,10 @@
 
             // Flash messages
             @if (session()->has('success'))
-            alertify.success("{{session('success')}}");
+                alertify.success("{{session('success')}}");
             @endif
             @if (session()->has('error'))
-            alertify.success("{{session('error')}}");
+                alertify.success("{{session('error')}}");
             @endif
         });
 
@@ -269,17 +268,9 @@
             }
         }
 
-        function changestate(el) {
-            if (parseInt(el.value) === 1) {
-                el.value = 0;
-            } else {
-                el.value = 1;
-            }
-            documentDirty = true;
-        }
+        function changestate(el){if(parseInt(el.value)===1){el.value=0}else{el.value=1;}documentDirty=true}
 
         let allowParentSelection = false;
-
         function enableParentSelection(b) {
             let plock = document.getElementById('plock');
             if (b) {
@@ -301,6 +292,49 @@
                 elm.innerHTML = (pId + " (" + pName + ")");
             }
         }
+    </script>
+    <script>
+        //dropdown
+        document.addEventListener("click", function (event) {
+            const dropdowns = document.querySelectorAll('.dropdown');
+            dropdowns.forEach(function(dropdown) {
+                if (!dropdown.contains(event.target)) {
+                    dropdown.classList.remove('active')
+                } else {
+                    dropdown.classList.toggle('active')
+                }
+            });
+        });
+        //dropdown
+        // cookies
+        if (typeof cookieName === 'undefined'){cookieName = 'test'}
+        const cookieItems = document.querySelectorAll('[data-items]');
+        const actualCount = document.querySelector('[data-actual]');
+        const cookieValue = document.cookie.split('; ').find(row => row.startsWith(cookieName + '='))?.split('=')[1];
+        if (cookieValue !== undefined) {
+            actualCount?.setAttribute('data-actual', cookieValue);
+        } else {
+            setCookie(cookieName, 50, 30)
+        }
+        // Function to set a cookie
+        function setCookie(name, value, days) {
+            var expires = "";
+            if (days) {
+                var date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + value + expires + "; path=/";
+        }
+        function getCookie(name) {
+            document.cookie
+        }
+        cookieItems?.forEach(cookieItem => {
+            cookieItem.addEventListener('click', (e) => {
+                let itemValue = cookieItem.getAttribute('data-items')
+                setCookie(cookieName, itemValue, 30)
+            })
+        })
     </script>
     <img src="{{evo()->getConfig('site_url', '/')}}assets/site/noimage.png" id="img-preview" style="display: none;" class="post-thumbnail">
     <div id="copyright"><a href="https://seigerit.com/" target="_blank"><img src="{{evo()->getConfig('site_url', '/')}}assets/site/seigerit-blue.svg"/></a></div>

@@ -7,6 +7,8 @@ use Illuminate\Support\Str;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Models\sAttribute;
+use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sProduct;
 
 class sCommerceController
@@ -125,7 +127,7 @@ class sCommerceController
     public function listCategories(): array
     {
         $root = SiteContent::find(sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)));
-        $this->categories[$root->id] = $root->pagetitle;
+        $this->categories[$root->id] = __('sCommerce::global.catalog_root');
         if ($root->hasChildren()) {
             foreach ($root->children as $item) {
                 $this->categoryCrumb($item);
@@ -242,6 +244,45 @@ class sCommerceController
         switch ($key) {
             default :
                 $aliases = sProduct::whereNot('id', $id)->get('alias')->pluck('alias')->toArray();
+                break;
+            case "attribute":
+                $aliases = sAttribute::whereNot('id', $id)->get('alias')->pluck('alias')->toArray();
+                break;
+        }
+
+        if (in_array($alias, $aliases)) {
+            $cnt = 1;
+            $tempAlias = $alias;
+            while (in_array($tempAlias, $aliases)) {
+                $tempAlias = $alias . $cnt;
+                $cnt++;
+            }
+            $alias = $tempAlias;
+        }
+
+        return $alias;
+    }
+
+    /**
+     * Validates and returns a unique alias value.
+     *
+     * @param string $string The string to be converted into an alias.
+     * @param int $id The unique identifier.
+     * @param int $parent The parent identifier.
+     * @param string $key The key to determine the alias value (default: 'attrvalues').
+     * @return string The validated and unique alias value.
+     */
+    public function validateAliasValues(string $string, int $id, int $parent, string $key = 'attrvalues'): string
+    {
+        if (trim($string)) {
+            $alias = Str::slug(trim($string), '-');
+        } else {
+            $alias = $id;
+        }
+
+        switch ($key) {
+            default :
+                $aliases = sAttributeValue::whereNot('avid', $id)->whereNot('attribute', $parent)->get('alias')->pluck('alias')->toArray();
                 break;
         }
 

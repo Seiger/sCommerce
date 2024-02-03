@@ -1,9 +1,12 @@
 <?php namespace Seiger\sCommerce;
 
+use EvolutionCMS\Models\ClosureTable;
+use EvolutionCMS\Models\SiteContent;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sProduct;
 
 class sCommerce
@@ -60,6 +63,23 @@ class sCommerce
         $productIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->get()->pluck('product')->toArray();
 
         return sProduct::lang($lang)->whereIn('category', $categories)->orWhereIn('id', $productIds)->active()->get();
+    }
+
+    /**
+     * Retrieves the attribute object by its ID and language.
+     *
+     * @param int $attributeId The ID of the attribute to retrieve.
+     * @param string $lang The language code to use. Defaults to an empty string.
+     * @return object The attribute object if found, otherwise a new sAttribute object.
+     */
+    public function getAttribute(int $attributeId, string $lang = ''): object
+    {
+        if (!trim($lang)) {
+            $sCommerceController = new sCommerceController();
+            $lang = $sCommerceController->langDefault();
+        }
+
+        return sAttribute::lang($lang)->whereAttribute($attributeId)->first() ?? new sAttribute();
     }
 
     /**
