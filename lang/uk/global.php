@@ -97,6 +97,7 @@
     'type_attr_multiselect' => 'Мультивибір',
     'type_attr_text' => 'Текстове поле',
     'type_attr_textarea' => 'Текстова область',
+    'type_attr_richtext' => 'Візуальний редактор',
     'type_attr_color' => 'Палітра кольорів',
     'type_attr_date' => 'Вибір дати',
     'type_attr_datetime' => 'Дата й час',
@@ -117,4 +118,8 @@
     'deleted_irretrievably' => 'Якщо Ви натиснете кнопку видалити, елемент буде видалено безповоротно.',
     'deleted' => 'Видалено.',
     'canceled' => 'Скасовано.',
+    'additional_fields_main_product_tab' => 'Додаткові поля для головного таба продукта',
+    'caption' => 'Підпис',
+    'list_texts' => 'Список текстів',
+    'text_block' => 'Текстовий блок',
 ];

@@ -1,90 +1,87 @@
 @if(!is_writable(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerce.php'))<div class="alert alert-danger" role="alert">@lang('sCommerce::global.not_writable')</div>@endif
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=settingsSave" onsubmit="documentDirty=false;">
     <input type="hidden" name="back" value="&get=settings" />
-    {{--<h3>@lang('sCommerce::global.management_additional_fields')</h3>
-    <div class="row form-row widgets sortable">
-        @php($settings = require EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerce.php')
-        @foreach($settings as $setting)
-            <div class="col-sm-12">
-                <div class="card">
-                    <div class="card-header">
-                        <i style="cursor:pointer;font-size:x-large;" class="fas fa-sort"></i>&emsp; {{$setting['key']}}
-                        <span class="close-icon"><i class="fa fa-times"></i></span>
-                    </div>
-                    <div class="card-block">
-                        <div class="userstable">
-                            <div class="card-body">
-                                <div class="row form-row">
-                                    <div class="col-auto col-title-6">
-                                        <label class="warning">@lang('global.name')</label>
+    <div class="col col-12 col-sm-12 col-md-6">
+        <h3 class="sectionTrans">
+            @lang('sCommerce::global.additional_fields_main_product_tab')
+            <div class="btn-group">
+                <span class="btn btn-primary" onclick="addItem('main_product_constructors')">
+                    <i class="fa fa-plus"></i> <span>@lang('global.add')</span>
+                </span>
+            </div>
+        </h3>
+        <div id="main_product_constructors" class="row form-row widgets sortable">
+            @foreach(sCommerce::config('constructor.main_product', []) as $item)
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <i style="cursor:pointer;" class="fas fa-sort"></i>&emsp; {{$item['key']}}
+                            <span class="close-icon" onclick="deleteItem(this.closest('.card'))"><i class="fa fa-times"></i></span>
+                        </div>
+                        <div class="card-block">
+                            <div class="userstable">
+                                <div class="card-body">
+                                    <div class="row form-row">
+                                        <div class="col-auto col-title-6">
+                                            <label class="warning">@lang('sCommerce::global.key')</label>
+                                        </div>
+                                        <div class="col">
+                                            <input type="text" class="form-control" name="main_product_constructors[key][]" value="{{$item['key']}}" onchange="documentDirty=true;">
+                                        </div>
                                     </div>
-                                    <div class="col">
-                                        <input type="text" class="form-control" name="settings[name][]" maxlength="255" value="{{$setting['name']}}" onchange="documentDirty=true;" spellcheck="true">
+                                    <div class="row form-row">
+                                        <div class="col-auto col-title-6">
+                                            <label class="warning">@lang('sCommerce::global.caption')</label>
+                                        </div>
+                                        <div class="col">
+                                            <input type="text" class="form-control" name="main_product_constructors[caption][]" value="{{$item['caption']}}" onchange="documentDirty=true;">
+                                        </div>
                                     </div>
+                                    <div class="row form-row">
+                                        <div class="col-auto col-title-6">
+                                            <label class="warning">@lang('sCommerce::global.type_input')</label>
+                                        </div>
+                                        <div class="col">
+                                            <select class="form-control" name="main_product_constructors[type][]" onchange="documentDirty=true;">
+                                                @foreach($fieldtypes as $key => $value)
+                                                    <option value="{{$key}}" @if($item['type'] == $key) selected @endif>{{$value}}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                    @if(in_array($item['type'], ['select', 'multiselect']))
+                                        <div class="row form-row js_options">
+                                            <div class="col-auto">
+                                                <label>
+                                                    @lang('sCommerce::global.value')
+                                                    <i onclick="addOption(this.closest('.js_options'))" class="fa fa-plus-circle text-primary"></i>
+                                                </label>
+                                            </div>
+                                            <div class="col">
+                                                @if(isset($item['options']) && is_array($item['options']) && count($item['options']))
+                                                    @foreach($item['options'] as $option)
+                                                        <div class="row form-row">
+                                                            <div class="col">
+                                                                <input type="text" class="form-control" name="main_product_constructors[options][{{$item['key']}}][]" value="{{$option}}" onchange="documentDirty=true;">
+                                                            </div>
+                                                            <div class="col-auto">
+                                                                <i onclick="deleteItem(this.closest('.row'))" class="fa fa-minus-circle text-danger"></i>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
-                                <div class="row form-row">
-                                    <div class="col-auto col-title-6">
-                                        <label class="warning">@lang('sArticles::global.field_type')</label>
-                                    </div>
-                                    <div class="col">
-                                        <select id="rating" class="form-control" name="settings[type][]" onchange="documentDirty=true;">
-                                            @foreach(['Text', 'Textarea', 'RichText', 'File', 'Image'] as $value)
-                                                <option value="{{$value}}" @if($setting['type'] == $value) selected @endif>{{$value}}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="settings[key][]" value="{{$setting['key']}}" />
                             </div>
                         </div>
+                        <input type="hidden" data-name="oldkey" name="main_product_constructors[oldkey][]" value="{{$item['key']}}">
                     </div>
                 </div>
-            </div>
-        @endforeach
-    </div>
-    <div class="split my-3"></div>
-    <h3>@lang('sArticles::global.management_fields_on')</h3>
-    <div class="row form-row">
-        <div class="row-col col-lg-3 col-md-3 col-12">
-            <div class="row form-row">
-                <div class="col-title-8">
-                    <label for="tag_texts_on" class="warning">@lang('sArticles::global.tag_texts')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sArticles::global.tag_texts_on_off_help')"></i>
-                </div>
-                <div class="col">
-                    <input type="checkbox" id="tag_texts_on_check" class="form-checkbox form-control" name="tag_texts_on_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.tag_texts_on);" @if(evo()->getConfig('sart_tag_texts_on', 1) == 1) checked @endif>
-                    <input type="hidden" id="tag_texts_on" name="tag_texts_on" value="{{evo()->getConfig('sart_tag_texts_on', 1)}}" onchange="documentDirty=true;">
-                </div>
-            </div>
+            @endforeach
         </div>
     </div>
-    <div class="row form-row">
-        <div class="row-col col-lg-3 col-md-3 col-12">
-            <div class="row form-row">
-                <div class="col-title-8">
-                    <label for="cover_title_on" class="warning">@lang('sArticles::global.cover_title')</label>
-                </div>
-                <div class="col">
-                    <input type="checkbox" id="cover_title_on_check" class="form-checkbox form-control" name="cover_title_on_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.cover_title_on);" @if(evo()->getConfig('sart_cover_title_on', 1) == 1) checked @endif>
-                    <input type="hidden" id="cover_title_on" name="cover_title_on" value="{{evo()->getConfig('sart_cover_title_on', 1)}}" onchange="documentDirty=true;">
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="row-col col-lg-3 col-md-3 col-12">
-            <div class="row form-row">
-                <div class="col-title-8">
-                    <label for="long_title_on" class="warning">@lang('global.long_title')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('sArticles::global.long_title_on_off_help')"></i>
-                </div>
-                <div class="col">
-                    <input type="checkbox" id="long_title_on_check" class="form-checkbox form-control" name="long_title_on_check" value="" onchange="documentDirty=true;" onclick="changestate(document.form.long_title_on);" @if(evo()->getConfig('sart_long_title_on', 1) == 1) checked @endif>
-                    <input type="hidden" id="long_title_on" name="long_title_on" value="{{evo()->getConfig('sart_long_title_on', 1)}}" onchange="documentDirty=true;">
-                </div>
-            </div>
-        </div>
-    </div>--}}
     <div class="split my-3"></div>
     <h3>@lang('sCommerce::global.management_base_functionality')</h3>
     <div class="row form-row">
@@ -375,9 +372,6 @@
             <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}">
                 <i class="fa fa-times-circle"></i><span>@lang('global.cancel')</span>
             </a>
-            {{--<a id="Button2" class="btn btn-primary" href="javascript:void(0);" onclick="addItem();">
-                <i class="fa fa-plus"></i><span>@lang('global.add')</span>
-            </a>--}}
             <a id="Button1" class="btn btn-success" href="javascript:void(0);" onclick="saveForm('#form');">
                 <i class="fas fa-save"></i><span>@lang('global.save')</span>
             </a>
@@ -387,36 +381,36 @@
         <div class="col-sm-12">
             <div class="card">
                 <div class="card-header">
-                    <i style="cursor:pointer;font-size:x-large;" class="fas fa-sort"></i>&emsp; @lang('sArticles::global.new_field')
-                    <span class="close-icon"><i class="fa fa-times"></i></span>
+                    <i style="cursor:pointer;" class="fas fa-sort"></i>&emsp;
+                    <span class="close-icon" onclick="deleteItem(this.closest('.card'))"><i class="fa fa-times"></i></span>
                 </div>
                 <div class="card-block">
                     <div class="userstable">
                         <div class="card-body">
                             <div class="row form-row">
                                 <div class="col-auto col-title-6">
-                                    <label class="warning">@lang('sArticles::global.key')</label>
+                                    <label class="warning">@lang('sCommerce::global.key')</label>
                                 </div>
                                 <div class="col">
-                                    <input type="text" class="form-control" name="settings[key][]" maxlength="255" value="" onchange="documentDirty=true;" spellcheck="true">
+                                    <input type="text" class="form-control" name="constructors[key][]" value="" onchange="documentDirty=true;">
                                 </div>
                             </div>
                             <div class="row form-row">
                                 <div class="col-auto col-title-6">
-                                    <label class="warning">@lang('global.name')</label>
+                                    <label class="warning">@lang('sCommerce::global.caption')</label>
                                 </div>
                                 <div class="col">
-                                    <input type="text" class="form-control" name="settings[name][]" maxlength="255" value="" onchange="documentDirty=true;" spellcheck="true">
+                                    <input type="text" class="form-control" name="constructors[caption][]" value="" onchange="documentDirty=true;">
                                 </div>
                             </div>
                             <div class="row form-row">
                                 <div class="col-auto col-title-6">
-                                    <label class="warning">@lang('sArticles::global.field_type')</label>
+                                    <label class="warning">@lang('sCommerce::global.type_input')</label>
                                 </div>
                                 <div class="col">
-                                    <select id="rating" class="form-control" name="settings[type][]" onchange="documentDirty=true;">
-                                        @foreach(['Text', 'Textarea', 'RichText', 'File', 'Image'] as $value)
-                                            <option value="{{$value}}">{{$value}}</option>
+                                    <select class="form-control" name="constructors[type][]" onchange="documentDirty=true;">
+                                        @foreach($fieldtypes as $key => $value)
+                                            <option value="{{$key}}">{{$value}}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -424,6 +418,16 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    <div class="draft-option hidden">
+        <div class="row form-row">
+            <div class="col">
+                <input type="text" class="form-control" name="constructors[options][]" value="" onchange="documentDirty=true;">
+            </div>
+            <div class="col-auto">
+                <i onclick="deleteItem(this.closest('.row'))" class="fa fa-minus-circle text-danger"></i>
             </div>
         </div>
     </div>
@@ -450,13 +454,9 @@
                 nIntervId = null;
             }
         }
-        function changeParent() {
-            if (document.form.parent.value > 0) {
-                if (parentAction == 'catalogRoot') {
-                    document.form.basic__catalog_root.value = document.form.parent.value;
-                    document.getElementById('catalogRootName').innerHTML = document.getElementById('parentName').innerHTML;
-                }
-            }
-        }
+        function changeParent(){if(document.form.parent.value>0){if(parentAction=='catalogRoot'){document.form.basic__catalog_root.value = document.form.parent.value;document.getElementById('catalogRootName').innerHTML = document.getElementById('parentName').innerHTML}}}
+        function addItem(selector){document.getElementById(selector).insertAdjacentHTML('beforeend', document.querySelector('.draft-value').innerHTML.replaceAll('constructors', selector));documentDirty=true}
+        function deleteItem(element){alertify.confirm("@lang('sCommerce::global.are_you_sure')","@lang('sCommerce::global.deleted_irretrievably')",function(){alertify.error("@lang('sCommerce::global.deleted')");element.remove()},function(){alertify.success("@lang('sCommerce::global.canceled')")}).set('labels',{ok:"@lang('global.delete')",cancel:"@lang('global.cancel')"}).set({transition:'zoom'});documentDirty=true}
+        function addOption(element){element.querySelector('.col').insertAdjacentHTML('beforeend', document.querySelector('.draft-option').innerHTML.replaceAll('constructors[options]', element.closest('.widgets').getAttribute('id')+'[options]['+element.closest('.card').querySelector('[data-name="oldkey"]').value+']'));documentDirty=true}
     </script>
 @endpush

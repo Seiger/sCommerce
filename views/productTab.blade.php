@@ -8,7 +8,7 @@
         <div class="row-col col-lg-3 col-md-6 col-12">
             <div class="row form-row form-row-checkbox">
                 <div class="col-auto col-title">
-                    <label for="publishedcheck" class="warning">@lang('sCommerce::global.visibility')</label>
+                    <label for="publishedcheck">@lang('sCommerce::global.visibility')</label>
                     <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.published_help')"></i>
                 </div>
                 <div class="col">
@@ -24,7 +24,7 @@
             <div class="row-col col-lg-3 col-md-6 col-12">
                 <div class="row form-row">
                     <div class="col-auto col-title">
-                        <label for="availability" class="warning">@lang('sCommerce::global.availability')</label>
+                        <label for="availability">@lang('sCommerce::global.availability')</label>
                         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.availability_help')"></i>
                     </div>
                     <div class="col">
@@ -41,7 +41,7 @@
             <div class="row-col col-lg-3 col-md-6 col-12">
                 <div class="row form-row">
                     <div class="col-auto col-title">
-                        <label for="sku" class="warning">@lang('sCommerce::global.sku')</label>
+                        <label for="sku">@lang('sCommerce::global.sku')</label>
                         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.sku_help')"></i>
                     </div>
                     <div class="col">
@@ -50,10 +50,10 @@
                 </div>
             </div>
         @endif
-        <div class="row-col col-lg-3 col-md-3 col-12">
+        <div class="row-col col-lg-3 col-md-6 col-12">
             <div class="row form-row">
-                <div class="col-auto col-title-7">
-                    <label for="alias" class="warning">@lang('global.resource_alias')</label>
+                <div class="col-auto col-title">
+                    <label for="alias">@lang('global.resource_alias')</label>
                     <i class="fa fa-question-circle" data-tooltip="@lang('global.resource_alias_help')"></i>
                 </div>
                 <div class="input-group col">
@@ -63,10 +63,10 @@
             </div>
         </div>
         @if(sCommerce::config('product.show_field_price', 1) == 1)
-            <div class="row-col col-lg-3 col-md-3 col-12">
+            <div class="row-col col-lg-3 col-md-6 col-12">
                 <div class="row form-row">
                     <div class="col-auto col-title">
-                        <label for="price" class="warning">@lang('sCommerce::global.price')</label>
+                        <label for="price">@lang('sCommerce::global.price')</label>
                         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_help')"></i>
                     </div>
                     <div class="col">
@@ -78,7 +78,7 @@
         <div class="row-col col-lg-3 col-md-3 col-12">
             <div class="row form-row">
                 <div class="col-auto col-title">
-                    <label for="parent" class="warning">@lang('sCommerce::global.category')</label>
+                    <label for="parent">@lang('sCommerce::global.category')</label>
                     <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_product_help')"></i>
                 </div>
                 <div class="col">
@@ -106,7 +106,7 @@
             <div class="row-col col-lg-6 col-md-6 col-12">
                 <div class="row form-row">
                     <div class="col-auto col-title">
-                        <label for="categories" class="warning">@lang('sCommerce::global.categories')</label>
+                        <label for="categories">@lang('sCommerce::global.categories')</label>
                         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_help')"></i>
                     </div>
                     <div class="col">
@@ -140,7 +140,7 @@
 @push('scripts.bot')
     <div id="actions">
         <div class="btn-group">
-            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}">
+            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}{{request()->has('page') ? '&page=' . request()->page : ''}}">
                 <i class="fa fa-times-circle"></i><span>@lang('sCommerce::global.to_list_products')</span>
             </a>
             <a id="Button1" class="btn btn-success" href="javascript:void(0);" onclick="saveForm('#form');">

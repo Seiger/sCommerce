@@ -27,11 +27,12 @@ class sAttribute extends Model
     const TYPE_ATTR_MULTISELECT = 4;
     const TYPE_ATTR_TEXT = 5;
     //const TYPE_ATTR_TEXTAREA = 6;
-    //const TYPE_ATTR_COLOR = 7;
-    //const TYPE_ATTR_DATE = 8;
-    //const TYPE_ATTR_DATETIME = 9;
-    //const TYPE_ATTR_IMAGE = 10;
-    //const TYPE_ATTR_FILE = 11;
+    //const TYPE_ATTR_RICHTEXT = 7;
+    //const TYPE_ATTR_COLOR = 8;
+    //const TYPE_ATTR_DATE = 9;
+    //const TYPE_ATTR_DATETIME = 10;
+    //const TYPE_ATTR_IMAGE = 11;
+    //const TYPE_ATTR_FILE = 12;
 
     /**
      * Return list of type of input the attribute codes and labels

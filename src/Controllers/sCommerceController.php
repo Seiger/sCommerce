@@ -64,8 +64,36 @@ class sCommerceController
      */
     public function updateFileConfigs(): bool
     {
-        $filters = ['basic', 'product', 'products'];
+        $filters = ['basic', 'constructor', 'product', 'products'];
         $all = request()->all();
+
+        if (isset($all['main_product_constructors']) && is_array($all['main_product_constructors']) && count($all['main_product_constructors'])) {
+            $keys = array_keys($all['main_product_constructors']);
+            if (count($keys)) {
+                foreach ($all['main_product_constructors']['key'] as $idx => $keyname) {
+                    $array = [];
+                    $keyname = Str::slug($keyname, '_');
+                    foreach ($keys as $key) {
+                        if ($key == 'key') {
+                            $array[$key] = $keyname;
+                        } elseif ($key == 'options') {
+                            $oldkey = $all['main_product_constructors']['oldkey'][$idx] ?? '';
+                            $array['options'] = [];
+                            if (trim($oldkey) && isset($all['main_product_constructors']['options'][$oldkey])) {
+                                if (is_array($all['main_product_constructors']['options'][$oldkey]) && count($all['main_product_constructors']['options'][$oldkey])) {
+                                    $array['options'] = $all['main_product_constructors']['options'][$oldkey];
+                                }
+                            }
+                        } else {
+                            $array[$key] = $all['main_product_constructors'][$key][$idx];
+                        }
+                    }
+                    unset($array['oldkey']);
+                    $all['constructor__main_product'][$keyname] = $array;
+                }
+            }
+        }
+
         ksort($all);
         $config = [];
 
@@ -74,7 +102,22 @@ class sCommerceController
             foreach ($all as $key => $value) {
                 if (str_starts_with($key, $filter . '__')) {
                     $key = str_replace($filter . '__', '', $key);
-                    if ($this->isInteger($value)) {
+                    if (is_array($value)) {
+                        $array = [];
+                        foreach ($value as $k => $v) {
+                            if (is_array($v)) {
+                                foreach ($v as $k1 => $v1) {
+                                    if ($this->isInteger($v1)) {
+                                        $v1 = intval($v1);
+                                    }
+                                    $v[$k1] = $v1;
+                                }
+                            } elseif ($this->isInteger($v)) {
+                                $v = intval($v);
+                            }
+                            $value[$k] = $v;
+                        }
+                    } elseif ($this->isInteger($value)) {
                         $value = intval($value);
                     }
                     $config[$filter][$key] = $value;
@@ -360,7 +403,7 @@ class sCommerceController
      */
     protected function isInteger(mixed $input): bool
     {
-        return (ctype_digit(strval($input)));
+        return is_scalar($input) && ctype_digit(strval($input));
     }
 
     /**

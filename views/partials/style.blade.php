@@ -7,7 +7,8 @@
     #copyright img{width:35px;}
     #img-preview{border:1px solid #ccc;position:fixed;top:50%;left:50%;width:600px;margin-top:-300px;margin-left:-300px;display:none;}
     #preview.form-control{max-width:85px;background:#CECECF;}
-    input[type=checkbox], input[type=radio] {padding:0.5em;}
+    h3.sectionTrans .btn-group .btn{font-size:0.6772rem;}
+    input[type=checkbox], input[type=radio]{padding:0.5em;}
     table .product-thumbnail{width:70px;height:45px;}
     span[data-actual]::before{content:attr(data-actual);}
     ul.select2-selection__rendered{margin-left:unset;}

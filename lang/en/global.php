@@ -97,6 +97,7 @@
     'type_attr_multiselect' => 'Multiselect',
     'type_attr_text' => 'Text',
     'type_attr_textarea' => 'Text Area',
+    'type_attr_richtext' => 'Wysiwyg Editor',
     'type_attr_color' => 'Color Picker',
     'type_attr_date' => 'Date Picker',
     'type_attr_datetime' => 'Datetime Picker',
@@ -118,4 +119,8 @@
     'deleted_irretrievably' => 'If you press the delete button, the item will be irretrievably deleted.',
     'deleted' => 'Deleted.',
     'canceled' => 'Cancelled.',
+    'additional_fields_main_product_tab' => 'Additional fields for the main product tab',
+    'caption' => 'Caption',
+    'list_texts' => 'List of texts',
+    'text_block' => 'Text block',
 ];

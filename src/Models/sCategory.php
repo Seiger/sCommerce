@@ -2,6 +2,12 @@
 
 use EvolutionCMS\Models\SiteContent;
 
+/**
+ * Class sCategory
+ * This class extends the SiteContent class and represents a category.
+ *
+ * @package Seiger\sCommerce
+ */
 class sCategory extends SiteContent
 {
     /**

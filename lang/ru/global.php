@@ -97,6 +97,7 @@
     'type_attr_multiselect' => 'Мультивибор',
     'type_attr_text' => 'Текстовое поле',
     'type_attr_textarea' => 'Текстовая область',
+    'type_attr_richtext' => 'Визуальный редактор',
     'type_attr_color' => 'Палитра цветов',
     'type_attr_date' => 'Вибор даты',
     'type_attr_datetime' => 'Дата и время',
@@ -117,4 +118,8 @@
     'deleted_irretrievably' => 'Если вы нажмете кнопку удалить, элемент будет удален безвозвратно.',
     'deleted' => 'Удалено.',
     'canceled' => 'Отменено.',
+    'additional_fields_main_product_tab' => 'Дополнительные поля для главного таба продукта',
+    'caption' => 'Подпись',
+    'list_texts' => 'Список текстов',
+    'text_block' => 'Текстовый блок',
 ];

@@ -111,45 +111,6 @@
             @endif
         @endforeach--}}
     </div>
-    <div class="split my-2"></div>
-    <div class="row-col col-lg-12 col-12">
-        <div class="row form-row">
-            <div class="col-auto col-title">
-                <label for="seotitle" class="warning">@lang('sCommerce::global.seotitle')</label>
-                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.seotitle_help')"></i>
-            </div>
-            <div class="col">
-                <div class="input-group">
-                    <input type="text" id="seotitle" class="form-control" name="seotitle" value="{{$item->seotitle ?? ''}}" onchange="documentDirty=true;">
-                </div>
-            </div>
-        </div>
-        <div class="row form-row">
-            <div class="col-auto col-title">
-                <label for="seotitle" class="warning">@lang('sCommerce::global.seodescription')</label>
-                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.seodescription_help')"></i>
-            </div>
-            <div class="col">
-                <div class="input-group">
-                    <textarea id="seodescription" class="form-control" name="seodescription" rows="3" wrap="soft" onchange="documentDirty=true;">{{$item->seodescription ?? ''}}</textarea>
-                </div>
-            </div>
-        </div>
-        <div class="row form-row">
-            <div class="col-auto col-title">
-                <label for="seorobots" class="warning">@lang('sCommerce::global.seorobots')</label>
-                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.seorobots_help')"></i>
-            </div>
-            <div class="col">
-                <select id="seorobots" class="form-control" name="seorobots" onchange="documentDirty=true;">
-                    @foreach(['index,follow', 'noindex,nofollow'] as $value)
-                        <option value="{{$value}}" @if(($item->seorobots ?? 'index,follow') == $value) selected @endif>{{$value}}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-        <div class="split my-2"></div>
-    </div>
 </form>
 
 @push('scripts.bot')
@@ -208,7 +169,6 @@
             let elem=$('#'+attr).closest('.element').html();
             let enew=elem.replace('id="'+attr+'"','id="'+attr+cnts+'"')
                 .replace('id="image_for_'+attr+'"','id="image_for_'+attr+cnts+'"')
-                .replace('BrowseServer(\''+attr+'\')','BrowseServer(\''+attr+cnts+'\')')
                 .replace('BrowseServer(\''+attr+'\')','BrowseServer(\''+attr+cnts+'\')')
                 .replace('getElementById(\''+attr+'\')','getElementById(\''+attr+cnts+'\')')
                 .replace(/builder\[9999\]\[/g,'builder['+cnts+'][');

@@ -128,7 +128,8 @@ switch ($get) {
         $product->type = $type;
         $product->save();
 
-        $product->categories()->sync((array)request()->input('categories', []));
+        $categories = array_merge((array)request()->input('categories', []), [$product->category]);
+        $product->categories()->sync($categories);
 
         if (!$product->texts->count()) {
             $product->texts()->create(['lang' => $sCommerceController->langDefault()]);
@@ -476,6 +477,17 @@ switch ($get) {
             $back = request()->back ?? '&get=orders';
             return header('Location: ' . sCommerce::moduleUrl() . $back);
         }
+
+        $data['mainProductConstructors'] = [];
+        $data['fieldtypes'] = [
+            'text' => __('sCommerce::global.type_attr_text'),
+            'textarea' => __('sCommerce::global.type_attr_textarea'),
+            //'richtext' => __('sCommerce::global.type_attr_richtext'),
+            'select' => __('sCommerce::global.type_attr_select'),
+            'multiselect' => __('sCommerce::global.type_attr_multiselect'),
+            'image' => __('sCommerce::global.type_attr_image'),
+            'file' => __('sCommerce::global.type_attr_file'),
+        ];
         break;
     case "settingsSave":
         $sCommerceController->updateDBConfigs();

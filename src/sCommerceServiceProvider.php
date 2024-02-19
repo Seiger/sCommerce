@@ -32,7 +32,7 @@ class sCommerceServiceProvider extends ServiceProvider
                 dirname(dirname(__DIR__)) . '/sgallery/images/youtube-logo.png' => public_path('assets/site/youtube-logo.png'),
                 dirname(__DIR__) . '/config/sCommerceAlias.php' => config_path('app/aliases/sCommerce.php', true),
                 dirname(__DIR__) . '/config/sCommerceSettings.php' => config_path('seiger/settings/sCommerce.php', true),
-                dirname(__DIR__) . '/images/noimage.png' => public_path('assets/site/noimage.png'),
+                dirname(__DIR__) . '/images/noimage.png' => public_path('assets/images/noimage.png'),
                 dirname(__DIR__) . '/images/seigerit-blue.svg' => public_path('assets/site/seigerit-blue.svg'),
                 dirname(__DIR__) . '/views/s_commerce_product.blade.php' => public_path('views/s_commerce_product.blade.php'),
                 dirname(__DIR__) . '/builder/accordion/config.php' => public_path('assets/modules/scommerce/builder/accordion/config.php'),

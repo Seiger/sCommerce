@@ -10,6 +10,9 @@
 
 # Welcome to sCommerce!
 
+> [!IMPORTANT]  
+> sCommerce not stable yet. It active development.
+
 **sCommerce** stands as a comprehensive suite of **e-commerce** tools meticulously crafted
 for Evolution CMS. Tailored to empower Evolution CMS users, this dynamic package
 seamlessly integrates with the CMS platform, transforming it into a robust foundation
@@ -24,6 +27,20 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Order Management.
 - [ ] Order Status Management.
 - [x] Products Catalog.
+- [x] Products Attributes.
+- - [x] Number Attribute.
+- - [ ] Checkbox Attribute.
+- - [ ] Radio Attribute.
+- - [x] Select Attribute.
+- - [x] Multiselect Attribute.
+- - [x] Text Attribute.
+- - [ ] TextArea Attribute.
+- - [ ] RichText Attribute.
+- - [ ] Color Attribute.
+- - [ ] Date Attribute.
+- - [ ] DateTime Attribute.
+- - [ ] Image Attribute.
+- - [ ] File Attribute.
 - [ ] Dynamic Filters for Product Search.
 - [ ] Promo Code System.
 - [ ] Customer Reviews and Ratings.
@@ -32,8 +49,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Integration with Warehouses.
 - [ ] Integration with Trading Platforms.
 - [x] **[sLang](https://github.com/Seiger/sLang)** Integration.
-- [x] sGallery Integration.
-- [x] sMultisite Integration.
+- [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
+- [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.
 - [ ] Advanced Analytics and Reporting.
 - [ ] Personalized Recommendations.
 - [ ] Social Media Integration.
