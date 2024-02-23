@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sProduct;
+use Seiger\sCommerce\Models\sProductTranslate;
 
 class sCommerce
 {
@@ -25,7 +26,16 @@ class sCommerce
             $lang = $sCommerceController->langDefault();
         }
 
-        return sProduct::lang($lang)->whereProduct($productId)->first() ?? new sProduct();
+        $product = sProduct::lang($lang)->whereProduct($productId)->first();
+
+        if (!$product) {
+            $translate = sProductTranslate::whereProduct($productId)->first();
+            if ($translate) {
+                $product = sProduct::lang($translate->lang)->whereProduct($productId)->first();
+            }
+        }
+
+        return $product ?? new sProduct();
     }
 
     /**

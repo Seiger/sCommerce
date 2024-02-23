@@ -75,11 +75,14 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $product = sCommerce::getProduct($requestId);
 
-        $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+        $categoryParentsIds = [0];
+        if ($product->category) {
+            $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+        }
         $attributes = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {
             $q->whereIn('category', $categoryParentsIds);
         })->get();
-        if ($attributes) {
+        if ($attributes->count()) {
             $tabs[] = 'prodattributes';
         }
 
