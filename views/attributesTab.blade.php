@@ -42,6 +42,7 @@
             <tr style="height: 42px;" id="attribute-{{$item->id}}">
                 <td>
                     {{$item->pagetitle ?? __('sCommerce::global.no_text')}}
+                    @if(isset($item->asfilter) && $item->asfilter)<span class="badge bg-seigerit bg-super">@lang('sCommerce::global.as_filter')</span>@endif
                 </td>
                 <td>
                     @if($item->category > 1)

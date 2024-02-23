@@ -14,6 +14,7 @@
     ul.select2-selection__rendered{margin-left:unset;}
     .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok {color:#fff;background-color:#d9534f;border-color:#d9534f;}
     .badge.bg-seigerit{background-color:#0057b8 !important;color:#ffd700;font-size:85%;}
+    .badge.bg-super{vertical-align:super;font-size:60% !important;}
     .builder .row{display:flex;flex-wrap:wrap;margin-left:-.25rem;margin-right:-.25rem;cursor:default}
     .builder .col-4, .builder .col-8, .builder .col-12, .builder .col, .builder .col-auto{position:relative;width:100%;min-height:0;padding-left:.25rem;padding-right:.25rem}
     .builder .col{flex-basis:0;flex-grow:1;max-width:100%}

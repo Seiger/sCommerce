@@ -9,6 +9,7 @@ use Psr\Container\NotFoundExceptionInterface;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
+use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
 
 class sCommerceController
@@ -165,11 +166,15 @@ class sCommerceController
     /**
      * Retrieve the list of categories and their respective IDs.
      *
+     * @param int $category The ID of the category to retrieve sub-categories for.
      * @return array An associative array where the keys are the category IDs and the values are the category titles.
      */
-    public function listCategories(): array
+    public function listCategories(int $category = 0): array
     {
-        $root = SiteContent::find(sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)));
+        if ($category == 0) {
+            $category = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
+        }
+        $root = SiteContent::find($category);
         $this->categories[$root->id] = __('sCommerce::global.catalog_root');
         if ($root->hasChildren()) {
             foreach ($root->children as $item) {
@@ -184,11 +189,23 @@ class sCommerceController
      *
      * @param int $category The ID of the category to retrieve sub-categories for.
      * @param int $dept The depth of sub-categories to retrieve (default: 10).
-     * @return mixed An array of all active sub-category IDs within the specified category.
+     * @return array An array of all active sub-category IDs within the specified category.
      */
-    public function listAllActiveSubCategories(int $category, int $dept = 10)
+    public function listAllActiveSubCategories(int $category, int $dept = 10): array
     {
         return $this->getActiveChildIds($category, $dept);
+    }
+
+    /**
+     * Retrieves the parent IDs of a category.
+     *
+     * @param int $category The ID of the category.
+     * @return array An array containing the parent IDs of the category.
+     */
+    public function categoryParentsIds(int $category): array
+    {
+        $this->categories[] = $category;
+        return $this->getParentsIds($category);
     }
 
     /**
@@ -392,6 +409,25 @@ class sCommerceController
             }
         }
 
+        return $this->categories;
+    }
+
+    /**
+     * Retrieves the IDs of the parent categories for the specified category.
+     *
+     * @param int $categoryId The ID of the category for which to retrieve parent IDs.
+     * @return array An array containing the IDs of the parent categories.
+     */
+    protected function getParentsIds(int $categoryId): array
+    {
+        if ($categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
+            $category = sCategory::find($categoryId);
+            $parent = $category->getParent();
+            $this->categories = array_merge($this->categories, [$parent->id]);
+            if ($categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
+                $this->categories = $this->getParentsIds($parent->id);
+            }
+        }
         return $this->categories;
     }
 

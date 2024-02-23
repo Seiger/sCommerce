@@ -70,12 +70,23 @@ switch ($get) {
         $data['disactive'] = $data['total'] - $data['active'];
         break;
     case "product":
-        $tabs = ['product', 'content'];
+        $tabs = ['product'];
         $iUrl = trim($iUrl) ?: '&i=0';
         $requestId = (int)request()->input('i', 0);
         $product = sCommerce::getProduct($requestId);
+
+        $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+        $attributes = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {
+            $q->whereIn('category', $categoryParentsIds);
+        })->get();
+        if ($attributes) {
+            $tabs[] = 'prodattributes';
+        }
+
         $data['categories'] = [];
         $data['item'] = $product;
+
+        $tabs[] = 'content';
         break;
     case "productSave":
         $requestId = (int)request()->input('i', 0);
@@ -152,6 +163,20 @@ switch ($get) {
         $sCommerceController->setProductsListing();
         $back = '&get=products';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
+    case "prodattributes":
+        $tabs = ['product', 'prodattributes', 'content'];
+        $iUrl = trim($iUrl) ?: '&i=0';
+        $requestId = (int)request()->input('i', 0);
+        $product = sCommerce::getProduct($requestId);
+
+        $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+        $attributes = sAttribute::lang($sCommerceController->langDefault())->whereHas('categories', function ($q) use ($categoryParentsIds) {
+            $q->whereIn('category', $categoryParentsIds);
+        })->get();
+
+        $data['product'] = $product;
+        $data['items'] = $attributes;
+        break;
     case "content":
         $tabs = ['product', 'content'];
         $iUrl = trim($iUrl) ?: '&i=0';

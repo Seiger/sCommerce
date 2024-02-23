@@ -28,19 +28,19 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Order Status Management.
 - [x] Products Catalog.
 - [x] Products Attributes.
-- - [x] Number Attribute.
-- - [ ] Checkbox Attribute.
-- - [ ] Radio Attribute.
-- - [x] Select Attribute.
-- - [x] Multiselect Attribute.
-- - [x] Text Attribute.
-- - [ ] TextArea Attribute.
-- - [ ] RichText Attribute.
-- - [ ] Color Attribute.
-- - [ ] Date Attribute.
-- - [ ] DateTime Attribute.
-- - [ ] Image Attribute.
-- - [ ] File Attribute.
+    - [x] Number Attribute.
+    - [ ] Checkbox Attribute.
+    - [ ] Radio Attribute.
+    - [x] Select Attribute.
+    - [x] Multiselect Attribute.
+    - [x] Text Attribute.
+    - [ ] TextArea Attribute.
+    - [ ] RichText Attribute.
+    - [ ] Color Attribute.
+    - [ ] Date Attribute.
+    - [ ] DateTime Attribute.
+    - [ ] Image Attribute.
+    - [ ] File Attribute.
 - [ ] Dynamic Filters for Product Search.
 - [ ] Promo Code System.
 - [ ] Customer Reviews and Ratings.

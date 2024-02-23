@@ -14,6 +14,7 @@ use ReflectionClass;
  *
  * @method static Builder|sAttribute lang(string $locale)
  * @method Builder|sAttribute search()
+ * @method Builder|sAttribute active()
  */
 class sAttribute extends Model
 {
@@ -29,7 +30,7 @@ class sAttribute extends Model
     //const TYPE_ATTR_TEXTAREA = 6;
     //const TYPE_ATTR_RICHTEXT = 7;
     //const TYPE_ATTR_COLOR = 8;
-    //const TYPE_ATTR_DATE = 9;
+    const TYPE_ATTR_DATE = 9;
     //const TYPE_ATTR_DATETIME = 10;
     //const TYPE_ATTR_IMAGE = 11;
     //const TYPE_ATTR_FILE = 12;
@@ -101,6 +102,17 @@ class sAttribute extends Model
                 ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
                 ->orderByDesc('points');
         }
+    }
+
+    /**
+     * Apply the active scope to the given query builder.
+     *
+     * @param \Illuminate\Database\Query\Builder $builder The query builder to apply the scope to.
+     * @return \Illuminate\Database\Query\Builder The modified query builder.
+     */
+    public function scopeActive($builder)
+    {
+        return $builder->where('s_attributes.published', '1');
     }
 
     /**
