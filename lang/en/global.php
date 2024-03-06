@@ -103,6 +103,7 @@
     'type_attr_datetime' => 'Datetime Picker',
     'type_attr_image' => 'Image',
     'type_attr_file' => 'File',
+    'type_attr_geolocation' => 'Geolocation',
     'helptext' => 'Help text',
     'helptext_help' => 'Description about this Attribute in adminpanel.',
     'attribute_name_help' => 'This name will be displayed when the attribute is output.',
@@ -123,4 +124,7 @@
     'caption' => 'Caption',
     'list_texts' => 'List of texts',
     'text_block' => 'Text block',
+    'prodattributes' => 'Attributes',
+    'prodattributes_icon' => 'fas fa-paperclip',
+    'prodattributes_help' => 'List of product attributes.',
 ];

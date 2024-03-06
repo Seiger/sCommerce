@@ -108,6 +108,13 @@ return new class extends Migration
             $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
         });
 
+        Schema::create('s_product_attribute_values', function (Blueprint $table) {
+            $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
+            $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
+            $table->unsignedInteger('valueid')->default(0)->index()->comment('This is Id if the attribute value is given as an element from the data set of values');
+            $table->string('value', 1024)->index()->comment('It using for value if valueid is null');
+        });
+
         /*
         |--------------------------------------------------------------------------
         | Create a Product template
@@ -141,13 +148,14 @@ return new class extends Migration
         | The product's tables structure
         |--------------------------------------------------------------------------
         */
+        Schema::dropIfExists('s_product_attribute_values');
         Schema::dropIfExists('s_product_category');
         Schema::dropIfExists('s_product_translates');
         Schema::dropIfExists('s_products');
 
         /*
         |--------------------------------------------------------------------------
-        | The attributes's tables structure
+        | The attribute's tables structure
         |--------------------------------------------------------------------------
         */
         Schema::dropIfExists('s_attribute_category');

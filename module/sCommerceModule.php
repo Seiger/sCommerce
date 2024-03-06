@@ -177,11 +177,68 @@ switch ($get) {
             $q->whereIn('category', $categoryParentsIds);
         })->get();
 
+        $attrValues = $product->attrValues->mapWithKeys(function($value){
+            return [$value->id => $value];
+        })->all();
+
         $data['product'] = $product;
         $data['items'] = $attributes;
+        $data['attrValues'] = $attrValues;
         break;
+    case "prodattributesSave":
+        $filters = ['attribute'];
+        $all = request()->all();
+        $requestId = (int)request()->input('i', 0);
+        $product = sCommerce::getProduct($requestId);
+
+        if ($product) {
+            $product->attrValues()->detach();
+            $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+            $attributes = sAttribute::lang($sCommerceController->langDefault())->whereHas('categories', function ($q) use ($categoryParentsIds) {
+                $q->whereIn('category', $categoryParentsIds);
+            })->get();
+
+            foreach ($filters as $filter) {
+                foreach ($all as $key => $value) {
+                    if (str_starts_with($key, $filter . '__')) {
+                        $key = str_replace($filter . '__', '', $key);
+                        $attribute = $attributes->where('id', $key)->first();
+                        if ($attribute) {
+                            switch ($attribute->type) {
+                                case sAttribute::TYPE_ATTR_NUMBER :
+                                    if (trim($value)) {
+                                        if (is_float($value)) {
+                                            $value = floatval(str_replace(',', '.', $value));
+                                        } else {
+                                            $value = intval($value);
+                                        }
+                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
+                                    }
+                                    break;
+                                case sAttribute::TYPE_ATTR_TEXT :
+                                    if (is_array($value) && count($value)) {
+                                        $vals = [];
+                                        foreach ($value as $k => $v) {
+                                            if (trim($v)) {
+                                                $vals[$k] = trim($v);
+                                            }
+                                        }
+                                        if (count($vals)) {
+                                            $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($vals)]);
+                                        }
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=prodattributes'));
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "content":
-        $tabs = ['product', 'content'];
+        $tabs = ['product'];
         $iUrl = trim($iUrl) ?: '&i=0';
         $requestId = (int)request()->input('i', 0);
         $requestLang = request()->input('lang');
@@ -248,10 +305,24 @@ switch ($get) {
             }
         }
 
+        $product = sCommerce::getProduct($content->product);
+        $categoryParentsIds = [0];
+        if ($product->category) {
+            $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+        }
+        $attributes = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {
+            $q->whereIn('category', $categoryParentsIds);
+        })->get();
+        if ($attributes->count()) {
+            $tabs[] = 'prodattributes';
+        }
+
         $data['item'] = $content;
         $data['buttons'] = $buttons;
         $data['elements'] = $elements;
         $data['chunks'] = $chunks;
+
+        $tabs[] = 'content';
         break;
     case "contentSave":
         $requestId = (int)request()->input('i', 0);
@@ -330,7 +401,6 @@ switch ($get) {
             default :
                 $query->orderBy($order, $direc);
                 break;
-
         }
 
         $data['items'] = $query->paginate($perpage);

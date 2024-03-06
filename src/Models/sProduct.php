@@ -164,6 +164,23 @@ class sProduct extends Model
     }
 
     /**
+     * Get the attributes associated with the product.
+     *
+     * This method returns a BelongsToMany relationship with the sAttributeValue model.
+     * The intermediate table used for the relationship is 's_product_attribute_values'.
+     * The foreign key on the s_product_attribute_values table for the attribute model is 'attribute'.
+     * The foreign key on the s_product_attribute_values table for the product model is 'product'.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function attrValues()
+    {
+        return $this->belongsToMany(sAttribute::class, 's_product_attribute_values', 'product', 'attribute')
+            ->withPivot('valueid', 'value')
+            ->orderBy('position');
+    }
+
+    /**
      * Get the link attribute for the current object
      *
      * Returns the URL of the object based on the configured link rule in the sCommerce module.

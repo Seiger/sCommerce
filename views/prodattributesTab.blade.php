@@ -10,6 +10,9 @@
                 @case(\Seiger\sCommerce\Models\sAttribute::TYPE_ATTR_NUMBER)
                     @include('sCommerce::partials.attributeNumber')
                     @break
+                @case(\Seiger\sCommerce\Models\sAttribute::TYPE_ATTR_TEXT)
+                    @include('sCommerce::partials.attributeText')
+                    @break
             @endswitch
         @endforeach
     </div>
