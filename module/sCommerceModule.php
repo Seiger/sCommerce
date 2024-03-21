@@ -14,6 +14,8 @@ use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sGallery\Facades\sGallery;
+use Seiger\sGallery\Models\sGalleryField;
+use Seiger\sGallery\Models\sGalleryModel;
 
 if (!defined('IN_MANAGER_MODE') || IN_MANAGER_MODE != 'true') die("No access");
 if (!file_exists(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerce.php')) {
@@ -155,8 +157,17 @@ switch ($get) {
     case "productDelete":
         $product = sCommerce::getProduct((int)request()->input('i', 0));
 
-        if ($product) {
+        if ($product && isset($product->id) && (int)$product->id > 0) {
             $sCommerceController->removeDirRecursive(MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id);
+            $galleries = sGallery::all('product', $product->id);
+            if ($galleries->count()) {
+                foreach ($galleries as $gallery) {
+                    if ($gallery) {
+                        sGalleryField::where('key', $gallery->id)->delete();
+                        $gallery->delete();
+                    }
+                }
+            }
 
             $product->categories()->sync([]);
             $product->texts()->delete();

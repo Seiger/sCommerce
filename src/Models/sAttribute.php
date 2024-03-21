@@ -35,7 +35,7 @@ class sAttribute extends Model
     //const TYPE_ATTR_IMAGE = 11;
     //const TYPE_ATTR_FILE = 12;
     //const TYPE_ATTR_GEOLOCATION = 13;
-    //const TYPE_ATTR_DATERANGE = 14;
+    //const TYPE_ATTR_CONSTRUCTOR = 14;
 
     /**
      * Return list of type of input the attribute codes and labels

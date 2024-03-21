@@ -31,8 +31,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [x] Number Attribute.
     - [ ] Checkbox Attribute.
     - [ ] Radio Attribute.
-    - [x] Select Attribute.
-    - [x] Multiselect Attribute.
+    - [ ] Select Attribute.
+    - [ ] Multiselect Attribute.
     - [x] Text Attribute.
     - [ ] TextArea Attribute.
     - [ ] RichText Attribute.
@@ -42,6 +42,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [ ] Image Attribute.
     - [ ] File Attribute.
     - [ ] Geolocation Attribute.
+    - [ ] Constructor Attribute.
 - [ ] Dynamic Filters for Product Search.
 - [ ] Promo Code System.
 - [ ] Customer Reviews and Ratings.
