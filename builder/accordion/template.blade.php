@@ -1,4 +1,4 @@
-<small>Список текстів</small>
+<small>@lang('sCommerce::global.list_texts')</small>
 @if (is_array($value ?? []) && is_array($value['title'] ?? []) && count($value['title'] ?? []))
     @php($idOrig = ($id ?? 'accordion'))
     @foreach ($value['title'] as $key => $title)
