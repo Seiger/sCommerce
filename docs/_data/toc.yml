@@ -7,6 +7,3 @@
       url: "management"
     - title: "Attributes"
       url: "attributes"
-      links:
-        - title: "Custom Attribute"
-          url: "custom"
