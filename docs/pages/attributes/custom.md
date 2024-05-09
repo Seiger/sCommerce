@@ -186,7 +186,7 @@ if ($vals) {
                             <div class="row form-row">
                                 <div class="input-group mb-1 row-col col-lg-1 col-lg-2 col-md-3 col-6">
                                     <div class="input-group-prepend"><span class="input-group-text"><small>Date from</small></span></div>
-                                    <input value="{% raw %}{{$val['from']}}" type="date" class="form-control" autocomplete="off" onchange="this.nextElementSibling.value = this.value">
+                                    <input value="{% raw %}{{$val['from']}}{% endraw %}" type="date" class="form-control" autocomplete="off" onchange="this.nextElementSibling.value = this.value">
                                     <input name="attribute__{% raw %}{{$item->id}}{% endraw %}[{% raw %}{{$loop->index}}{% endraw %}][from]" value="{% raw %}{{$val['from']}}{% endraw %}" type="hidden" onchange="documentDirty=true;">
                                 </div>
                                 <div class="input-group mb-1 row-col col-lg-1 col-lg-2 col-md-3 col-6">
@@ -250,7 +250,7 @@ if ($vals) {
     </div>
 </div>
 <script>
-    function add{% raw %}{{$item->id}}Attr (e) {
+    function add{% raw %}{{$item->id}}{% endraw %}Attr (e) {
         let block = e.parentNode.nextElementSibling;
         let index = block.children.length + 1000;
         let element = block.firstElementChild.innerHTML.replaceAll(/attribute__{% raw %}{{$item->id}}{% endraw %}\[0\]/gi, 'attribute__{% raw %}{{$item->id}}{% endraw %}['+index+']').replaceAll(/(value)=("[^"]*")/gi, 'value=""');

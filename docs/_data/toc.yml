@@ -5,3 +5,8 @@
       url: "getting-started"
     - title: "Management tabs"
       url: "management"
+    - title: "Attributes"
+      url: "attributes"
+      links:
+        - title: "Custom Attribute"
+          url: "custom"
