@@ -30,8 +30,19 @@ customizable on the Settings tab.
 
 If your store has more products than you chose to display on the page, other products
 will automatically move to another page, and pagination will appear at the bottom.
-Note that the choice of spherical of products on the backend product list page does
+Note that the choice of virtual of products on the backend product list page does
 not affect the display of the number of frontend products.
+
+## Attributes
+
+The Attributes tab displays a complete list of attributes available for customizing your products.
+The list is presented in the form of a title and additional information, as well as control buttons.
+
+There is also an attribute search form on the page. For ease of management, you can sort attributes by all fields of the presentation table
+both forward and reverse.
+
+If your store has more attributes than you choose to display on the page, other attributes
+will automatically move to another page and pagination will appear at the bottom.
 
 ## Settings
 

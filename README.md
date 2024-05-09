@@ -43,6 +43,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [ ] File Attribute.
     - [ ] Geolocation Attribute.
     - [ ] Constructor Attribute.
+    - [x] Custom Attribute.
 - [ ] Dynamic Filters for Product Search.
 - [ ] Promo Code System.
 - [ ] Customer Reviews and Ratings.

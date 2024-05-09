@@ -30,12 +30,13 @@ class sAttribute extends Model
     //const TYPE_ATTR_TEXTAREA = 6;
     //const TYPE_ATTR_RICHTEXT = 7;
     //const TYPE_ATTR_COLOR = 8;
-    const TYPE_ATTR_DATE = 9;
+    //const TYPE_ATTR_DATE = 9;
     //const TYPE_ATTR_DATETIME = 10;
     //const TYPE_ATTR_IMAGE = 11;
     //const TYPE_ATTR_FILE = 12;
     //const TYPE_ATTR_GEOLOCATION = 13;
     //const TYPE_ATTR_CONSTRUCTOR = 14;
+    const TYPE_ATTR_CUSTOM = 15;
 
     /**
      * Return list of type of input the attribute codes and labels

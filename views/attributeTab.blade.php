@@ -48,8 +48,8 @@
         <div class="row-col col-lg-3 col-md-3 col-12">
             <div class="row form-row">
                 <div class="col-auto">
-                    <label for="alias" class="warning">@lang('global.resource_alias')</label>
-                    <i class="fa fa-question-circle" data-tooltip="@lang('global.resource_alias_help')"></i>
+                    <label for="alias" class="warning">@lang('sCommerce::global.key')</label>
+                    <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.key_help')"></i>
                 </div>
                 <div class="input-group col">
                     <input type="text" id="alias" class="form-control" name="alias" maxlength="512" value="{{$item->alias ?? 'new-attribute'}}" onchange="documentDirty=true;">
@@ -89,7 +89,7 @@
         <div class="row-col col-lg-3 col-md-3 col-12">
             <div class="row form-row">
                 <div class="col-auto">
-                    <label for="helptext" class="warning">@lang('sCommerce::global.helptext')</label>
+                    <label for="helptext">@lang('sCommerce::global.helptext')</label>
                     <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.helptext_help')"></i>
                 </div>
                 <div class="col">

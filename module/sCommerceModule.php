@@ -216,7 +216,7 @@ switch ($get) {
                         $attribute = $attributes->where('id', $key)->first();
                         if ($attribute) {
                             switch ($attribute->type) {
-                                case sAttribute::TYPE_ATTR_NUMBER :
+                                case sAttribute::TYPE_ATTR_NUMBER : // 0
                                     if (trim($value)) {
                                         if (is_float($value)) {
                                             $value = floatval(str_replace(',', '.', $value));
@@ -226,7 +226,7 @@ switch ($get) {
                                         $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
                                     }
                                     break;
-                                case sAttribute::TYPE_ATTR_TEXT :
+                                case sAttribute::TYPE_ATTR_TEXT : // 5
                                     if (is_array($value) && count($value)) {
                                         $vals = [];
                                         foreach ($value as $k => $v) {
@@ -237,6 +237,11 @@ switch ($get) {
                                         if (count($vals)) {
                                             $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($vals)]);
                                         }
+                                    }
+                                    break;
+                                case sAttribute::TYPE_ATTR_CUSTOM : // 15
+                                    if (is_array($value) && count($value)) {
+                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($value)]);
                                     }
                                     break;
                             }

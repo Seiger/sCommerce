@@ -26,7 +26,7 @@ equips users with the essential features required to establish and manage a thri
 management enthusiast, **sCommerce** provides a streamlined solution, unlocking the potential
 of Evolution CMS for seamless and efficient **online commerce**.
 
-[Getting Started]({{ site.baseurl }}/getting-started/){: .btn .btn-sky}
+[Getting Started]({{site.baseurl}}/getting-started/){: .btn .btn-sky}
 
 ## Features
 
@@ -49,6 +49,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [ ] File Attribute.
   - [ ] Geolocation Attribute.
   - [ ] Constructor Attribute.
+  - [x] Custom Attribute.
 - [ ] Dynamic Filters for Product Search.
 - [ ] Promo Code System.
 - [ ] Customer Reviews and Ratings.
