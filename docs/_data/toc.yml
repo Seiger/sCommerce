@@ -7,3 +7,5 @@
       url: "management"
     - title: "Attributes"
       url: "attributes"
+    - title: "Integration"
+      url: "integration"

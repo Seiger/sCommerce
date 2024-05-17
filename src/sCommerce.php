@@ -50,6 +50,20 @@ class sCommerce
     }
 
     /**
+     * Retrieves the active subcategories of a given category.
+     *
+     * @param int $category The id of the category whose subcategories need to be retrieved.
+     * @param int $dept The depth level up to which the subcategories should be retrieved. Default value is 10.
+     * @return object The list of active subcategories of the given category.
+     */
+    public function getTreeActiveCategories(int $category, int $dept = 10): object
+    {
+        $sCommerceController = new sCommerceController();
+        $object = SiteContent::find($category);
+        return $sCommerceController->listSubCategories($object, $dept);
+    }
+
+    /**
      * Retrieves the products belonging to a specific category.
      *
      * @param int|null $category The ID of the category. If not provided, it will default to the current document identifier.

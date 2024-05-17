@@ -45,7 +45,13 @@ administrator panel **Admin Panel -> Modules -> Commerce**.
 You can also fix quick access to the module through the main menu of the Admin Panel. 
 This can be done on the configuration tab (only available for the administrator role).
 
-[Management tabs]({{ site.baseurl }}/management/){: .btn .btn-sky}
+[Management tabs]({{site.baseurl}}/management/){: .btn .btn-sky}
+
+## Integration
+
+Integrate sCommerce capabilities into your code using the examples provided on the Integration page.
+
+[Integration]({{site.baseurl}}/integration/){: .btn .btn-sky}
 
 ## Extra
 

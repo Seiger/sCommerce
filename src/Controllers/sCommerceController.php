@@ -209,6 +209,27 @@ class sCommerceController
     }
 
     /**
+     * Retrieves and assigns the subcategories of a given category recursively.
+     *
+     * @param object $category A reference to the category object.
+     * @return object The modified category object with the "subcategories" property assigned.
+     */
+    public function listSubCategories(object &$category, int $dept): object
+    {
+        if ($category->hasChildren() && $dept) {
+            $children = $category->children()->active()->get();
+            $children->map(function ($item) use ($dept) {
+                return $this->listSubCategories($item, $dept--);
+            });
+            $category->subcategories = $children;
+        } else {
+            $category->subcategories = SiteContent::whereId(0)->get();
+        }
+
+        return $category;
+    }
+
+    /**
      * Initializes and returns a rich text editor for the specified elements.
      *
      * @param string $ids A comma-separated list of element IDs.
