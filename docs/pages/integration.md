@@ -46,7 +46,7 @@ Nesting depth depends on the `$dept` parameter (default 10).
 }
 ```
 
-### Call the getTreeActiveCategories() method
+#### Call the getTreeActiveCategories() method
 
 ```php
 namespace EvolutionCMS\Main\Controllers;
@@ -65,14 +65,15 @@ class CategoryController extends BaseController
 }
 ```
 
-### Arguments the getTreeActiveCategories() method
+#### Arguments the getTreeActiveCategories() method
 
 From the example above:
 
 `evo()->documentIdentifier` - The ID of the category for which you want to retrieve data. Number type integer.
+
 `10` - Nesting depth to get subcategories. Number type integer. Default 10.
 
-### Applying the result of the getTreeActiveCategories() call
+#### Applying the result of the getTreeActiveCategories() call
 
 See below for an example of using the result of the getTreeActiveCategories() method call in the Blade template.
 
@@ -90,4 +91,102 @@ See below for an example of using the result of the getTreeActiveCategories() me
         </section>
     @endforeach
 @endif
+```
+
+## Products by category
+
+To get all the products related to the current category, it is enough to call the related product models
+like this:
+
+```php
+...
+use Seiger\sCommerce\Models\sCategory;
+...
+$category = sCategory::find(evo()->documentIdentifier);
+$products = $category->products()->count(); // Products count
+$products = $category->products; // Products list
+```
+
+## Category and subcategory products
+
+To display all products of the root category and its associated subcategories,
+you need to use the `getCategoryProducts()` method.
+
+#### Call the getCategoryProducts() method
+
+```php
+namespace EvolutionCMS\Main\Controllers;
+
+use Seiger\sCommerce\Facades\sCommerce;
+
+class CategoryController extends BaseController
+{
+    public function render()
+    {
+        parent::render();
+        ...
+        $products = sCommerce::getCategoryProducts(evo()->documentIdentifier, 'base', 10);
+        ...
+    }
+}
+```
+
+#### Arguments the getCategoryProducts() method
+
+From the example above:
+
+This method can be called with no arguments.
+In this case, a list of products will be returned, where the root category will be the **current category**.
+If a multi-language is used, then the data of the text fields will be presented in the **current language**.
+The nesting **depth of** subcategories will be **10**.
+
+`evo()->documentIdentifier` - The ID of the root category for which data is to be retrieved.
+Number type integer or null. Default null.
+
+`'base'` - Language for displaying product fields. String language code or null. Default null.
+
+`10` - Nesting depth to get subcategories. Number type integer. Default 10.
+
+#### Result of the getCategoryProducts() call
+
+```php
+Illuminate\Database\Eloquent\Collection {#1422 ▼
+  #items: array:3 [▼
+    0 => Seiger\sCommerce\Models\sProduct {#1359 ▼
+      #connection: "default"
+      #table: "s_products"
+      #primaryKey: "id"
+      #keyType: "int"
+      +incrementing: true
+      #with: []
+      #withCount: []
+      +preventsLazyLoading: false
+      #perPage: 15
+      +exists: true
+      +wasRecentlyCreated: false
+      #escapeWhenCastingToString: false
+      #attributes: array:35 [▶]
+      #original: array:35 [▶]
+      #changes: []
+      #casts: []
+      #classCastCache: []
+      #attributeCastCache: []
+      #dateFormat: null
+      #appends: array:2 [▶]
+      #dispatchesEvents: []
+      #observables: []
+      #relations: []
+      #touches: []
+      +timestamps: true
+      +usesUniqueIds: false
+      #hidden: []
+      #visible: []
+      #fillable: []
+      #guarded: array:1 [▶]
+    }
+    1 => Seiger\sCommerce\Models\sProduct {#1421 ▶}
+    2 => Seiger\sCommerce\Models\sProduct {#1370 ▶}
+  ]
+  #escapeWhenCastingToString: false
+}
 ```
