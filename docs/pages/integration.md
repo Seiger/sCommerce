@@ -16,7 +16,7 @@ This method will return the searched category along with the recursively constru
 Nesting depth depends on the `$dept` parameter (default 10).
 
 ```php
-EvolutionCMS\Models\SiteContent {#1902 ▼
+ Seiger\sCommerce\Models\sCategory {#1902 ▼
   #connection: "default"
   #table: "site_content"
   ...
@@ -26,7 +26,7 @@ EvolutionCMS\Models\SiteContent {#1902 ▼
     ...
     "subcategories" => EvolutionCMS\Extensions\Collection {#1889 ▼
       #items: array:4 [▼
-        0 => EvolutionCMS\Models\SiteContent {#1888 ▼
+        0 => Seiger\sCommerce\Models\sCategory {#1888 ▼
           #connection: "default"
           #table: "site_content"
           ...
@@ -34,9 +34,9 @@ EvolutionCMS\Models\SiteContent {#1902 ▼
           #original: array:36 [▶]
           ...
         }
-        1 => EvolutionCMS\Models\SiteContent {#1886 ▶}
-        2 => EvolutionCMS\Models\SiteContent {#1884 ▶}
-        3 => EvolutionCMS\Models\SiteContent {#1882 ▶}
+        1 => Seiger\sCommerce\Models\sCategory {#1886 ▶}
+        2 => Seiger\sCommerce\Models\sCategory {#1884 ▶}
+        3 => Seiger\sCommerce\Models\sCategory {#1882 ▶}
       ]
       #escapeWhenCastingToString: false
     }

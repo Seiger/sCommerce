@@ -444,8 +444,8 @@ class sCommerceController
         if ($categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
             $category = sCategory::find($categoryId);
             $parent = $category->getParent();
-            $this->categories = array_merge($this->categories, [$parent->id]);
-            if ($parent->id && $categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
+            $this->categories = array_merge($this->categories, [$parent->id ?? 0]);
+            if (($parent->id ?? 0) && $categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
                 $this->categories = $this->getParentsIds($parent->id);
             }
         }

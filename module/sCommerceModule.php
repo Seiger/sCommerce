@@ -321,7 +321,7 @@ switch ($get) {
             }
         }
 
-        $product = sCommerce::getProduct($content->product);
+        $product = sCommerce::getProduct($content->product ?? 0);
         $categoryParentsIds = [0];
         if ($product->category) {
             $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
