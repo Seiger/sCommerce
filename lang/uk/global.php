@@ -128,4 +128,10 @@
     'prodattributes' => 'Атрибути',
     'prodattributes_icon' => 'fas fa-paperclip',
     'prodattributes_help' => 'Список атрибутів товара.',
+    'visual_editor_for' => 'Візуальний редактор для',
+    'price_decimals' => 'Вказує кількість десяткових знаків ціни. Дробова частина не вказується, якщо значення 0.',
+    'price_decimal_separator' => 'Десятковий роздільник ціни',
+    'price_decimal_separator_help' => 'Встановлює роздільник дробової частини ціни.',
+    'price_thousands_separator' => 'Розділювач тисяч',
+    'price_thousands_separator_help' => 'Встановлює роздільник класів багатозначного числа.',
 ];

@@ -95,7 +95,7 @@ class sProduct extends Model
                 ->where('lang', function ($leftJoin) use ($locale) {
                     $leftJoin->select('lang')
                         ->from('s_product_translates')
-                        ->whereRaw(DB::getTablePrefix() . 's_product_translates.product = ' . DB::getTablePrefix() . 's_products.id')
+                        ->whereRaw('`' . DB::getTablePrefix() . 's_product_translates`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`')
                         ->whereIn('lang', [$locale, 'base'])
                         ->orderByRaw('FIELD(lang, "' . $locale . '", "base")')
                         ->limit(1);
@@ -225,5 +225,10 @@ class sProduct extends Model
         }
 
         return $coverSrc;
+    }
+
+    public function getPriceAttribute(): string
+    {
+        return number_format($this->price_regular, sCommerce::config('basic.price_decimals', 2), sCommerce::config('basic.price_decimal_separator', '.'), sCommerce::config('basic.price_thousands_separator', "&nbsp;"));
     }
 }

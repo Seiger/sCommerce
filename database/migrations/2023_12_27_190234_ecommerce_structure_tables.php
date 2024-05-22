@@ -112,7 +112,7 @@ return new class extends Migration
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
             $table->unsignedInteger('valueid')->default(0)->index()->comment('This is Id if the attribute value is given as an element from the data set of values');
-            $table->string('value', 1024)->index()->comment('It using for value if valueid is null');
+            $table->text('value')->index()->comment('It using for value if valueid is null');
         });
 
         /*

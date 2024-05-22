@@ -128,4 +128,11 @@
     'prodattributes' => 'Attributes',
     'prodattributes_icon' => 'fas fa-paperclip',
     'prodattributes_help' => 'List of product attributes.',
+    'visual_editor_for' => 'Visual editor for',
+    'price_decimals' => 'Number of decimal places in price',
+    'price_decimals_help' => 'Sets the number of decimal places in the price. The fractional part is not specified if the value is 0.',
+    'price_decimal_separator' => 'Decimal separator for price',
+    'price_decimal_separator_help' => 'Sets the separator for the fractional part of the price.',
+    'price_thousands_separator' => 'Thousands separator',
+    'price_thousands_separator_help' => 'Sets the class separator for a multi-digit number.',
 ];

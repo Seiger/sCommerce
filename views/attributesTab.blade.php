@@ -20,7 +20,6 @@
         </div>
     </div>
 </div>
-@php($resources = \EvolutionCMS\Models\SiteContent::select('id', 'pagetitle')->whereIn('id', $items->pluck('category')->unique()->toArray())->get()->pluck('pagetitle', 'id')->toArray())
 <div class="table-responsive seiger__module-table">
     <table class="table table-condensed table-hover sectionTrans scom-table">
         <thead>
@@ -45,8 +44,10 @@
                     @if(isset($item->asfilter) && $item->asfilter)<span class="badge bg-seigerit bg-super">@lang('sCommerce::global.as_filter')</span>@endif
                 </td>
                 <td>
-                    @if($item->category > 1)
-                        <a href="@makeUrl($item->category)" target="_blank">{{$resources[$item->category]}}</a>
+                    @if($item->categories->count())
+                        @foreach($item->categories as $category)
+                            <a href="@makeUrl($category->id)" target="_blank">{{$category->pagetitle}}</a>
+                        @endforeach
                     @else
                         <a href="@makeUrl(1)" target="_blank">{{evo()->getConfig('site_name')}}</a>
                     @endif

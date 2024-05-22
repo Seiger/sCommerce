@@ -172,13 +172,36 @@ class sCommerceController
     public function listCategories(int $category = 0): array
     {
         if ($category == 0) {
-            $category = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
+            if (evo()->getConfig('check_sMultisite', false)) {
+                $category = [];
+                $basic = sCommerce::config('basic', ['basic.catalog_root' => evo()->getConfig('site_start', 1)]);
+                foreach ($basic as $k => $v) {
+                    if (str_starts_with($k, 'catalog_root')) {
+                        $category[] = $v;
+                    }
+                }
+            } else {
+                $category = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
+            }
         }
-        $root = SiteContent::find($category);
-        $this->categories[$root->id] = __('sCommerce::global.catalog_root');
-        if ($root->hasChildren()) {
-            foreach ($root->children as $item) {
-                $this->categoryCrumb($item);
+
+        if (is_array($category)) {
+            foreach ($category as $c) {
+                $root = SiteContent::find($c);
+                $this->categories[$root->id] = __('sCommerce::global.catalog_root') . ' ('.$root->id.')';
+                if ($root->hasChildren()) {
+                    foreach ($root->children as $item) {
+                        $this->categoryCrumb($item);
+                    }
+                }
+            }
+        } else {
+            $root = SiteContent::find($category);
+            $this->categories[$root->id] = __('sCommerce::global.catalog_root');
+            if ($root->hasChildren()) {
+                foreach ($root->children as $item) {
+                    $this->categoryCrumb($item);
+                }
             }
         }
         return $this->categories;
@@ -223,7 +246,7 @@ class sCommerceController
             });
             $category->subcategories = $children;
         } else {
-            $category->subcategories = SiteContent::whereId(0)->get();
+            $category->subcategories = sCategory::whereId(0)->get();
         }
 
         return $category;

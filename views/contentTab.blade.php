@@ -26,7 +26,7 @@
     <div class="row-col col-12">
         <div class="row form-row">
             <div class="col-auto col-title">
-                <label for="introtext" class="warning">@lang('global.resource_summary')</label>
+                <label for="introtext">@lang('global.resource_summary')</label>
             </div>
             <div class="col">
                 <textarea id="introtext" class="form-control" name="introtext" rows="3" wrap="soft" onchange="documentDirty=true;">{{$item->introtext ?? ''}}</textarea>

@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Models;
 
 use EvolutionCMS\Models\SiteContent;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class sCategory
@@ -21,6 +22,6 @@ class sCategory extends SiteContent
      */
     public function products()
     {
-        return $this->belongsToMany(sProduct::class, 's_product_category', 'category', 'product');
+        return $this->belongsToMany(sProduct::class, 's_product_category', 'category', 'product')->lang('base');
     }
 }

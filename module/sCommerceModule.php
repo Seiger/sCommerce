@@ -94,6 +94,8 @@ switch ($get) {
         $tabs[] = 'content';
         break;
     case "productSave":
+        $filters = ['constructor'];
+        $all = request()->all();
         $requestId = (int)request()->input('i', 0);
         $alias = request()->input('alias', 'new-product');
         $product = sCommerce::getProduct($requestId);
@@ -151,6 +153,27 @@ switch ($get) {
             $product->texts()->create(['lang' => $sCommerceController->langDefault()]);
         }
 
+        $constructorInput = [];
+        foreach ($filters as $filter) {
+            foreach ($all as $key => $value) {
+                if (str_starts_with($key, $filter . '__')) {
+                    $key = str_replace($filter . '__', '', $key);
+                    $constructorInput[$key] = $value;
+                }
+            }
+        }
+
+        foreach ($product->texts as $text) {
+            $constructor = data_is_json($text->constructor, true);
+            if (is_array($constructor)) {
+                $constructor = array_merge($constructor, $constructorInput);
+            } else {
+                $constructor = $constructorInput;
+            }
+            $text->constructor = json_encode($constructor);
+            $text->update();
+        }
+
         $sCommerceController->setProductsListing();
         $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=product'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
@@ -186,15 +209,19 @@ switch ($get) {
         $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
         $attributes = sAttribute::lang($sCommerceController->langDefault())->whereHas('categories', function ($q) use ($categoryParentsIds) {
             $q->whereIn('category', $categoryParentsIds);
-        })->get();
+        })->orderBy('position')->get();
 
-        $attrValues = $product->attrValues->mapWithKeys(function($value){
+        $attrValues = $product->attrValues->mapWithKeys(function ($value) {
             return [$value->id => $value];
         })->all();
 
+        $attributes->mapWithKeys(function ($attribute) use ($attrValues) {
+            $attribute->value = $attrValues[$attribute->id]->pivot->value ?? '';
+            return $attribute;
+        });
+
         $data['product'] = $product;
-        $data['items'] = $attributes;
-        $data['attrValues'] = $attrValues;
+        $data['attributes'] = $attributes;
         break;
     case "prodattributesSave":
         $filters = ['attribute'];
@@ -319,6 +346,10 @@ switch ($get) {
             foreach ($items as $item) {
                 $editor[] = $key . $item;
             }
+        }
+
+        if (sCommerce::config('product.visual_editor_introtext', 0) == 1) {
+            $editor[] = 'introtext';
         }
 
         $product = sCommerce::getProduct($content->product ?? 0);
@@ -593,15 +624,6 @@ switch ($get) {
         }
 
         $data['mainProductConstructors'] = [];
-        $data['fieldtypes'] = [
-            'text' => __('sCommerce::global.type_attr_text'),
-            'textarea' => __('sCommerce::global.type_attr_textarea'),
-            //'richtext' => __('sCommerce::global.type_attr_richtext'),
-            'select' => __('sCommerce::global.type_attr_select'),
-            'multiselect' => __('sCommerce::global.type_attr_multiselect'),
-            'image' => __('sCommerce::global.type_attr_image'),
-            'file' => __('sCommerce::global.type_attr_file'),
-        ];
         break;
     case "settingsSave":
         $sCommerceController->updateDBConfigs();
