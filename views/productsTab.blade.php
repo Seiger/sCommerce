@@ -1,5 +1,8 @@
 @php
     $order = request()->has('order') ? request()->input('order') : 'id';
+    if (evo()->getConfig('check_sMultisite', false)) {
+        $domains = \Seiger\sMultisite\Models\sMultisite::all();
+    }
 @endphp
 <div class="row-col pl-0 scom-conters">
     <div class="d-flex flex-row align-items-center">
@@ -81,8 +84,8 @@
                 </th>
             @endif
             @if (evo()->getConfig('check_sMultisite', false) && sCommerce::config('products.show_field_websites', 1) == 1)
-                <th class="sorting @if($order == 'websites') sorted @endif" data-order="websites">
-                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.websites') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                <th {{--class="sorting @if($order == 'websites') sorted @endif" data-order="websites"--}}>
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.websites') {{--<i class="fas fa-sort" style="color: #036efe;"></i>--}}</button>
                 </th>
             @endif
             @if (sCommerce::config('products.show_field_visibility', 1) == 1)
@@ -138,13 +141,25 @@
                     <td>
                         @if($item->category > 1)
                             <a href="@makeUrl($item->category)" target="_blank">{{$resources[$item->category]}}</a>
+                        @elseif(evo()->getConfig('check_sMultisite', false))
+                            @php($categories = $item->categories()->where('scope', 'LIKE', 'primary%')->get())
+                            @foreach($categories as $category)
+                                <a href="@makeUrl($category->id){{$category->alias_visible == 1 ? '' : $category->alias . evo()->getConfig('friendly_url_suffix', '')}}" target="_blank">{{$category->pagetitle}}</a>
+                            @endforeach
                         @else
                             <a href="@makeUrl(1)" target="_blank">{{evo()->getConfig('site_name')}}</a>
                         @endif
                     </td>
                 @endif
                 @if (evo()->getConfig('check_sMultisite', false) && sCommerce::config('products.show_field_websites', 1) == 1)
-                    <td>{{$item->websites}}</td>
+                    <td>
+                        @php($categories = $item->categories()->withPivot(['scope'])->wherePivot('scope', 'LIKE', 'primary%')->get())
+                        @foreach($categories as $category)
+                            @php($scope = str_replace('primary_', '', $category->pivot->scope))
+                            @php($website = $domains->where('key', $scope)->first())
+                                <a href="https://{{$website->domain}}/" target="_blank">{{$website->site_name}}</a>
+                        @endforeach
+                    </td>
                 @endif
                 @if (sCommerce::config('products.show_field_visibility', 1) == 1)
                     <td>

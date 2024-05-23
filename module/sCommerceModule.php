@@ -57,7 +57,16 @@ switch ($get) {
             case "category":
                 $query->addSelect(
                     '*',
-                    DB::Raw('(select `' . DB::getTablePrefix() . 'site_content`.`pagetitle` from `' . DB::getTablePrefix() . 'site_content` where `' . DB::getTablePrefix() . 'site_content`.`id` = `' . DB::getTablePrefix() . 's_products`.`category`) as cat')
+                    DB::Raw(
+                        '(select `' . DB::getTablePrefix() . 'site_content`.`pagetitle` 
+                        from `' . DB::getTablePrefix() . 'site_content` 
+                        where `' . DB::getTablePrefix() . 'site_content`.`id` = (
+                            select `' . DB::getTablePrefix() . 's_product_category`.`category` 
+                            from `' . DB::getTablePrefix() . 's_product_category`
+                            where `' . DB::getTablePrefix() . 's_product_category`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`
+                            limit 1)
+                        ) as cat'
+                    )
                 );
                 $query->orderBy('cat', $direc);
                 break;
@@ -65,7 +74,7 @@ switch ($get) {
                 $query->orderBy($order, $direc);
                 break;
         }
-
+        
         $data['items'] = $query->paginate($perpage);
         $data['total'] = sProduct::count();
         $data['active'] = sProduct::wherePublished(1)->count();
@@ -78,9 +87,12 @@ switch ($get) {
         $product = sCommerce::getProduct($requestId);
 
         $categoryParentsIds = [0];
-        if ($product->category) {
-            $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+        if ($product->categories) {
+            foreach ($product->categories as $category) {
+                $categoryParentsIds = array_merge($categoryParentsIds, $sCommerceController->categoryParentsIds($category->id));
+            }
         }
+
         $attributes = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {
             $q->whereIn('category', $categoryParentsIds);
         })->get();
@@ -128,7 +140,6 @@ switch ($get) {
 
         $product->published = (int)request()->input('published', 0);
         $product->availability = (int)request()->input('availability', 0);
-        $product->category = (int)request()->input('parent', sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)));
         $product->sku = request()->input('sku', '');
         $product->alias = $sCommerceController->validateAlias($alias, (int)$product->id);
         $product->position = (int)request()->input('position', 0);
@@ -146,7 +157,17 @@ switch ($get) {
         $product->type = $type;
         $product->save();
 
-        $categories = array_merge((array)request()->input('categories', []), [$product->category]);
+        $categories = (array)request()->input('categories', []);
+        if (evo()->getConfig('check_sMultisite', false)) {
+            foreach(Seiger\sMultisite\Models\sMultisite::all() as $domain) {
+                $parent = (int)request()->input('parent_' . $domain->key, 0);
+                if ($parent > 0) {
+                    $categories[$parent] = ['scope' => 'primary_' . $domain->key];
+                }
+            }
+        } else {
+            $categories[(int)request()->input('parent', sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))] = ['scope' => 'primary'];
+        }
         $product->categories()->sync($categories);
 
         if (!$product->texts->count()) {
@@ -206,7 +227,13 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $product = sCommerce::getProduct($requestId);
 
-        $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+        $categoryParentsIds = [0];
+        if ($product->categories) {
+            foreach ($product->categories as $category) {
+                $categoryParentsIds = array_merge($categoryParentsIds, $sCommerceController->categoryParentsIds($category->id));
+            }
+        }
+
         $attributes = sAttribute::lang($sCommerceController->langDefault())->whereHas('categories', function ($q) use ($categoryParentsIds) {
             $q->whereIn('category', $categoryParentsIds);
         })->orderBy('position')->get();
@@ -231,7 +258,14 @@ switch ($get) {
 
         if ($product) {
             $product->attrValues()->detach();
-            $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+
+            $categoryParentsIds = [0];
+            if ($product->categories) {
+                foreach ($product->categories as $category) {
+                    $categoryParentsIds = array_merge($categoryParentsIds, $sCommerceController->categoryParentsIds($category->id));
+                }
+            }
+
             $attributes = sAttribute::lang($sCommerceController->langDefault())->whereHas('categories', function ($q) use ($categoryParentsIds) {
                 $q->whereIn('category', $categoryParentsIds);
             })->get();
@@ -354,8 +388,10 @@ switch ($get) {
 
         $product = sCommerce::getProduct($content->product ?? 0);
         $categoryParentsIds = [0];
-        if ($product->category) {
-            $categoryParentsIds = $sCommerceController->categoryParentsIds($product->category);
+        if ($product->categories) {
+            foreach ($product->categories as $category) {
+                $categoryParentsIds = array_merge($categoryParentsIds, $sCommerceController->categoryParentsIds($category->id));
+            }
         }
         $attributes = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {
             $q->whereIn('category', $categoryParentsIds);

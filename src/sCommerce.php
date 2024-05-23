@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Models\sAttribute;
+use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 
@@ -59,7 +60,7 @@ class sCommerce
     public function getTreeActiveCategories(int $category, int $dept = 10): object
     {
         $sCommerceController = new sCommerceController();
-        $object = SiteContent::find($category);
+        $object = sCategory::find($category);
         return $sCommerceController->listSubCategories($object, $dept);
     }
 
@@ -86,7 +87,7 @@ class sCommerce
         $categories = array_merge([$category], $sCommerceController->listAllActiveSubCategories($category, $dept));
         $productIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->get()->pluck('product')->toArray();
 
-        return sProduct::lang($lang)->whereIn('category', $categories)->orWhereIn('id', $productIds)->active()->get();
+        return sProduct::lang($lang)->WhereIn('id', $productIds)->active()->get();
     }
 
     /**

@@ -2,6 +2,7 @@
 
 use EvolutionCMS\Models\SiteContent;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Psr\Container\ContainerExceptionInterface;
@@ -24,15 +25,26 @@ class sCommerceController
     public function setProductsListing(): void
     {
         $productsListing = [];
-        $products = sProduct::select('id', 'alias', 'category')->wherePublished(1)->get();
+        $categories = [];
+        $products = sProduct::select('id', 'alias')->wherePublished(1)->get();
         if ($products) {
+            $scopes = DB::table('s_product_category')->where('scope', 'LIKE', 'primary%')->get();
+            foreach ($scopes as $scope) {
+                $categories[$scope->product][] = trim(str_replace('primary', '', $scope->scope), '_');
+            }
             foreach ($products as $product) {
-                $link = str_replace(MODX_SITE_URL, '', $product->link);
-                $productsListing[trim($link, '/')] = $product->id;
+                if (isset($categories[$product->id])) {
+                    foreach ($categories[$product->id] as $category) {
+                        $link = str_replace(MODX_SITE_URL, '', $product->getLinkAttribute($category));
+                        $productsListing[$category][trim($link, '/')] = $product->id;
+                    }
+                }
             }
         }
         evo()->clearCache('full');
-        Cache::forever('productsListing', $productsListing);
+        foreach ($productsListing as $key => $array) {
+            Cache::forever('productsListing' . $key, $array);
+        }
     }
 
     /**

@@ -81,33 +81,68 @@
                     </div>
                 </div>
             @endif
-            <div class="row-col col-lg-3 col-md-3 col-12">
-                <div class="row form-row">
-                    <div class="col-auto col-title">
-                        <label for="parent">@lang('sCommerce::global.category')</label>
-                        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_product_help')"></i>
+            @if (evo()->getConfig('check_sMultisite', false))
+                <span id="parentName" class="hidden"></span>
+                <input type="hidden" name="parent" value="0"/>
+                @foreach(Seiger\sMultisite\Models\sMultisite::all() as $domain)
+                    <div class="row-col col-lg-3 col-md-3 col-12">
+                        <div class="row form-row">
+                            <div class="col-auto col-title">
+                                <label for="parent">{{$domain->site_name}} @lang('sCommerce::global.category')</label>
+                                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_product_help')"></i>
+                            </div>
+                            <div class="col">
+                                <div>
+                                    @php($parentlookup = false)
+                                    @if(($item->categories()->whereScope('primary_' . $domain->key)->first()->id ?? 0) == 0)
+                                        @php($parentname = __('global.disabled'))
+                                    @else
+                                        @php($parentlookup = ($item->getCategoryAttribute($domain->key) ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))))
+                                    @endif
+                                    @if($parentlookup !== false && is_numeric($parentlookup))
+                                        @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
+                                        @if(!$parentname)
+                                            @php(evo()->webAlertAndQuit(__('global.error_no_parent')))
+                                        @endif
+                                    @endif
+                                    <i id="plockcat{{$domain->key}}" class="fa fa-folder" onclick="enableCatalogRootSelection(this, !allowParentSelection, '{{$domain->key}}');"></i>
+                                    <b id="parentRootName{{$domain->key}}">{{$parentlookup}} ({{entities($parentname)}})</b>
+                                    <i onclick="cleareCat(this)" class="fa fa-minus-circle text-danger b-btn-del"></i>
+                                    <input type="hidden" name="parent_{{$domain->key}}" value="{{$item->categories()->where('scope', 'primary_' . $domain->key)->first()->id ?? 0}}" onchange="documentDirty=true;" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col">
-                        <div>
-                            @php($parentlookup = false)
-                            @if(($item->category ?? sCommerce::config('basic.catalog_root', 0)) == 0)
-                                @php($parentname = evo()->getConfig('site_name'))
-                            @else
-                                @php($parentlookup = ($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))))
-                            @endif
-                            @if($parentlookup !== false && is_numeric($parentlookup))
-                                @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
-                                @if(!$parentname)
-                                    @php(evo()->webAlertAndQuit($_lang["error_no_parent"]))
+                @endforeach
+            @else
+                <div class="row-col col-lg-3 col-md-3 col-12">
+                    <div class="row form-row">
+                        <div class="col-auto col-title">
+                            <label for="parent">@lang('sCommerce::global.category')</label>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_product_help')"></i>
+                        </div>
+                        <div class="col">
+                            <div>
+                                @php($parentlookup = false)
+                                @if(($item->category ?? sCommerce::config('basic.catalog_root', 0)) == 0)
+                                    @php($parentname = evo()->getConfig('site_name'))
+                                @else
+                                    @php($parentlookup = ($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))))
                                 @endif
-                            @endif
-                            <i id="plock" class="fa fa-folder" onclick="enableParentSelection(!allowParentSelection);"></i>
-                            <b id="parentName">{{$parentlookup}} ({{entities($parentname)}})</b>
-                            <input type="hidden" name="parent" value="{{($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))}}" onchange="documentDirty=true;" />
+                                @if($parentlookup !== false && is_numeric($parentlookup))
+                                    @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
+                                    @if(!$parentname)
+                                        @php(evo()->webAlertAndQuit($_lang["error_no_parent"]))
+                                    @endif
+                                @endif
+                                <i id="plock" class="fa fa-folder" onclick="enableParentSelection(!allowParentSelection);"></i>
+                                <b id="parentName">{{$parentlookup}} ({{entities($parentname)}})</b>
+                                <input type="hidden" name="parent" value="{{($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))}}" onchange="documentDirty=true;" />
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            @endif
             @if(sCommerce::config('product.show_field_categories', 1) == 1)
                 <div class="row-col col-lg-6 col-md-6 col-12">
                     <div class="row form-row">
@@ -193,4 +228,40 @@
             </a>
         </div>
     </div>
+    <script>
+        let nIntervId;
+        let parentAction = null;
+        function enableCatalogRootSelection(a, b, c) {
+            if (b) {
+                parent.tree.ca = "parent";
+                a.className = "fa fa-folder-open";
+                allowParentSelection = true;
+                parentAction = 'parentRoot';
+                if (!nIntervId) {
+                    nIntervId = setInterval(changeParent, 500, c);
+                }
+            } else {
+                parent.tree.ca = "open";
+                a.className = "fa fa-folder";
+                allowParentSelection = false;
+                document.form.parent.value = 0;
+                parentAction = null;
+                clearInterval(nIntervId);
+                nIntervId = null;
+            }
+        }
+        function changeParent(key) {
+            if (document.form.parent.value > 0) {
+                if (parentAction == 'parentRoot') {
+                    document.getElementsByName('parent_' + key)[0].value = document.form.parent.value;
+                    document.getElementById('parentRootName' + key).innerHTML = document.getElementById('parentName').innerHTML
+                }
+            }
+        }
+        function cleareCat(elm) {
+            elm.parentNode.getElementsByTagName('input')[0].value = 0;
+            elm.parentNode.getElementsByTagName('b')[0].innerHTML = "(@lang('global.disabled'))";
+            documentDirty = true;
+        }
+    </script>
 @endpush

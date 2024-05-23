@@ -29,7 +29,7 @@ class sProduct extends Model
      *
      * @var array
      */
-    protected $appends = ['coverSrc', 'link'];
+    protected $appends = ['category', 'coverSrc', 'link'];
 
     /**
      * Availability constants
@@ -181,6 +181,24 @@ class sProduct extends Model
     }
 
     /**
+     * Retrieves the category attribute for the product.
+     *
+     * @param string|null $key The key for the site scope. If null, the default site key is used.
+     * @return int|null The category ID of the product or the catalog root ID.
+     */
+    public function getCategoryAttribute($key = null): int
+    {
+        if (evo()->getConfig('check_sMultisite', false)) {
+            $key = $key ?? evo()->setConfig('site_key', 'default');
+            $category = $this->categories()->whereScope('primary_' . $key)->first()->id ?? null;
+        } else {
+            $category = $this->categories()->whereScope('primary')->first()->id ?? null;
+        }
+        $cateroot = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
+        return $category ?? $cateroot;
+    }
+
+    /**
      * Get the link attribute for the current object
      *
      * Returns the URL of the object based on the configured link rule in the sCommerce module.
@@ -190,14 +208,15 @@ class sProduct extends Model
      *
      * @return string The URL of the object.
      */
-    public function getLinkAttribute(): string
+    public function getLinkAttribute($key = ''): string
     {
         switch (sCommerce::config('product.link_rule', 'root')) {
             case "catalog" :
-                $base_url = UrlProcessor::makeUrl(sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)));
+                $category = sCommerce::config('basic.catalog_root' . $key, evo()->getConfig('site_start', 1));
+                $base_url = UrlProcessor::makeUrl($category);
                 break;
             case "category" :
-                $category = (int)$this->category ?: sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
+                $category = (int)$this->getCategoryAttribute(trim($key) ? $key : null) ?: sCommerce::config('basic.catalog_root' . $key, evo()->getConfig('site_start', 1));
                 $base_url = UrlProcessor::makeUrl($category);
                 break;
             default :
