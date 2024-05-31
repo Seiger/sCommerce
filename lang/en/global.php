@@ -135,4 +135,11 @@
     'price_decimal_separator_help' => 'Sets the separator for the fractional part of the price.',
     'price_thousands_separator' => 'Thousands separator',
     'price_thousands_separator_help' => 'Sets the class separator for a multi-digit number.',
+    'image_and_text' => 'Image and text',
+    'image_on_the_left' => 'Image on the left',
+    'image_on_the_right' => 'Image on the right',
+    'image_file' => 'Image file',
+    'image_caption' => 'Image caption',
+    'alternative_text' => 'Alternative text',
+    'image_link' => 'Link for the Image',
 ];

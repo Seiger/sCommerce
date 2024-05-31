@@ -1,3 +1,4 @@
+@php use Seiger\sCommerce\Facades\sCommerce; @endphp
 @extends('manager::template.page')
 @section('content')
     <h1><i class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
@@ -26,17 +27,10 @@
                         </div>
                     @endforeach
                 @else
-                    <div class="tab-page {{$tab}}Tab" id="{{$tab}}Tab">
-                        <h2 class="tab">
-                            <a onclick="javascript:tabSave('&get={{$tab}}{{$iUrl}}');" href="{!!$moduleUrl!!}&get={{$tab}}{{$iUrl}}">
-                                <span><i class="@lang('sCommerce::global.'.$tab.'_icon')" data-tooltip="@lang('sCommerce::global.'.$tab.'_help')"></i> @lang('sCommerce::global.'.$tab)</span>
-                            </a>
-                        </h2>
-                        <script>tpResources.addTabPage(document.getElementById('{{$tab}}Tab'));</script>
-                        @if($get == $tab)
-                            @include('sCommerce::'.$tab.'Tab')
-                        @endif
-                    </div>
+                    {!!sCommerce::tabRender($tab, 'sCommerce::'.$tab.'Tab', $sCommerceController->getData())!!}
+                @endif
+                @if(is_array($events = evo()->invokeEvent('sCommerceManagerAddTabEvent', ['currentTab' => $tab, 'dataInput' => $sCommerceController->getData()])))
+                    @foreach($events as $event){!!$event['view']!!}@endforeach
                 @endif
             @endforeach
             <script>tpResources.setSelectedTab('{{$get}}Tab');</script>
@@ -128,10 +122,10 @@
 
             // Flash messages
             @if (session()->has('success'))
-                alertify.success("{{session('success')}}");
+            alertify.success("{{session('success')}}");
             @endif
             @if (session()->has('error'))
-                alertify.success("{{session('error')}}");
+            alertify.success("{{session('error')}}");
             @endif
         });
 

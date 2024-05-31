@@ -56,3 +56,70 @@ additional functionality of the store.
 You can also hide or show certain fields in a product or order, as well
 rename certain fields so that the store manager has a clearer idea of which
 functionality a particular field has.
+
+## Custom tab
+
+You have the opportunity to expand the capabilities of the administrative part of the sCommerce module
+by using the `sCommerceManagerAddTabEvent` event. To do this, use your own plugin file, or create
+a new one (eg `core/custom/packages/main/plugins/SeigerPlugin.php`) and add the following content.
+
+```php
+<?php
+
+use Illuminate\Support\Facades\Event;
+use Seiger\sCommerce\Facades\sCommerce;
+...
+
+Event::listen('evolution.sCommerceManagerAddTabEvent', function($params) {
+    $result['handler'] = MODX_BASE_PATH . 'core/custom/packages/main/src/Controllers/SeigerPluginCommerceHandler.php';
+    $result['view'] = '';
+
+    switch ($params['currentTab'] ?? '') {
+        case 'content' :
+            $result['view'] = sCommerce::tabRender('mypage', 'Main::seigerplugin.mypageTab', $params['dataInput'] ?? [], 'My Page', 'fa fa-keyboard', 'The text that is displayed when hovering');
+            break;
+    }
+
+    return $result;
+});
+
+...
+```
+
+As a result, an array with two keys **handler** and **view** should be returned.
+The **handler** key must contain a reference to the handler file for your custom page.
+See the example handler file.
+
+```php
+<?php
+
+use Seiger\sCommerce\Facades\sCommerce;
+
+switch (request()->input('get')) { // current tab id
+    case 'mypage': // current tab id
+        $tabs = ['products', 'attributes']; // tabs that should be displayed when this tab is shown
+        
+        ...
+        
+        $data['items'] = $items; // data to be passed to the view
+        break;
+    case 'mypageSave': // if the data needs to be saved
+        ...
+        
+        $back = (request()->back ?? '&get=product');
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+}
+```
+
+The **view** key must contain the rendering of your page. This is quite easy to achieve
+if you use the `sCommerce::tabRender()` method. The following data are passed as arguments,
+as in the example:
+
+```php
+'mypage', // The ID of the tab
+'Main::seigerplugin.mypageTab', // The template for the tab
+$params['dataInput'] ?? [], // The input data for the tab
+'My Page', // The name of the tab
+'fa fa-keyboard', // The icon for the tab
+'The text that is displayed when hovering' // The help text for the tab
+```

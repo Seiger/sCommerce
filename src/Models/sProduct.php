@@ -189,7 +189,7 @@ class sProduct extends Model
     public function getCategoryAttribute($key = null): int
     {
         if (evo()->getConfig('check_sMultisite', false)) {
-            $key = $key ?? evo()->setConfig('site_key', 'default');
+            $key = $key ?? evo()->getConfig('site_key', 'default');
             $category = $this->categories()->whereScope('primary_' . $key)->first()->id ?? null;
         } else {
             $category = $this->categories()->whereScope('primary')->first()->id ?? null;

@@ -15,6 +15,7 @@ use Seiger\sCommerce\Models\sProduct;
 
 class sCommerceController
 {
+    protected $data = [];
     protected $categories = [];
 
     /**
@@ -416,6 +417,16 @@ class sCommerceController
     }
 
     /**
+     * Retrieves the data array.
+     *
+     * @return array The data array.
+     */
+    public function getData(): array
+    {
+        return $this->data;
+    }
+
+    /**
      * Render a view using a template and data.
      *
      * @param string $tpl The template to render.
@@ -424,6 +435,7 @@ class sCommerceController
      */
     public function view(string $tpl, array $data = [])
     {
+        $this->data = $data;
         return \View::make('sCommerce::'.$tpl, $data);
     }
 

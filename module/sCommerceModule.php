@@ -40,6 +40,13 @@ switch ($get) {
     |--------------------------------------------------------------------------
     */
     default:
+        if (is_array($handlers = evo()->invokeEvent('sCommerceManagerAddTabEvent'))) {
+            foreach ($handlers as $handler) {
+                if (trim($handler['handler']) && is_file($handler['handler'])) {
+                    include_once $handler['handler'];
+                }
+            }
+        }
     case "orders":
         break;
     /*
@@ -74,7 +81,7 @@ switch ($get) {
                 $query->orderBy($order, $direc);
                 break;
         }
-        
+
         $data['items'] = $query->paginate($perpage);
         $data['total'] = sProduct::count();
         $data['active'] = sProduct::wherePublished(1)->count();

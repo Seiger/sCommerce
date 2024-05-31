@@ -79,7 +79,10 @@ Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
         }
 
         unset($product->tmplvars);
-        return $params['documentObject'] = Arr::dot($product->toArray());
+        $params['documentObject'] = Arr::dot($product->toArray());
+        $params['documentObject']['product'] = $product;
+
+        return $params['documentObject'];
     }
 });
 

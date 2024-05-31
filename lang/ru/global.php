@@ -134,4 +134,11 @@
     'price_decimal_separator_help' => 'Устанавливает разделитель дробной части цены.',
     'price_thousands_separator' => 'Разделитель тысяч',
     'price_thousands_separator_help' => 'Устанавливает разделитель классов многозначного числа.',
+    'image_and_text' => 'Изображение и текст',
+    'image_on_the_left' => 'Изображение слева',
+    'image_on_the_right' => 'Изображение справа',
+    'image_file' => 'Файл изображения',
+    'image_caption' => 'Подпись к изображению',
+    'alternative_text' => 'Альтернативный текст',
+    'image_link' => 'Ссылка для изображения',
 ];

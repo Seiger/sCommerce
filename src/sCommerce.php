@@ -114,7 +114,7 @@ class sCommerce
      */
     public function documentListing(): array
     {
-        $productsListing = Cache::get('productsListing');
+        $productsListing = Cache::get('productsListing' . evo()->getConfig('site_key', ''));
 
         if (!$productsListing) {
             $sCommerceController = new sCommerceController();
@@ -123,6 +123,32 @@ class sCommerce
         }
 
         return $productsListing ?? [];
+    }
+
+    /**
+     * Renders a tab with the given information and input data.
+     *
+     * @param string $tabId The ID of the tab.
+     * @param string|null $tabTpl The template for the tab. Default is null.
+     * @param array $dataInput The input data for the tab. Default is an empty array.
+     * @param string|null $tabName The name of the tab. Default is null, which fetches the name from the language files.
+     * @param string|null $tabIcon The icon for the tab. Default is null, which fetches the icon from the language files.
+     * @param string|null $tabHelp The help text for the tab. Default is null, which fetches the help text from the language files.
+     * @param string|null $fullUrl The full URL for the tab. Default is null, which is generated using the module URL and tab ID.
+     *
+     * @return string The rendered tab content.
+     */
+    public function tabRender($tabId, $tabTpl = null, $dataInput = [], $tabName = null, $tabIcon = null, $tabHelp = null, $fullUrl = null)
+    {
+        $saveUri = '&get=' . $tabId . ($dataInput['iUrl'] ?? '');
+        $fullUrl = $fullUrl ?: $this->moduleUrl() . $saveUri;
+        $tabName = $tabName ?: __('sCommerce::global.' . $tabId);
+        $tabIcon = $tabIcon ?: __('sCommerce::global.' . $tabId . '_icon');
+        $tabHelp = $tabHelp ?: __('sCommerce::global.' . $tabId . '_help');
+
+        $data = compact(['tabId', 'tabTpl', 'saveUri', 'fullUrl', 'tabName', 'tabIcon', 'tabHelp']);
+
+        return view('sCommerce::partials.tabRender', array_merge($data, $dataInput))->render();
     }
 
     /**
