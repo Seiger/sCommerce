@@ -106,7 +106,7 @@ switch (request()->input('get')) { // current tab id
     case 'mypageSave': // if the data needs to be saved
         ...
         
-        $back = (request()->back ?? '&get=product');
+        $back = (request()->back ?? '&get=products');
         return header('Location: ' . sCommerce::moduleUrl() . $back);
 }
 ```

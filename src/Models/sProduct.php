@@ -19,8 +19,10 @@ use Seiger\sCommerce\Facades\sCommerce;
  * @method static Builder|sProduct lang(string $locale)
  * @method Builder|sProduct search()
  * @method Builder|sProduct active()
- * @property-read string $coverSrc The URL of the cover image source attribute.
+ * @property-read string $title The Title of the product.
+ * @property-read string $category The Category of the product.
  * @property-read string $link The URL of the product.
+ * @property-read string $coverSrc The URL of the cover image source attribute.
  */
 class sProduct extends Model
 {
@@ -29,7 +31,7 @@ class sProduct extends Model
      *
      * @var array
      */
-    protected $appends = ['category', 'coverSrc', 'link'];
+    protected $appends = ['title', 'category', 'link', 'coverSrc'];
 
     /**
      * Availability constants
@@ -164,6 +166,34 @@ class sProduct extends Model
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     *
+     * Relationship method for retrieving the reviews of a product.
+     * Returns a collection of sReview instances associated with the product.
+     * The reviews are ordered in descending order by their creation timestamp.
+     */
+    public function reviews()
+    {
+        return $this->hasMany(sReview::class, 'product')->orderByDesc('created_at');
+    }
+
+    /**
+     * Method activeReviews
+     *
+     * Retrieve the active reviews for a product.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     *
+     * @see sProduct
+     * @see sReview
+     * @see sProduct::hasMany
+     */
+    public function activeReviews()
+    {
+        return $this->hasMany(sReview::class, 'product')->wherePublished(1)->orderByDesc('created_at');
+    }
+
+    /**
      * Get the attributes associated with the product.
      *
      * This method returns a BelongsToMany relationship with the sAttributeValue model.
@@ -196,6 +226,16 @@ class sProduct extends Model
         }
         $cateroot = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
         return $category ?? $cateroot;
+    }
+
+    /**
+     * Get the title attribute of the sProduct instance.
+     *
+     * @return string The title attribute value. If the value is not found, an empty string is returned.
+     */
+    public function getTitleAttribute(): string
+    {
+        return $this->texts()->whereLang(evo()->getConfig('lang', 'base'))->first()->pagetitle ?? '';
     }
 
     /**
@@ -246,6 +286,14 @@ class sProduct extends Model
         return $coverSrc;
     }
 
+    /**
+     * Gets the price attribute of the sProduct.
+     * Formats the price based on configuration values.
+     *
+     * @return string The formatted price of the product.
+     *
+     * @throws ErrorException if configuration values are not set.
+     */
     public function getPriceAttribute(): string
     {
         return number_format($this->price_regular, sCommerce::config('basic.price_decimals', 2), sCommerce::config('basic.price_decimal_separator', '.'), sCommerce::config('basic.price_thousands_separator', "&nbsp;"));

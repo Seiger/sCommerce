@@ -117,6 +117,24 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
+        | The review's tables structure
+        |--------------------------------------------------------------------------
+        */
+        Schema::create('s_reviews', function (Blueprint $table) {
+            $table->id('id');
+            $table->string('lang', 10)->default('base')->index()->comment('The Lang field');
+            $table->unsignedBigInteger('parent')->default(0)->index()->comment('If it is answer');
+            $table->unsignedBigInteger('product')->default(0)->index()->comment('The product ID');
+            $table->unsignedDecimal('rating', 2, 1)->default(5)->comment('Rating the Review');
+            $table->unsignedBigInteger('user')->default(0)->index()->comment('The product user ID');
+            $table->string('name')->default('')->comment('The User name');
+            $table->name('message')->default('')->comment('The Message');
+            $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
+            $table->timestamps();
+        });
+
+        /*
+        |--------------------------------------------------------------------------
         | Create a Product template
         |--------------------------------------------------------------------------
         */
@@ -142,6 +160,13 @@ return new class extends Migration
         |--------------------------------------------------------------------------
         */
         $templateProduct = SiteTemplate::whereTemplatealias('s_commerce_product')->delete();
+
+        /*
+        |--------------------------------------------------------------------------
+        | The review's tables structure
+        |--------------------------------------------------------------------------
+        */
+        Schema::dropIfExists('s_reviews');
 
         /*
         |--------------------------------------------------------------------------

@@ -13,6 +13,7 @@ use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
+use Seiger\sCommerce\Models\sReview;
 use Seiger\sGallery\Facades\sGallery;
 use Seiger\sGallery\Models\sGalleryField;
 use Seiger\sGallery\Models\sGalleryModel;
@@ -28,7 +29,7 @@ $get = request()->get ?? (sCommerce::config('basic.orders_on', 1) == 1 ? "orders
 $iUrl = (int)request()->input('i', 0) > 0 ? '&i=' . (int)request()->input('i', 0) : '';
 $editor = [];
 
-$tabs = ['products', 'attributes'];
+$tabs = ['products', 'reviews', 'attributes'];
 if (evo()->hasPermission('settings')) {
     $tabs[] = 'settings';
 }
@@ -136,20 +137,29 @@ switch ($get) {
 
         if (!$votes) {
             $votes = [];
-            $votes['total'] = 1;
+            $votes['total'] = 0;
             $votes['1'] = 0;
             $votes['2'] = 0;
             $votes['3'] = 0;
             $votes['3'] = 0;
             $votes['4'] = 0;
-            $votes['5'] = 1;
+            $votes['5'] = 0;
         }
+
+        $summ = 0;
+        foreach ($votes as $key => $value) {
+            if ((int)$key > 0) {
+                $summ += (int)$key * (int)$value;
+            }
+        }
+        $rating = round((int)$votes['total'] ? $summ / $votes['total'] : 5, 1);
 
         $product->published = (int)request()->input('published', 0);
         $product->availability = (int)request()->input('availability', 0);
         $product->sku = request()->input('sku', '');
         $product->alias = $sCommerceController->validateAlias($alias, (int)$product->id);
         $product->position = (int)request()->input('position', 0);
+        $product->rating = ($rating == 0 ? 5 : $rating);
         $product->quantity = (int)request()->input('quantity', 0);
         $product->price_regular = $sCommerceController->validatePrice(request()->input('price_regular', 0));
         $product->price_special = $sCommerceController->validatePrice(request()->input('price_special', 0));
@@ -654,6 +664,161 @@ switch ($get) {
         }
 
         $back = str_replace('&i=0', '&i=' . $attribute->id, (request()->back ?? '&get=attrvalues'));
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    /*
+    |--------------------------------------------------------------------------
+    | Reviews
+    |--------------------------------------------------------------------------
+    */
+    case "reviews":
+        $perpage = Cookie::get('scom_reviews_page_items', 50);
+        $order = request()->input('order', 'id');
+        $direc = request()->input('direc', 'desc');
+        $query = sReview::query()->search();
+
+        switch ($order) {
+            case "category":
+                $query->addSelect(
+                    '*',
+                    DB::Raw(
+                        '(select `' . DB::getTablePrefix() . 'site_content`.`pagetitle` 
+                        from `' . DB::getTablePrefix() . 'site_content` 
+                        where `' . DB::getTablePrefix() . 'site_content`.`id` = (
+                            select `' . DB::getTablePrefix() . 's_product_category`.`category` 
+                            from `' . DB::getTablePrefix() . 's_product_category`
+                            where `' . DB::getTablePrefix() . 's_product_category`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`
+                            limit 1)
+                        ) as cat'
+                    )
+                );
+                $query->orderBy('cat', $direc);
+                break;
+            default :
+                $query->orderBy($order, $direc);
+                break;
+        }
+
+        $data['items'] = $query->paginate($perpage);
+        $data['total'] = sReview::count();
+        $data['active'] = sReview::wherePublished(1)->count();
+        $data['disactive'] = $data['total'] - $data['active'];
+        break;
+    case "review":
+        $tabs = ['review'];
+        $iUrl = trim($iUrl) ?: '&i=0';
+        $requestId = (int)request()->input('i', 0);
+        $review = sReview::find($requestId);
+        $data['item'] = $review;
+        break;
+    case "reviewSave":
+        $all = request()->all();
+        $requestId = (int)request()->input('i', 0);
+        $review = sReview::find($requestId);
+
+        if (!$review) {
+            $review = new sReview();
+        }
+
+        if ($review->product && $review->published) {
+            $product = sProduct::find($review->product);
+            if ($product) {
+                $votes = data_is_json($product->votes ?? '', true);
+                if ($votes && isset($votes[$review->rating])) {
+                    if ($votes[$review->rating] > 0) {
+                        $votes[$review->rating] = $votes[$review->rating] - 1;
+                        $votes['total'] = $votes['total'] > 0 ? $votes['total'] - 1 : 0;
+                    }
+
+                    $summ = 0;
+                    foreach ($votes as $key => $value) {
+                        if ((int)$key > 0) {
+                            $summ += (int)$key * (int)$value;
+                        }
+                    }
+
+                    $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 5, 1);
+                    $product->votes = json_encode($votes);
+                    $product->update();
+                }
+            }
+        }
+
+        if (isset($all['product']) && (int)$all['product'] && isset($all['rating']) && (int)$all['rating'] && isset($all['published']) && (int)$all['published']) {
+            $product = sProduct::find($all['product']);
+            if ($product) {
+                $votes = data_is_json($product->votes ?? '', true);
+
+                if (!$votes) {
+                    if (!$votes) {
+                        $votes = [];
+                        $votes['total'] = 0;
+                        $votes['1'] = 0;
+                        $votes['2'] = 0;
+                        $votes['3'] = 0;
+                        $votes['3'] = 0;
+                        $votes['4'] = 0;
+                        $votes['5'] = 0;
+                    }
+                }
+
+                $votes[$all['rating']] = ($votes[$all['rating']] ?? 0) + 1;
+                $votes['total'] = ($votes['total'] ?? 0) + 1;
+
+                $summ = 0;
+                foreach ($votes as $key => $value) {
+                    if ((int)$key > 0) {
+                        $summ += (int)$key * (int)$value;
+                    }
+                }
+
+                $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 5, 1);
+                $product->votes = json_encode($votes);
+                $product->update();
+            }
+        }
+
+        $review->product = (int)($all['product'] ?? 0);
+        $review->rating = (int)($all['rating'] ?? 5);
+        $review->name = $all['name'] ?? '';
+        $review->message = $all['message'] ?? '';
+        $review->published = (int)($all['published'] ?? 0);
+        $review->created_at = $all['created_at'];
+        $review->save();
+
+        $back = str_replace('&i=0', '&i=' . $review->id, (request()->back ?? '&get=review'));
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    case "reviewDelete":
+        $requestId = (int)request()->input('i', 0);
+        $review = sReview::find($requestId);
+
+        if ($review) {
+            if ($review->product && $review->published) {
+                $product = sProduct::find($review->product);
+                if ($product) {
+                    $votes = data_is_json($product->votes ?? '', true);
+                    if ($votes && isset($votes[$review->rating])) {
+                        if ($votes[$review->rating] > 0) {
+                            $votes[$review->rating] = $votes[$review->rating] - 1;
+                            $votes['total'] = $votes['total'] > 0 ? $votes['total'] - 1 : 0;
+                        }
+
+                        $summ = 0;
+                        foreach ($votes as $key => $value) {
+                            if ((int)$key > 0) {
+                                $summ += (int)$key * (int)$value;
+                            }
+                        }
+
+                        $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 5, 1);
+                        $product->votes = json_encode($votes);
+                        $product->update();
+                    }
+                }
+            }
+            $review->delete();
+        }
+
+        $back = request()->back ?? '&get=reviews';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------
