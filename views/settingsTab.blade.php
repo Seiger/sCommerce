@@ -292,6 +292,16 @@
     </div>
     <div class="row form-row">
         <div class="col-auto">
+            <label for="product__show_field_relevant" class="warning">@lang('sCommerce::global.relevant')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.relevant')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_relevant);" @if(sCommerce::config('product.show_field_relevant', 1) == 1) checked @endif>
+            <input type="hidden" id="product__show_field_relevant" name="product__show_field_relevant" value="{{sCommerce::config('product.show_field_relevant', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
             <label for="product__link_rule" class="warning">@lang('sCommerce::global.product_link')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.product_link_rule_help')"></i>
         </div>

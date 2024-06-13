@@ -153,4 +153,5 @@
     'review_global' => 'Global review',
     'new_review' => 'New review',
     'message' => 'Message',
+    'relevant' => 'Relevant products',
 ];

@@ -125,14 +125,10 @@
                                             @php(evo()->webAlertAndQuit(__('global.error_no_parent')))
                                         @endif
                                     @endif
-                                    <i id="plockcat{{$domain->key}}" class="fa fa-folder"
-                                       onclick="enableCatalogRootSelection(this, !allowParentSelection, '{{$domain->key}}');"></i>
-                                    <b id="parentRootName{{$domain->key}}">{{$parentlookup}} ({{entities($parentname)}}
-                                        )</b>
+                                    <i id="plockcat{{$domain->key}}" class="fa fa-folder" onclick="enableCatalogRootSelection(this, !allowParentSelection, '{{$domain->key}}');"></i>
+                                    <b id="parentRootName{{$domain->key}}">{{$parentlookup}} ({{entities($parentname)}})</b>
                                     <i onclick="cleareCat(this)" class="fa fa-minus-circle text-danger b-btn-del"></i>
-                                    <input type="hidden" name="parent_{{$domain->key}}"
-                                           value="{{$item->categories()->where('scope', 'primary_' . $domain->key)->first()->id ?? 0}}"
-                                           onchange="documentDirty=true;"/>
+                                    <input type="hidden" name="parent_{{$domain->key}}" value="{{$item->categories()->where('scope', 'primary_' . $domain->key)->first()->id ?? 0}}" onchange="documentDirty=true;"/>
                                 </div>
                             </div>
                         </div>
@@ -160,12 +156,9 @@
                                         @php(evo()->webAlertAndQuit($_lang["error_no_parent"]))
                                     @endif
                                 @endif
-                                <i id="plock" class="fa fa-folder"
-                                   onclick="enableParentSelection(!allowParentSelection);"></i>
+                                <i id="plock" class="fa fa-folder" onclick="enableParentSelection(!allowParentSelection);"></i>
                                 <b id="parentName">{{$parentlookup}} ({{entities($parentname)}})</b>
-                                <input type="hidden" name="parent"
-                                       value="{{($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))}}"
-                                       onchange="documentDirty=true;"/>
+                                <input type="hidden" name="parent" value="{{($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))}}" onchange="documentDirty=true;"/>
                             </div>
                         </div>
                     </div>
@@ -176,15 +169,31 @@
                     <div class="row form-row">
                         <div class="col-auto col-title">
                             <label for="categories">@lang('sCommerce::global.categories')</label>
-                            <i class="fa fa-question-circle"
-                               data-tooltip="@lang('sCommerce::global.categories_help')"></i>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_help')"></i>
                         </div>
                         <div class="col">
-                            <select id="categories" class="form-control select2" name="categories[]" multiple
-                                    onchange="documentDirty=true;">
+                            <select id="categories" class="form-control select2" name="categories[]" multiple onchange="documentDirty=true;">
                                 @foreach($sCommerceController->listCategories() as $key => $value)
-                                    <option value="{{$key}}"
-                                            @if(in_array($key, $categories)) selected @endif>{{$value}}</option>
+                                    <option value="{{$key}}" @if(in_array($key, $categories)) selected @endif>{{$value}}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            @endif
+            @if(sCommerce::config('product.show_field_relevant', 1) == 1)
+                <div class="row-col col-lg-6 col-md-6 col-12">
+                    <div class="row form-row">
+                        <div class="col-auto col-title">
+                            <label for="relevants">@lang('sCommerce::global.relevant')</label>
+                        </div>
+                        <div class="col">
+                            @php($productRelevants = data_is_json($item->relevants ?? '', true) ?: [])
+                            <select id="relevants" class="form-control select2" name="relevants[]" multiple onchange="documentDirty=true;">
+                                @foreach(sProduct::all() as $itm)
+                                    @if(($item->id ?? 0) != $itm->id)
+                                        <option value="{{$itm->id}}" @if(in_array($itm->id, $productRelevants)) selected @endif>{{$itm->title}}</option>
+                                    @endif
                                 @endforeach
                             </select>
                         </div>

@@ -31,7 +31,7 @@ class sProduct extends Model
      *
      * @var array
      */
-    protected $appends = ['title', 'category', 'link', 'coverSrc'];
+    protected $appends = ['title', 'category', 'link', 'coverSrc', 'price'];
 
     /**
      * Availability constants
