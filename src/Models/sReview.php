@@ -49,4 +49,15 @@ class sReview extends Model
     {
         return $this->belongsTo(sProduct::class, 'product');
     }
+
+    /**
+     * Apply the active scope to the given query builder.
+     *
+     * @param \Illuminate\Database\Query\Builder $builder The query builder to apply the scope to.
+     * @return \Illuminate\Database\Query\Builder The modified query builder.
+     */
+    public function scopeActive($builder)
+    {
+        return $builder->where('s_reviews.published', '1');
+    }
 }

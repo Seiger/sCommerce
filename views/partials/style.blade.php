@@ -76,6 +76,7 @@
     .dropdown.active .dropdown__menu{visibility:visible;pointer-events:all;}
     .dropdown .dropdown__menu-link{padding:8px 12px;white-space:nowrap;cursor:pointer;color:#0d0d0d;text-decoration:none;display:block;}
     .dropdown .dropdown__menu-link:hover{text-decoration:none;background:#F4F4EF;}
+    .input-group .select2-container .select2-selection--single{height:33px;}
     @media (max-width: 840px){
         #action-btns{width:80px;}
         #actions .btn-group .btn .fas, #_actions .btn-group .btn .fas,

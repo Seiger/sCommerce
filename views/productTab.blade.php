@@ -217,6 +217,10 @@
                         @case(sAttribute::TYPE_ATTR_NUMBER)
                             @include('sCommerce::partials.attributeNumber')
                             @break
+                        @case(sAttribute::TYPE_ATTR_SELECT)
+                            @php($options = $attribute->options)
+                            @include('sCommerce::partials.attributeSelect')
+                            @break
                         @case(sAttribute::TYPE_ATTR_MULTISELECT)
                             @php($options = $attribute->options)
                             @php($value = is_array($attribute->value) ? $attribute->value : [])

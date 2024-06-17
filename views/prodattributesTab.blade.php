@@ -13,6 +13,9 @@
                     @case(sAttribute::TYPE_ATTR_NUMBER)
                         @include('sCommerce::partials.attributeNumber')
                         @break
+                    @case(sAttribute::TYPE_ATTR_SELECT)
+                        @include('sCommerce::partials.attributeSelect')
+                        @break
                     @case(sAttribute::TYPE_ATTR_MULTISELECT)
                         @php($value = json_decode($attribute->value ?? '', true))
                         @include('sCommerce::partials.attributeMultiselect')
