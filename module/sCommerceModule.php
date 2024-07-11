@@ -214,6 +214,7 @@ switch ($get) {
 
         $sCommerceController->setProductsListing();
         $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=product'));
+        evo()->invokeEvent('OnAfterProductSave', compact('product', 'text'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "productDelete":
         $product = sCommerce::getProduct((int)request()->input('i', 0));
