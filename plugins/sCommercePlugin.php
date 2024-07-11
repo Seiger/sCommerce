@@ -65,6 +65,7 @@ Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
         }
 
         $template = SiteTemplate::whereTemplatealias('s_commerce_product')->first();
+        $product->type = 'product';
         $product->template = $template->id ?? 0;
         $product->hide_from_tree = false;
         $product->content_dispo = false;

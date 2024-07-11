@@ -72,7 +72,7 @@ class sCommerce
      * @param int $dept The depth of sub-categories to include in the query. Defaults to 10.
      * @return object The products belonging to the specified category, filtered by language and category ID.
      */
-    public function getCategoryProducts(int $category = null, string $lang = null, int $dept = 10): object
+    public function getCategoryProducts(int $category = null, string $lang = null, int $perPage = 1000, int $dept = 10): object
     {
         $sCommerceController = new sCommerceController();
 
@@ -87,7 +87,7 @@ class sCommerce
         $categories = array_merge([$category], $sCommerceController->listAllActiveSubCategories($category, $dept));
         $productIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->get()->pluck('product')->toArray();
 
-        return sProduct::lang($lang)->WhereIn('id', $productIds)->active()->get();
+        return sProduct::lang($lang)->whereIn('id', $productIds)->active()->paginate($perPage);
     }
 
     /**

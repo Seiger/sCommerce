@@ -252,10 +252,10 @@ class sCommerceController
      */
     public function listSubCategories(object &$category, int $dept): object
     {
-        if ($category->hasChildren() && $dept) {
+        if ($category->hasChildren() && $dept--) {
             $children = $category->children()->active()->get();
             $children->map(function ($item) use ($dept) {
-                return $this->listSubCategories($item, $dept--);
+                return $this->listSubCategories($item, $dept);
             });
             $category->subcategories = $children;
         } else {
@@ -488,7 +488,7 @@ class sCommerceController
      */
     protected function getParentsIds(int $categoryId): array
     {
-        if ($categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
+        if ($categoryId > 0 && $categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
             $category = sCategory::find($categoryId);
             $parent = $category->getParent();
             $this->categories = array_merge($this->categories, [$parent->id ?? 0]);
