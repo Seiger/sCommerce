@@ -120,7 +120,7 @@
                     <a href="{{$item->link}}" target="_blank"><b>{{$item->pagetitle ?? __('sCommerce::global.no_text')}}</b></a>
                 </td>
                 @if (sCommerce::config('products.show_field_price', 1) == 1)
-                    <td>{{$item->price}}</td>
+                        <td>{{sCommerce::getCurrencies([$item->currency])->first()['symbol']}}{{$item->price}}</td>
                 @endif
                 @if (sCommerce::config('products.show_field_price_special', 1) == 1)
                     <td>{{$item->price_special}}</td>

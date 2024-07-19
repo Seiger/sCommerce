@@ -2,6 +2,7 @@
 
 use EvolutionCMS\Models\ClosureTable;
 use EvolutionCMS\Models\SiteContent;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -13,6 +14,8 @@ use Seiger\sCommerce\Models\sProductTranslate;
 
 class sCommerce
 {
+    protected $currencies;
+
     /**
      * Retrieves the product based on the given ID and language.
      *
@@ -105,6 +108,29 @@ class sCommerce
         }
 
         return sAttribute::lang($lang)->whereAttribute($attributeId)->first() ?? new sAttribute();
+    }
+
+    /**
+     * Retrieves the currencies from cache or includes them from a config file if not found.
+     *
+     * @param array|null $where An optional array of criteria to filter the currencies.
+     * @return Collection The currencies retrieved from cache or an empty collection if not found.
+     */
+    public function getCurrencies(null|array $where = null): Collection
+    {
+        if (!$this->currencies) {
+            $this->currencies = Cache::remember('currencies', 60, function () {
+                return include_once str_replace('views/index.blade.php', 'config/currencies.php', view('sCommerce::index')->getPath());
+            });
+        }
+
+        $currencies = $this->currencies;
+
+        if ($where) {
+            $currencies = $this->currencies->whereIn('alpha', $where)->values();
+        }
+
+        return $currencies ?? collect([]);
     }
 
     /**

@@ -176,6 +176,32 @@
     </div>
     <div class="row form-row">
         <div class="col-auto">
+            <label for="basic__available_currencies">@lang('sCommerce::global.available_currencies')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.available_currencies_help')"></i>
+        </div>
+        <div class="col">
+            <select id="basic__available_currencies" class="form-control select2" name="basic__available_currencies[]" multiple onchange="documentDirty=true;">
+                @foreach(sCommerce::getCurrencies() as $currency)
+                    <option value="{{$currency['alpha']}}" @if(in_array($currency['alpha'], sCommerce::config('basic.available_currencies', []))) selected @endif title="{{$currency['name']}}">{{$currency['alpha']}} ({{$currency['symbol']}})</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="basic__main_currency">@lang('sCommerce::global.main_currency')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.main_currency_help')"></i>
+        </div>
+        <div class="col col-4 col-md-3 col-lg-2">
+            <select id="basic__main_currency" class="form-control" name="basic__main_currency" onchange="documentDirty=true;">
+                @foreach(sCommerce::getCurrencies(sCommerce::config('basic.available_currencies', [])) as $cur)
+                    <option value="{{$cur['alpha']}}" @if(sCommerce::config('basic.main_currency', '') == $cur['alpha']) selected @endif title="{{$cur['name']}}">{{$cur['alpha']}} ({{$cur['symbol']}})</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
             <label for="basic__price_decimal_characters">@lang('sCommerce::global.price_decimals')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_decimals_help')"></i>
         </div>

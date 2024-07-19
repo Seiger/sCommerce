@@ -165,6 +165,7 @@ switch ($get) {
         $product->price_special = $sCommerceController->validatePrice(request()->input('price_special', 0));
         $product->price_opt_regular = $sCommerceController->validatePrice(request()->input('price_opt_regular', 0));
         $product->price_opt_special = $sCommerceController->validatePrice(request()->input('price_opt_special', 0));
+        $product->currency = request()->input('currency', sCommerce::config('basic.main_currency', 'USD'));
         $product->weight = (float)request()->input('weight', 0);
         $product->cover = str_replace(MODX_SITE_URL, '', $cover->src ?? '/assets/site/noimage.png');
         $product->relevants = json_encode(request()->input('relevants', []));

@@ -154,4 +154,5 @@
     'new_review' => 'New review',
     'message' => 'Message',
     'relevant' => 'Relevant products',
+    'available_currencies' => 'Available currencies',
 ];
