@@ -59,12 +59,25 @@ switch ($get) {
         $perpage = Cookie::get('scom_products_page_items', 50);
         $order = request()->input('order', 'id');
         $direc = request()->input('direc', 'desc');
-        $query = sProduct::lang($sCommerceController->langDefault())->search();
+        $query = sProduct::lang($sCommerceController->langDefault())->search()->select('*');
+
+        if (count(sCommerce::config('products.additional_fields', []))) {
+            foreach (sCommerce::config('products.additional_fields', []) as $field) {
+                $query->addSelect(
+                    DB::Raw(
+                        '(select `' . DB::getTablePrefix() . 's_product_translates`.`constructor` ->> "$.'.$field.'"
+                        from `' . DB::getTablePrefix() . 's_product_translates` 
+                        where `' . DB::getTablePrefix() . 's_product_translates`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`
+                        and `' . DB::getTablePrefix() . 's_product_translates`.`lang` = "base"
+                        ) as ' . $field
+                    )
+                );
+            }
+        }
 
         switch ($order) {
             case "category":
                 $query->addSelect(
-                    '*',
                     DB::Raw(
                         '(select `' . DB::getTablePrefix() . 'site_content`.`pagetitle` 
                         from `' . DB::getTablePrefix() . 'site_content` 

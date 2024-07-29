@@ -103,6 +103,13 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.rating') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
+            @if(count(sCommerce::config('products.additional_fields', [])))
+                @foreach(sCommerce::config('products.additional_fields', []) as $field)
+                    <th class="sorting @if($order == $field) sorted @endif" data-order="{{$field}}">
+                        <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">{{sCommerce::config('constructor.main_product.'.$field.'.pagetitle', $field)}} <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                    </th>
+                @endforeach
+            @endif
             <th id="action-btns">@lang('global.onlineusers_action')</th>
         </tr>
         </thead>
@@ -181,6 +188,11 @@
                 @endif
                 @if (sCommerce::config('product.rating_on', 1) == 1 && sCommerce::config('products.show_field_rating', 1) == 1)
                     <td>{{$item->rating}}</td>
+                @endif
+                @if(count(sCommerce::config('products.additional_fields', [])))
+                    @foreach(sCommerce::config('products.additional_fields', []) as $field)
+                        <td>{{ $item->{$field} }}</td>
+                    @endforeach
                 @endif
                 <td style="text-align:center;">
                     <div class="btn-group">
