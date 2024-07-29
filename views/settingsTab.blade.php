@@ -2,6 +2,25 @@
 @if(!is_writable(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerce.php'))<div class="alert alert-danger" role="alert">@lang('sCommerce::global.not_writable')</div>@endif
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=settingsSave" onsubmit="documentDirty=false;">
     <input type="hidden" name="back" value="&get=settings" />
+    @if(count(sCommerce::config('basic.available_currencies', [])) && trim(sCommerce::config('basic.main_currency', '')))
+        <h3>@lang('sCommerce::global.currency_conversion')</h3>
+        @php($currs = sCommerce::getCurrencies(sCommerce::config('basic.available_currencies', [])))
+        @foreach($currs as $curr)
+            @foreach($currs as $cur)
+                @if($curr['alpha'] != $cur['alpha'])
+                    <div class="row form-row">
+                        <div class="col-auto">
+                            <label for="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}">{{$curr['alpha']}} --> {{$cur['alpha']}}</label>
+                        </div>
+                        <div class="col col-4 col-md-3 col-lg-2">
+                            <input type="number" id="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}" name="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}" class="form-control" value="{{sCommerce::config('currencies.'.$curr['alpha'].'_'.$cur['alpha'], 1)}}" onchange="documentDirty=true;">
+                        </div>
+                    </div>
+                @endif
+            @endforeach
+        @endforeach
+        <div class="split my-3"></div>
+    @endif
     <div class="col col-12 col-sm-12 col-md-6">
         <h3 class="sectionTrans">
             @lang('sCommerce::global.additional_fields_main_product_tab')
@@ -176,6 +195,56 @@
     </div>
     <div class="row form-row">
         <div class="col-auto">
+            <label for="basic__orders_on">@lang('sCommerce::global.orders_on')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.orders_on_help')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__orders_on);" @if(sCommerce::config('basic.orders_on', 1) == 1) checked @endif>
+            <input type="hidden" id="basic__orders_on" name="basic__orders_on" value="{{sCommerce::config('basic.orders_on', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="split my-3"></div>
+    <h3>@lang('sCommerce::global.price_configuration')</h3>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="basic__available_currencies">@lang('sCommerce::global.available_currencies')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.available_currencies_help')"></i>
+        </div>
+        <div class="col">
+            <select id="basic__available_currencies" class="form-control select2" name="basic__available_currencies[]" multiple onchange="documentDirty=true;">
+                @foreach(sCommerce::getCurrencies() as $currency)
+                    <option value="{{$currency['alpha']}}" @if(in_array($currency['alpha'], sCommerce::config('basic.available_currencies', []))) selected @endif title="{{$currency['name']}}">{{$currency['alpha']}} ({{$currency['symbol']}})</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="basic__main_currency">@lang('sCommerce::global.main_currency')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.main_currency_help')"></i>
+        </div>
+        <div class="col col-4 col-md-3 col-lg-2">
+            <select id="basic__main_currency" class="form-control" name="basic__main_currency" onchange="documentDirty=true;">
+                @foreach(sCommerce::getCurrencies(sCommerce::config('basic.available_currencies', [])) as $cur)
+                    <option value="{{$cur['alpha']}}" @if(sCommerce::config('basic.main_currency', '') == $cur['alpha']) selected @endif title="{{$cur['name']}}">{{$cur['alpha']}} ({{$cur['symbol']}})</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="basic__price_symbol">@lang('sCommerce::global.price_symbol')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_symbol_help')"></i>
+        </div>
+        <div class="col col-4 col-md-3 col-lg-2">
+            <select id="basic__price_symbol" class="form-control" name="basic__price_symbol" onchange="documentDirty=true;">
+                <option value="0" @if(sCommerce::config('basic.price_symbol', 1) == 0) selected @endif>@lang('global.no')</option>
+                <option value="1" @if(sCommerce::config('basic.price_symbol', 1) == 1) selected @endif>@lang('global.yes')</option>
+            </select>
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
             <label for="basic__price_decimal_characters">@lang('sCommerce::global.price_decimals')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_decimals_help')"></i>
         </div>
@@ -206,16 +275,6 @@
         </div>
         <div class="col col-4 col-md-3 col-lg-2">
             <input type="text" id="basic__price_thousands_separator" name="basic__price_thousands_separator" class="form-control" value="{{sCommerce::config('basic.price_thousands_separator', "&nbsp;")}}" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="basic__orders_on">@lang('sCommerce::global.orders_on')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.orders_on_help')"></i>
-        </div>
-        <div class="col">
-            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__orders_on);" @if(sCommerce::config('basic.orders_on', 1) == 1) checked @endif>
-            <input type="hidden" id="basic__orders_on" name="basic__orders_on" value="{{sCommerce::config('basic.orders_on', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     <div class="split my-3"></div>

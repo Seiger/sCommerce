@@ -2,6 +2,7 @@
 
 use EvolutionCMS\Models\ClosureTable;
 use EvolutionCMS\Models\SiteContent;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -13,6 +14,8 @@ use Seiger\sCommerce\Models\sProductTranslate;
 
 class sCommerce
 {
+    protected $currencies;
+
     /**
      * Retrieves the product based on the given ID and language.
      *
@@ -105,6 +108,71 @@ class sCommerce
         }
 
         return sAttribute::lang($lang)->whereAttribute($attributeId)->first() ?? new sAttribute();
+    }
+
+    /**
+     * Retrieves the currencies from cache or includes them from a config file if not found.
+     *
+     * @param array|null $where An optional array of criteria to filter the currencies.
+     * @return Collection The currencies retrieved from cache or an empty collection if not found.
+     */
+    public function getCurrencies(null|array $where = null): Collection
+    {
+        if (!$this->currencies) {
+            $this->currencies = Cache::remember('currencies', 2629743, function () {
+                $reflector = new \ReflectionClass(self::class);
+                return include_once str_replace('src/sCommerce.php', 'config/currencies.php', $reflector->getFileName());
+            });
+        }
+
+        $currencies = $this->currencies;
+
+        if ($where) {
+            $currencies = $this->currencies->whereIn('alpha', $where)->values();
+        }
+
+        return $currencies ?? collect([]);
+    }
+
+    /**
+     * Converts a price from one currency to another and returns it as a formatted string.
+     *
+     * @param float $price The price to convert.
+     * @param string $currencyFrom The currency to convert from.
+     * @param string $currencyTo The currency to convert to.
+     * @return string The converted price as a formatted string.
+     */
+    public function convertPice($price, $currencyFrom, $currencyTo): string
+    {
+        $price = number_format(
+            $this->convertPiceNumber($price, $currencyFrom, $currencyTo),
+            $this->config('basic.price_decimals', 2),
+            $this->config('basic.price_decimal_separator', '.'),
+            $this->config('basic.price_thousands_separator', "&nbsp;")
+        );
+        $symbol = '';
+        if ($this->config('basic.price_symbol', 1)) {
+            $s = $this->getCurrencies([$currencyTo])->first()['symbol'];
+            if (trim($s) && $s != $currencyTo) {
+                $symbol = $s;
+            }
+        }
+        return $symbol . $price;
+    }
+
+    /**
+     * Converts a price from one currency to another.
+     *
+     * @param float $price The price to be converted.
+     * @param string $currencyFrom The currency to convert from.
+     * @param string $currencyTo The currency to convert to.
+     *
+     * @return float The converted price.
+     */
+    public function convertPiceNumber($price, $currencyFrom, $currencyTo): float
+    {
+        $rate = $this->config('currencies.'.$currencyFrom.'_'.$currencyTo, 1);
+        return $price * $rate;
     }
 
     /**

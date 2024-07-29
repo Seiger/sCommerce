@@ -78,7 +78,7 @@ class sCommerceController
      */
     public function updateFileConfigs(): bool
     {
-        $filters = ['basic', 'constructor', 'product', 'products'];
+        $filters = ['basic', 'constructor', 'currencies', 'product', 'products'];
         $all = request()->all();
 
         if (isset($all['main_product_constructors']) && is_array($all['main_product_constructors']) && count($all['main_product_constructors'])) {
@@ -133,6 +133,8 @@ class sCommerceController
                         }
                     } elseif ($this->isInteger($value)) {
                         $value = intval($value);
+                    } elseif ($this->isFloat($value)) {
+                        $value = floatval($value);
                     }
                     $config[$filter][$key] = $value;
                 }
@@ -511,6 +513,17 @@ class sCommerceController
     }
 
     /**
+     * Check if the given input is a float.
+     *
+     * @param mixed $input The input to be checked.
+     * @return bool Returns true if the input is an float, otherwise false.
+     */
+    protected function isFloat(mixed $input): bool
+    {
+        return is_scalar($input) && filter_var(strval($input), FILTER_VALIDATE_FLOAT);
+    }
+
+    /**
      * Convert data to a string representation.
      *
      * @param mixed $data The data to convert.
@@ -529,7 +542,7 @@ class sCommerceController
             return str_replace(['bool(', ')'], ['', ','], $match[0]);
         })->replaceMatches('/int\(\d+\)/', function ($match) {
             return str_replace(['int(', ')'], ['', ','], $match[0]);
-        })->replaceMatches('/float\(\d+\)/', function ($match) {
+        })->replaceMatches('/float\(\d+\.\d+\)/', function ($match) {
             return str_replace(['float(', ')'], ['', ','], $match[0]);
         })->replaceMatches('/array\(\d+\) /', function ($match) {
             return str_replace($match[0], '', $match[0]);

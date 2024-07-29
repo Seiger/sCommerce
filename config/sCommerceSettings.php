@@ -1,18 +1,34 @@
 <?php return [
     "basic" => [
+        "available_currencies" => [
+            0 => "EUR",
+            1 => "USD",
+        ],
         "catalog_root" => 1,
         "in_main_menu" => 1,
+        "main_currency" => "EUR",
         "main_menu_order" => 11,
         "orders_on" => 0,
+        "price_decimal_separator" => ".",
+        "price_decimals" => 0,
+        "price_symbol" => 1,
+        "price_thousands_separator" => ",",
+    ],
+    "currencies" => [
+        "EUR_USD" => 1.08,
+        "USD_EUR" => 0.92,
     ],
     "product" => [
         "link_rule" => "root",
         "quantity_on" => 0,
         "rating_on" => 0,
         "show_field_availability" => 0,
+        "show_field_categories" => 1,
         "show_field_price" => 1,
-        "show_field_sku" => 1,
+        "show_field_relevant" => 1,
+        "show_field_sku" => 0,
         "views_on" => 1,
+        "visual_editor_introtext" => 0,
     ],
     "products" => [
         "show_field_availability" => 1,
@@ -23,8 +39,10 @@
         "show_field_price_opt_special" => 0,
         "show_field_price_special" => 0,
         "show_field_quantity" => 0,
+        "show_field_rating" => 1,
         "show_field_sku" => 1,
         "show_field_views" => 1,
         "show_field_visibility" => 1,
+        "show_field_websites" => 0,
     ],
 ];

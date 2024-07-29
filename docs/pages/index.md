@@ -53,7 +53,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Dynamic Filters for Product Search.
 - [ ] Promo Code System.
 - [ ] Customer Reviews and Ratings.
-- [ ] Multi-currency Support.
+- [x] Multi-currency Support.
 - [x] Plugin events.
 - [ ] Integration with Payment Systems.
 - [ ] Integration with Warehouses.

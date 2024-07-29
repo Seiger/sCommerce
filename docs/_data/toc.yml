@@ -11,3 +11,5 @@
       url: "attributes"
     - title: "Events"
       url: "events"
+    - title: "Currencies"
+      url: "currencies"

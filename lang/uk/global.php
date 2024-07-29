@@ -153,4 +153,12 @@
     'new_review' => 'Новий відгук',
     'message' => 'Повідомлення',
     'relevant' => 'Релевантні продукти',
+    'main_currency' => 'Основна валюта',
+    'main_currency_help' => 'Базова валюта магазину, що використовується типово.',
+    'available_currencies' => 'Доступні валюти',
+    'available_currencies_help' => 'Список цін, що доступні для роботи магазину.',
+    'currency_conversion' => 'Конвертація валют',
+    'price_configuration' => 'Налаштування ціни',
+    'price_symbol' => 'Показати символ',
+    'price_symbol_help' => 'Відображати символ валюти при виведенні ціни',
 ];

@@ -296,6 +296,33 @@ class sProduct extends Model
      */
     public function getPriceAttribute(): string
     {
-        return number_format($this->price_regular, sCommerce::config('basic.price_decimals', 2), sCommerce::config('basic.price_decimal_separator', '.'), sCommerce::config('basic.price_thousands_separator', "&nbsp;"));
+        if (!isset($_SESSION['currency'])) {
+            $_SESSION['currency'] = sCommerce::config('basic.main_currency', 'EUR');
+        }
+
+        return $this->priceTo($_SESSION['currency']);
+    }
+
+    /**
+     * Convert the price to the specified currency and format it as a string.
+     *
+     * @param string $currency The target currency.
+     * @return string The formatted price.
+     */
+    public function priceTo($currency): string
+    {
+        return sCommerce::convertPice($this->price_regular, $this->currency, $currency);
+    }
+
+    /**
+     * Convert the product regular price to a number in a specified currency.
+     *
+     * @param string $currency The desired currency to convert to.
+     *
+     * @return float The converted price in the specified currency.
+     */
+    public function priceToNumber($currency): float
+    {
+        return sCommerce::convertPiceNumber($this->price_regular, $this->currency, $currency);
     }
 }

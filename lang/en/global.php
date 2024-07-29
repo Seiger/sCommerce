@@ -154,4 +154,12 @@
     'new_review' => 'New review',
     'message' => 'Message',
     'relevant' => 'Relevant products',
+    'main_currency' => 'Main currency',
+    'main_currency_help' => 'The store\'s base currency, which is default used.',
+    'available_currencies' => 'Available currencies',
+    'available_currencies_help' => 'List of prices that are available for store operation.',
+    'currency_conversion' => 'Currency Conversion',
+    'price_configuration' => 'Price configuration',
+    'price_symbol' => 'Show symbol',
+    'price_symbol_help' => 'Display the currency symbol when displaying the price',
 ];

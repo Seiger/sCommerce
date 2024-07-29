@@ -153,4 +153,12 @@
     'new_review' => 'Новый отзыв',
     'message' => 'Сообщение',
     'relevant' => 'Релевантные продукты',
+    'main_currency' => 'Основная валюта',
+    'main_currency_help' => 'Базовая валюта магазина, которая используется по умолчанию.',
+    'available_currencies' => 'Доступные валюты',
+    'available_currencies_help' => 'Список цен, доступных для работы магазина.',
+    'currency_conversion' => 'Обмен валют',
+    'price_configuration' => 'Настройка цены',
+    'price_symbol' => 'Показать символ',
+    'price_symbol_help' => 'Отображение символа валюты при выводе цены',
 ];
