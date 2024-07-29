@@ -93,9 +93,15 @@
                             <label for="price">@lang('sCommerce::global.price')</label>
                             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_help')"></i>
                         </div>
-                        <div class="col">
-                            <input id="price" class="form-control" name="price_regular"
-                                   value="{{$item->price_regular ?? ''}}" onblur="documentDirty=true;">
+                        <div class="input-group col">
+                            <div class="input-group-prepend">
+                                <select name="currency" class="form-control" onchange="documentDirty=true;" style="background-color: #e9ecef;">
+                                    @foreach(sCommerce::getCurrencies(sCommerce::config('basic.available_currencies', [])) as $cur)
+                                        <option value="{{$cur['alpha']}}" @if(($item->currency ?? sCommerce::config('basic.main_currency', 'USD')) == $cur['alpha']) selected @endif data-tooltip="{{$cur['name']}}">{{$cur['symbol']}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <input id="price" class="form-control" name="price_regular" value="{{$item->price_regular ?? ''}}" onblur="documentDirty=true;">
                         </div>
                     </div>
                 </div>

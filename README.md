@@ -1,5 +1,5 @@
 # sCommerce for Evolution CMS
-![sCommerce](https://repository-images.githubusercontent.com/683186810/d71c1c9b-f143-4000-8125-5104eeee067b)
+![sCommerce](https://github.com/user-attachments/assets/49892061-442b-4171-8107-29c1e75ac0a4)
 [![Latest Stable Version](https://img.shields.io/packagist/v/seiger/sCommerce?label=version)](https://packagist.org/packages/seiger/scommerce)
 [![CMS Evolution](https://img.shields.io/badge/CMS-Evolution-brightgreen.svg)](https://github.com/evolution-cms/evolution)
 ![PHP version](https://img.shields.io/packagist/php-v/seiger/scommerce)
@@ -47,7 +47,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Dynamic Filters for Product Search.
 - [ ] Promo Code System.
 - [ ] Customer Reviews and Ratings.
-- [x] Multi-currency Support.
+- [x] Multi-currency Support (ISO 4217).
 - [x] Plugin events.
 - [ ] Integration with Payment Systems.
 - [ ] Integration with Warehouses.
