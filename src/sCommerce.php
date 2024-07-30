@@ -172,7 +172,7 @@ class sCommerce
     public function convertPiceNumber($price, $currencyFrom, $currencyTo): float
     {
         $rate = $this->config('currencies.'.$currencyFrom.'_'.$currencyTo, 1);
-        return $price * $rate;
+        return floatval($price) * $rate;
     }
 
     /**
