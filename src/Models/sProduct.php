@@ -84,15 +84,45 @@ class sProduct extends Model
     }
 
     /**
+     * This method is called when the sProduct class is booted.
+     * It adds a global scope to the query that joins the s_product_translates table and selects the product attributes.
+     * The join condition is on the product id and the lang column is filtered based on the current locale and 'base'.
+     * The lang column is ordered based on the current locale and 'base' to prioritize the current locale.
+     * Only one result select.
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        static::addGlobalScope('translate', function (Builder $builder) {
+            if (!isset($builder->getQuery()->columns)) {
+                $builder->select('*');
+            }
+
+            $builder->leftJoin('s_product_translates as spt', function ($leftJoin) {
+                $leftJoin->on('s_products.id', '=', 'spt.product')
+                    ->where('spt.lang', function ($leftJoin) {
+                        $leftJoin->select('lang')
+                            ->from('s_product_translates as t')
+                            ->whereRaw('`' . DB::getTablePrefix() . 't`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`')
+                            ->whereIn('lang', [evo()->getLocale(), 'base'])
+                            ->orderByRaw('FIELD(lang, "' . evo()->getLocale() . '", "base")')
+                            ->limit(1);
+                    });
+            });
+        });
+    }
+
+    /**
      * Join the language translations table on the query based on the provided locale.
      *
-     * @param \Illuminate\Database\Query\Builder $query The query builder instance.
+     * @param \Illuminate\Database\Query\Builder $builder Builder The query builder instance.
      * @param string $locale The locale to filter the translations by.
      * @return \Illuminate\Database\Query\Builder The modified query builder instance.
      */
-    public static function scopeLang($query, $locale)
+    public static function scopeLang($builder, $locale)
     {
-        return $query->leftJoin('s_product_translates', function ($leftJoin) use ($locale) {
+        return $builder->leftJoin('s_product_translates', function ($leftJoin) use ($locale) {
             $leftJoin->on('s_products.id', '=', 's_product_translates.product')
                 ->where('lang', function ($leftJoin) use ($locale) {
                     $leftJoin->select('lang')
@@ -108,11 +138,11 @@ class sProduct extends Model
     /**
      * Apply search filters to the query
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query The query builder object
+     * @param \Illuminate\Database\Eloquent\Builder $builder The query builder object
      *
      * @return \Illuminate\Database\Eloquent\Builder The modified query builder object
      */
-    public function scopeSearch($query)
+    public function scopeSearch($builder)
     {
         if (request()->has('search')) {
             $fields = collect(['sku', 'pagetitle', 'longtitle', 'introtext', 'content']);
@@ -128,7 +158,7 @@ class sProduct extends Model
 
             $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN \"{$field}\" LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate points source
 
-            return $query->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
+            return $builder->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
                 ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
                 ->orderByDesc('points');
         }
@@ -143,6 +173,35 @@ class sProduct extends Model
     public function scopeActive($builder)
     {
         return $builder->where('s_products.published', '1');
+    }
+
+    /**
+     * Apply the active scope to the given query builder.
+     *
+     * @param \Illuminate\Database\Query\Builder $builder The query builder to apply the scope to.
+     * @return \Illuminate\Database\Query\Builder The modified query builder.
+     */
+    public function scopeExtractConstructor($builder)
+    {
+        if (!isset($builder->getQuery()->columns)) {
+            $builder->select('*');
+        }
+
+        foreach (sCommerce::config('constructor', []) as $constructor) {
+            foreach ($constructor as $field => $item) {
+                $builder->addSelect(
+                    DB::Raw(
+                        '(select `' . DB::getTablePrefix() . 's_product_translates`.`constructor` ->> "$.' . $field . '"
+                        from `' . DB::getTablePrefix() . 's_product_translates` 
+                        where `' . DB::getTablePrefix() . 's_product_translates`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`
+                        and `' . DB::getTablePrefix() . 's_product_translates`.`lang` = "base"
+                        ) as constructor_' . $field
+                    )
+                );
+            }
+        }
+
+        return $builder;
     }
 
     /**
@@ -163,6 +222,17 @@ class sProduct extends Model
     public function texts()
     {
         return $this->hasMany(sProductTranslate::class, 'product', 'id');
+    }
+
+    /**
+     * Get selected related product translate
+     *
+     * @return Illuminate\Database\Eloquent\Relations\HasMany The relation object for the product translations.
+     */
+    public function text($locale = '')
+    {
+        $locale = trim($locale) ? $locale : config('app.locale');
+        return $this->hasOne(sProductTranslate::class, 'product', 'id')->whereIn('lang', [$locale, 'base']);
     }
 
     /**

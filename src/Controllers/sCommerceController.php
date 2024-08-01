@@ -27,7 +27,7 @@ class sCommerceController
     {
         $productsListing = [];
         $categories = [];
-        $products = sProduct::select('id', 'alias')->wherePublished(1)->get();
+        $products = sProduct::select('id', 'alias')->active()->get();
         if ($products) {
             $scopes = DB::table('s_product_category')->where('scope', 'LIKE', 'primary%')->get();
             foreach ($scopes as $scope) {

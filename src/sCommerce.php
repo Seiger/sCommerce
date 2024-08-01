@@ -30,12 +30,12 @@ class sCommerce
             $lang = $sCommerceController->langDefault();
         }
 
-        $product = sProduct::lang($lang)->whereProduct($productId)->first();
+        $product = sProduct::lang($lang)->whereId($productId)->first();
 
         if (!$product) {
             $translate = sProductTranslate::whereProduct($productId)->first();
             if ($translate) {
-                $product = sProduct::lang($translate->lang)->whereProduct($productId)->first();
+                $product = sProduct::lang($translate->lang)->whereId($productId)->first();
             }
         }
 
