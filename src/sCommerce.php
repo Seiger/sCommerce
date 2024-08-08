@@ -12,8 +12,20 @@ use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 
+/**
+ * Class sCommerce
+ *
+ * This class handles various functionalities of the sCommerce package including product retrieval, category management, currency conversion, and configuration handling.
+ *
+ * @package Seiger\sCommerce
+ */
 class sCommerce
 {
+    /**
+     * Cached currencies.
+     *
+     * @var Collection
+     */
     protected $currencies;
 
     /**
@@ -72,7 +84,8 @@ class sCommerce
      *
      * @param int|null $category The ID of the category. If not provided, it will default to the current document identifier.
      * @param string|null $lang The language code for the product names. If not provided, it will default to the application's locale.
-     * @param int $dept The depth of sub-categories to include in the query. Defaults to 10.
+     * @param int $perPage The number of products to return per page. Default value is 1000.
+     * @param int $dept The depth of sub-categories to include in the query. Default value is 10.
      * @return object The products belonging to the specified category, filtered by language and category ID.
      */
     public function getCategoryProducts(int $category = null, string $lang = null, int $perPage = 1000, int $dept = 10): object
