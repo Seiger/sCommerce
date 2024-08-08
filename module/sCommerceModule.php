@@ -432,6 +432,7 @@ switch ($get) {
             $tabs[] = 'prodattributes';
         }
 
+        $data['product'] = $product;
         $data['item'] = $content;
         $data['buttons'] = $buttons;
         $data['elements'] = $elements;

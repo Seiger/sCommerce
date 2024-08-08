@@ -42,12 +42,12 @@ class sCommerce
             $lang = $sCommerceController->langDefault();
         }
 
-        $product = sProduct::lang($lang)->whereId($productId)->first();
+        $product = sProduct::lang($lang)->whereId($productId)->extractConstructor()->first();
 
         if (!$product) {
             $translate = sProductTranslate::whereProduct($productId)->first();
             if ($translate) {
-                $product = sProduct::lang($translate->lang)->whereId($productId)->first();
+                $product = sProduct::lang($translate->lang)->whereId($productId)->extractConstructor()->first();
             }
         }
 
@@ -62,7 +62,7 @@ class sCommerce
      */
     public function getProductByAlias(string $alias): object
     {
-        return sProduct::whereAlias($alias)->first() ?? new sProduct();
+        return sProduct::whereAlias($alias)->extractConstructor()->first() ?? new sProduct();
     }
 
     /**

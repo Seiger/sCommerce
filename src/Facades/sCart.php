@@ -3,14 +3,7 @@
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static \Seiger\sCommerce\sCart addItem($item)
- * @method static \Seiger\sCommerce\sCart removeItem($itemId)
- * @method static \Seiger\sCommerce\sCart clear()
- * @method static \Seiger\sCommerce\sCart getItems()
- * @method static \Seiger\sCommerce\sCart getTotal()
- * @method static \Seiger\sCommerce\sCart getItemCount()
- * @method static \Seiger\sCommerce\sCart updateItemQuantity($itemId, $quantity)
- * @method static \Seiger\sCommerce\sCart getInstance()
+ * @mixin \Seiger\sCommerce\sCart
  */
 class sCart extends Facade
 {

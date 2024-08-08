@@ -23,17 +23,22 @@
                                name="publishedcheck" value="" onchange="documentDirty=true;"
                                onclick="changestate(document.form.published);"
                                @if(isset($item->published) && $item->published) checked @endif>
-                        <input type="hidden" id="published" name="published" value="{{$item->published ?? 0}}"
-                               onchange="documentDirty=true;">
-                        @if(sCommerce::config('product.views_on', 1) == 1)&emsp;<i class="fa fa-eye"
-                                                                                   data-tooltip="@lang('sCommerce::global.views')">
-                            <b>{{$item->views ?? 0}}</b></i>@endif
-                        @if(sCommerce::config('product.rating_on', 1) == 1)&emsp;<i class="fa fa-star"
-                                                                                    data-tooltip="@lang('sCommerce::global.rating')">
-                            <b>{{$item->rating ?? 5}}</b></i>@endif
-                        @if(sCommerce::config('product.quantity_on', 1) == 1)&emsp;<i class="fas fa-warehouse"
-                                                                                      data-tooltip="@lang('sCommerce::global.quantity')">
-                            <b>{{$item->quantity ?? 0}}</b></i>@endif
+                        <input type="hidden" id="published" name="published" value="{{$item->published ?? 0}}" onchange="documentDirty=true;">
+                        @if(sCommerce::config('product.views_on', 1) == 1)&emsp;
+                            <i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')">
+                                <b>{{$item->views ?? 0}}</b>
+                            </i>
+                        @endif
+                        @if(sCommerce::config('product.rating_on', 1) == 1)&emsp;
+                            <i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')">
+                                <b>{{$item->rating ?? 5}}</b>
+                            </i>
+                        @endif
+                        @if(sCommerce::config('product.quantity_on', 1) == 1)&emsp;
+                            <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.quantity')">
+                                <b>{{$item->quantity ?? 0}}</b>
+                            </i>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -42,15 +47,12 @@
                     <div class="row form-row">
                         <div class="col-auto col-title">
                             <label for="availability">@lang('sCommerce::global.availability')</label>
-                            <i class="fa fa-question-circle"
-                               data-tooltip="@lang('sCommerce::global.availability_help')"></i>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.availability_help')"></i>
                         </div>
                         <div class="col">
-                            <select id="availability" class="form-control" name="availability"
-                                    onchange="documentDirty=true;">
+                            <select id="availability" class="form-control" name="availability" onchange="documentDirty=true;">
                                 @foreach(sProduct::listAvailability() as $key => $title)
-                                    <option value="{{$key}}"
-                                            @if($key == ($item->availability ?? 0)) selected @endif>{{$title}}</option>
+                                    <option value="{{$key}}" @if($key == ($item->availability ?? 0)) selected @endif>{{$title}}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -65,8 +67,7 @@
                             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.sku_help')"></i>
                         </div>
                         <div class="col">
-                            <input id="sku" class="form-control" name="sku" value="{{$item->sku ?? ''}}"
-                                   onblur="documentDirty=true;">
+                            <input id="sku" class="form-control" name="sku" value="{{$item->sku ?? ''}}" onblur="documentDirty=true;">
                         </div>
                     </div>
                 </div>
@@ -208,17 +209,15 @@
             @endif
         </div>
     </div>
-    @php($attributes = sCommerce::config('constructor.main_product'))
-    @if(count($attributes))
-        @php($constructor = data_is_json($item->constructor ?? '', true))
+    @php($mainAttributes = sCommerce::config('constructor.main_product', []))
+    @if(count($mainAttributes))
         <div class="split my-3"></div>
         <div class="row-col col-12">
             <div class="row form-row">
                 @php($prefix = 'constructor__')
-                @foreach($attributes as $attribute)
-                    @php($attribute = (object)$attribute)
-                    @php($attribute->id = $attribute->key)
-                    @php($attribute->value = $constructor[$attribute->key] ?? '')
+                @foreach($mainAttributes as $attribute)
+                    @php($value = data_is_json(($item->{'constructor_'.$attribute['key']}??''),true)?:($item->{'constructor_'.$attribute['key']}??''))
+                    @php($attribute = (object)array_merge($attribute, ['id' => $attribute['key'], 'value' => $value]))
                     @switch($attribute->type)
                         @case(sAttribute::TYPE_ATTR_NUMBER)
                             @include('sCommerce::partials.attributeNumber')
