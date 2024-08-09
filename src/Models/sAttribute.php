@@ -22,7 +22,7 @@ class sAttribute extends Model
      * Type of input the attribute constants
      */
     const TYPE_ATTR_NUMBER = 0;
-    //const TYPE_ATTR_CHECKBOX = 1;
+    const TYPE_ATTR_CHECKBOX = 1;
     //const TYPE_ATTR_RADIO = 2;
     const TYPE_ATTR_SELECT = 3;
     const TYPE_ATTR_MULTISELECT = 4;

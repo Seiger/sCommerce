@@ -13,6 +13,9 @@
                     @case(sAttribute::TYPE_ATTR_NUMBER)
                         @include('sCommerce::partials.attributeNumber')
                         @break
+                    @case(sAttribute::TYPE_ATTR_CHECKBOX)
+                        @include('sCommerce::partials.attributeCheckbox')
+                        @break
                     @case(sAttribute::TYPE_ATTR_SELECT)
                         @include('sCommerce::partials.attributeSelect')
                         @break

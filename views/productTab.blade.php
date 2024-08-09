@@ -222,6 +222,9 @@
                         @case(sAttribute::TYPE_ATTR_NUMBER)
                             @include('sCommerce::partials.attributeNumber')
                             @break
+                        @case(sAttribute::TYPE_ATTR_CHECKBOX)
+                            @include('sCommerce::partials.attributeCheckbox')
+                            @break
                         @case(sAttribute::TYPE_ATTR_SELECT)
                             @php($options = $attribute->options)
                             @include('sCommerce::partials.attributeSelect')

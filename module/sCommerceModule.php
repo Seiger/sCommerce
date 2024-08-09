@@ -319,6 +319,12 @@ switch ($get) {
                                         $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
                                     }
                                     break;
+                                case sAttribute::TYPE_ATTR_CHECKBOX : // 1
+                                    if (trim($value)) {
+                                        $value = intval($value);
+                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
+                                    }
+                                    break;
                                 case sAttribute::TYPE_ATTR_TEXT : // 5
                                     if (is_array($value) && count($value)) {
                                         $vals = [];
