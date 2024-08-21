@@ -91,6 +91,9 @@ switch ($get) {
                 );
                 $query->orderBy('cat', $direc);
                 break;
+            case "pagetitle":
+                $query->orderBy('s_product_translates.pagetitle', $direc);
+                break;
             default :
                 $query->orderBy($order, $direc);
                 break;
