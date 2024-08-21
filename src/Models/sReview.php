@@ -21,7 +21,7 @@ class sReview extends Model
     public function scopeSearch($query)
     {
         if (request()->has('search')) {
-            $fields = collect(['product', 'name', 'feedback']);
+            $fields = collect(['product', 'name', 'message']);
 
             $search = Str::of(request('search'))
                 ->stripTags()

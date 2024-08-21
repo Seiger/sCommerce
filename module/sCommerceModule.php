@@ -100,6 +100,7 @@ switch ($get) {
         $data['total'] = sProduct::count();
         $data['active'] = sProduct::wherePublished(1)->count();
         $data['disactive'] = $data['total'] - $data['active'];
+        $_SESSION['itemaction'] = 'Viewing a list of products';
         break;
     case "product":
         $tabs = ['product'];
@@ -125,6 +126,13 @@ switch ($get) {
         $data['item'] = $product;
 
         $tabs[] = 'content';
+
+        if ($requestId > 0) {
+            $_SESSION['itemaction'] = 'Editing Product';
+            $_SESSION['itemname'] = $product->title;
+        } else {
+            $_SESSION['itemaction'] = 'Creating a Product';
+        }
         break;
     case "productSave":
         $filters = ['constructor'];
@@ -226,6 +234,8 @@ switch ($get) {
             $text->update();
         }
 
+        $_SESSION['itemaction'] = 'Saving Product';
+        $_SESSION['itemname'] = $product->title;
         $sCommerceController->setProductsListing();
         $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=product'));
         evo()->invokeEvent('OnAfterProductSave', compact('product', 'text'));
@@ -234,6 +244,8 @@ switch ($get) {
         $product = sCommerce::getProduct((int)request()->input('i', 0));
 
         if ($product && isset($product->id) && (int)$product->id > 0) {
+            $_SESSION['itemaction'] = 'Deleting Product';
+            $_SESSION['itemname'] = $product->title;
             $sCommerceController->removeDirRecursive(MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id);
             $galleries = sGallery::all('product', $product->id);
             if ($galleries->count()) {
@@ -281,6 +293,8 @@ switch ($get) {
 
         $data['product'] = $product;
         $data['attributes'] = $attributes;
+        $_SESSION['itemaction'] = 'Editing a Product attributes';
+        $_SESSION['itemname'] = $product->title;
         break;
     case "prodattributesSave":
         $filters = ['attribute'];
@@ -350,6 +364,8 @@ switch ($get) {
             }
         }
 
+        $_SESSION['itemaction'] = 'Saving a Product attributes';
+        $_SESSION['itemname'] = $product->title;
         $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=prodattributes'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "content":
@@ -445,6 +461,9 @@ switch ($get) {
         $data['chunks'] = $chunks;
 
         $tabs[] = 'content';
+
+        $_SESSION['itemaction'] = 'Editing a Product content' . ($requestLang != 'base' ? $requestLang : '');
+        $_SESSION['itemname'] = $product->title;
         break;
     case "contentSave":
         $requestId = (int)request()->input('i', 0);
@@ -498,6 +517,8 @@ switch ($get) {
         }
         $content->save();
 
+        $_SESSION['itemaction'] = 'Saving a Product content' . ($requestLang != 'base' ? $requestLang : '');
+        $_SESSION['itemname'] = $product->title;
         $sCommerceController->setProductsListing();
         $back = str_replace('&i=0', '&i=' . $content->product, (request()->back ?? '&get=product'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
