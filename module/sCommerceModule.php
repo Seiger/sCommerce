@@ -104,6 +104,7 @@ switch ($get) {
         $data['active'] = sProduct::wherePublished(1)->count();
         $data['disactive'] = $data['total'] - $data['active'];
         $_SESSION['itemaction'] = 'Viewing a list of products';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
     case "product":
         $tabs = ['product'];
@@ -135,6 +136,7 @@ switch ($get) {
             $_SESSION['itemname'] = $product->title;
         } else {
             $_SESSION['itemaction'] = 'Creating a Product';
+            $_SESSION['itemname'] = __('sCommerce::global.title');
         }
         break;
     case "productSave":
@@ -550,6 +552,8 @@ switch ($get) {
         }
 
         $data['items'] = $query->paginate($perpage);
+        $_SESSION['itemaction'] = 'Viewing a list of attributes';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
     case "attribute":
         $iUrl = trim($iUrl) ?: '&i=0';
@@ -569,6 +573,14 @@ switch ($get) {
         $data['texts'] = $attribute->texts->mapWithKeys(function ($item) {
             return [$item->lang => $item];
         })->all();
+
+        if ($requestId > 0) {
+            $_SESSION['itemaction'] = 'Editing Attribute';
+            $_SESSION['itemname'] = $data['texts']['base']->pagetitle;
+        } else {
+            $_SESSION['itemaction'] = 'Creating a Attribute';
+            $_SESSION['itemname'] = __('sCommerce::global.title');
+        }
         break;
     case "attrvalues":
         $iUrl = trim($iUrl) ?: '&i=0';
@@ -585,6 +597,9 @@ switch ($get) {
 
         $data['item'] = $attribute;
         $data['values'] = $attribute->values;
+
+        $_SESSION['itemaction'] = 'Viewing a list of attribute values';
+        $_SESSION['itemname'] = $attribute->texts()->whereLang('base')->first()->pagetitle;
         break;
     case "attributeSave":
         $requestId = (int)request()->input('i', 0);
@@ -629,10 +644,14 @@ switch ($get) {
             }
         }
 
+        $_SESSION['itemaction'] = 'Saving a Attribute';
+        $_SESSION['itemname'] = $attribute->texts()->whereLang('base')->first()->pagetitle;
         $back = str_replace('&i=0', '&i=' . $attribute->id, (request()->back ?? '&get=attribute'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "attributeDelete":
         $attribute = sCommerce::getAttribute((int)request()->input('i', 0));
+        $_SESSION['itemaction'] = 'Deleting Attribute';
+        $_SESSION['itemname'] = $attribute->texts()->whereLang('base')->first()->pagetitle;
 
         if ($attribute) {
             $attribute->categories()->sync([]);
@@ -709,6 +728,8 @@ switch ($get) {
             }
         }
 
+        $_SESSION['itemaction'] = 'Saving Attribute values';
+        $_SESSION['itemname'] = $attribute->texts()->whereLang('base')->first()->pagetitle;
         $back = str_replace('&i=0', '&i=' . $attribute->id, (request()->back ?? '&get=attrvalues'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
@@ -748,6 +769,8 @@ switch ($get) {
         $data['total'] = sReview::count();
         $data['active'] = sReview::wherePublished(1)->count();
         $data['disactive'] = $data['total'] - $data['active'];
+        $_SESSION['itemaction'] = 'Viewing a list of reviews';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
     case "review":
         $tabs = ['review'];
@@ -755,6 +778,14 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $review = sReview::find($requestId);
         $data['item'] = $review;
+
+        if ($requestId > 0) {
+            $_SESSION['itemaction'] = 'Editing Review';
+            $_SESSION['itemname'] = $review->name . (($review->toProduct ?? false) ? ' for ' . $review->toProduct->title : '');
+        } else {
+            $_SESSION['itemaction'] = 'Creating a Review';
+            $_SESSION['itemname'] = __('sCommerce::global.title');
+        }
         break;
     case "reviewSave":
         $all = request()->all();
@@ -831,11 +862,15 @@ switch ($get) {
         $review->created_at = $all['created_at'];
         $review->save();
 
+        $_SESSION['itemaction'] = 'Saving Review';
+        $_SESSION['itemname'] = $review->name . (($review->toProduct ?? false) ? ' for ' . $review->toProduct->title : '');
         $back = str_replace('&i=0', '&i=' . $review->id, (request()->back ?? '&get=review'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "reviewDelete":
         $requestId = (int)request()->input('i', 0);
         $review = sReview::find($requestId);
+        $_SESSION['itemaction'] = 'Deleting Review';
+        $_SESSION['itemname'] = $review->name . (($review->toProduct ?? false) ? ' for ' . $review->toProduct->title : '');
 
         if ($review) {
             if ($review->product && $review->published) {
@@ -878,12 +913,14 @@ switch ($get) {
         }
 
         $data['mainProductConstructors'] = [];
+        $_SESSION['itemaction'] = 'Editing Settings';
         break;
     case "settingsSave":
         $sCommerceController->updateDBConfigs();
         $sCommerceController->updateFileConfigs();
         evo()->clearCache('full');
 
+        $_SESSION['itemaction'] = 'Saving Settings';
         session()->flash('success', __('sCommerce::global.settings_save_success'));
         $back = request()->back ?? '&get=settings';
         return header('Location: ' . sCommerce::moduleUrl() . $back);

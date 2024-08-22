@@ -35,7 +35,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] Products Catalog.
 - [x] Products Attributes.
   - [x] Number Attribute.
-  - [х] Checkbox Attribute.
+  - [x] Checkbox Attribute.
   - [ ] Radio Attribute.
   - [x] Select Attribute.
   - [x] Multiselect Attribute.
@@ -81,4 +81,6 @@ of Evolution CMS for seamless and efficient **online commerce**.
 
 ## Support
 
-If you need help, please don't hesitate to [open an issue]({{ site.support }}).
+The developer of the sCommerce module is [Seiger IT](https://seigerit.com/).
+
+If you need help, please don't hesitate to [open an issue]({{site.support}}).
