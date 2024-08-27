@@ -98,25 +98,26 @@ class sProduct extends Model
             if (!isset($builder->getQuery()->columns)) {
                 $builder->select('*');
             }
+
+            $locale = app()->getLocale();
             foreach ($builder->getQuery()->columns as $key => $column) {
                 if (is_string($column) && str_starts_with($column, 'locale.')) {
-                    unset($builder->getQuery()->columns[$key]);
-
                     $locale = explode('.', $column)[1];
-
-                    $builder->leftJoin('s_product_translates as spt', function ($leftJoin) use ($builder, $locale) {
-                        $leftJoin->on('s_products.id', '=', 'spt.product')
-                            ->where('spt.lang', function ($leftJoin) use ($builder, $locale) {
-                                $leftJoin->select('lang')
-                                    ->from('s_product_translates as t')
-                                    ->whereRaw('`' . DB::getTablePrefix() . 't`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`')
-                                    ->whereIn('lang', [$locale, 'base'])
-                                    ->orderByRaw('FIELD(' . $builder->getGrammar()->wrap('lang') . ', "' . $locale . '", "base")')
-                                    ->limit(1);
-                            });
-                    });
+                    unset($builder->getQuery()->columns[$key]);
                 }
             }
+
+            $builder->leftJoin('s_product_translates as spt', function ($leftJoin) use ($builder, $locale) {
+                $leftJoin->on('s_products.id', '=', 'spt.product')
+                    ->where('spt.lang', function ($leftJoin) use ($builder, $locale) {
+                        $leftJoin->select('lang')
+                            ->from('s_product_translates as t')
+                            ->whereRaw('`' . DB::getTablePrefix() . 't`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`')
+                            ->whereIn('lang', [$locale, 'base'])
+                            ->orderByRaw('FIELD(`lang`, "' . $locale . '", "base")')
+                            ->limit(1);
+                    });
+            });
         });
     }
 
