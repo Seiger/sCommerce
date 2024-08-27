@@ -88,7 +88,7 @@ class sProduct extends Model
      * It adds a global scope to the query that joins the s_product_translates table and selects the product attributes.
      * The join condition is on the product id and the lang column is filtered based on the current locale and 'base'.
      * The lang column is ordered based on the current locale and 'base' to prioritize the current locale.
-     * Only one result select.
+     * Only one result is selected.
      *
      * @return void
      */
@@ -98,18 +98,25 @@ class sProduct extends Model
             if (!isset($builder->getQuery()->columns)) {
                 $builder->select('*');
             }
+            foreach ($builder->getQuery()->columns as $key => $column) {
+                if (is_string($column) && str_starts_with($column, 'locale.')) {
+                    unset($builder->getQuery()->columns[$key]);
 
-            $builder->leftJoin('s_product_translates as spt', function ($leftJoin) {
-                $leftJoin->on('s_products.id', '=', 'spt.product')
-                    ->where('spt.lang', function ($leftJoin) {
-                        $leftJoin->select('lang')
-                            ->from('s_product_translates as t')
-                            ->whereRaw('`' . DB::getTablePrefix() . 't`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`')
-                            ->whereIn('lang', [evo()->getLocale(), 'base'])
-                            ->orderByRaw('FIELD(lang, "' . evo()->getLocale() . '", "base")')
-                            ->limit(1);
+                    $locale = explode('.', $column)[1];
+
+                    $builder->leftJoin('s_product_translates as spt', function ($leftJoin) use ($builder, $locale) {
+                        $leftJoin->on('s_products.id', '=', 'spt.product')
+                            ->where('spt.lang', function ($leftJoin) use ($builder, $locale) {
+                                $leftJoin->select('lang')
+                                    ->from('s_product_translates as t')
+                                    ->whereRaw('`' . DB::getTablePrefix() . 't`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`')
+                                    ->whereIn('lang', [$locale, 'base'])
+                                    ->orderByRaw('FIELD(' . $builder->getGrammar()->wrap('lang') . ', "' . $locale . '", "base")')
+                                    ->limit(1);
+                            });
                     });
-            });
+                }
+            }
         });
     }
 
@@ -120,19 +127,17 @@ class sProduct extends Model
      * @param string $locale The locale to filter the translations by.
      * @return \Illuminate\Database\Query\Builder The modified query builder instance.
      */
-    public static function scopeLang($builder, $locale)
+    public static function scopeLang($builder, $locale = '')
     {
-        return $builder->leftJoin('s_product_translates', function ($leftJoin) use ($locale) {
-            $leftJoin->on('s_products.id', '=', 's_product_translates.product')
-                ->where('lang', function ($leftJoin) use ($locale) {
-                    $leftJoin->select('lang')
-                        ->from('s_product_translates')
-                        ->whereRaw('`' . DB::getTablePrefix() . 's_product_translates`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`')
-                        ->whereIn('lang', [$locale, 'base'])
-                        ->orderByRaw('FIELD(lang, "' . $locale . '", "base")')
-                        ->limit(1);
-                });
-        });
+        if (!isset($builder->getQuery()->columns)) {
+            $builder->select('*');
+        }
+
+        if (empty($locale)) {
+            $locale = app()->getLocale();
+        }
+
+        return $builder->addSelect('locale.' . $locale);
     }
 
     /**
@@ -145,7 +150,17 @@ class sProduct extends Model
     public function scopeSearch($builder)
     {
         if (request()->has('search')) {
-            $fields = collect(['sku', 'pagetitle', 'longtitle', 'introtext', 'content']);
+            if (!isset($builder->getQuery()->columns)) {
+                $builder->select('*');
+            }
+
+            $fields = collect([
+                'sku',
+                'spt.pagetitle',
+                'spt.longtitle',
+                'spt.introtext',
+                'spt.content',
+            ]);
 
             $search = Str::of(request('search'))
                 ->stripTags()
@@ -156,9 +171,9 @@ class sProduct extends Model
 
             $select = collect([0]);
 
-            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN \"{$field}\" LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate points source
+            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate points source
 
-            return $builder->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
+            return $builder->addSelect(DB::Raw('(' . $select->implode(' + ') . ') as points'))
                 ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
                 ->orderByDesc('points');
         }

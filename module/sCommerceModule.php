@@ -59,7 +59,7 @@ switch ($get) {
         $perpage = Cookie::get('scom_products_page_items', 50);
         $order = request()->input('order', 'id');
         $direc = request()->input('direc', 'desc');
-        $query = sProduct::lang($sCommerceController->langDefault())->search()->select('*');
+        $query = sProduct::lang($sCommerceController->langDefault())->search();
 
         if (count(sCommerce::config('products.additional_fields', []))) {
             foreach (sCommerce::config('products.additional_fields', []) as $field) {
