@@ -1,7 +1,7 @@
 @if ($paginator->hasPages())
     {{-- Full link generate --}}
     @php
-        $fullUrl = sCommerce::moduleUrl() . '&get='.request()->get('get');
+        $fullUrl = sCommerce::moduleUrl() . '&get='.request()->input('get', (sCommerce::config('basic.orders_on', 1) == 1 ? "orders" : "products"));
         $fullUrl .= (request()->has('search') ? '&search=' . request()->search : '');
         $fullUrl .= (request()->has('order') ? '&order=' . request()->order : '');
         $fullUrl .= (request()->has('direc') ? '&direc=' . request()->direc : '');

@@ -128,6 +128,7 @@ return new class extends Migration
             $table->unsignedDecimal('rating', 2, 1)->default(5)->comment('Rating the Review');
             $table->unsignedBigInteger('user')->default(0)->index()->comment('The product user ID');
             $table->string('name')->default('')->comment('The User name');
+            $table->string('title')->default('')->comment('The Title of Message');
             $table->string('message')->default('')->comment('The Message');
             $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
             $table->timestamps();
