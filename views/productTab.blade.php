@@ -25,19 +25,19 @@
                                @if(isset($item->published) && $item->published) checked @endif>
                         <input type="hidden" id="published" name="published" value="{{$item->published ?? 0}}" onchange="documentDirty=true;">
                         @if(sCommerce::config('product.views_on', 1) == 1)&emsp;
-                            <i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')">
-                                <b>{{$item->views ?? 0}}</b>
-                            </i>
+                        <i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')">
+                            <b>{{$item->views ?? 0}}</b>
+                        </i>
                         @endif
                         @if(sCommerce::config('product.rating_on', 1) == 1)&emsp;
-                            <i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')">
-                                <b>{{$item->rating ?? 5}}</b>
-                            </i>
+                        <i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')">
+                            <b>{{$item->rating ?? 5}}</b>
+                        </i>
                         @endif
                         @if(sCommerce::config('product.quantity_on', 1) == 1)&emsp;
-                            <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.quantity')">
-                                <b>{{$item->quantity ?? 0}}</b>
-                            </i>
+                        <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.quantity')">
+                            <b>{{$item->quantity ?? 0}}</b>
+                        </i>
                         @endif
                     </div>
                 </div>
@@ -252,7 +252,7 @@
 
 @if($item->id)
     <h3>@lang('sCommerce::global.gallery') <small><i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.gallery_help')"></i></small></h3>
-    {!!sGallery::initialise('section', 'product', 'i')!!}
+    {!!sGallery::initialiseView()->itemType('product')!!}
     <div class="split my-3"></div>
     @if($item->reviews->count())
         <h3>Reviews</h3>
