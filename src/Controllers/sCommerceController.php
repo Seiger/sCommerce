@@ -186,6 +186,8 @@ class sCommerceController
      */
     public function listCategories(int $category = 0): array
     {
+        $this->categories = [];
+
         if ($category == 0) {
             if (evo()->getConfig('check_sMultisite', false)) {
                 $category = [];

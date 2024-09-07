@@ -126,7 +126,7 @@ switch ($get) {
             $tabs[] = 'prodattributes';
         }
 
-        $data['categories'] = [];
+        $data['categories'] = $product->categories->pluck('id')->toArray();
         $data['item'] = $product;
 
         $tabs[] = 'content';
