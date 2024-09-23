@@ -92,9 +92,6 @@ switch ($get) {
                 );
                 $query->orderBy('cat', $direc);
                 break;
-            case "pagetitle":
-                $query->orderBy('s_product_translates.pagetitle', $direc);
-                break;
             default :
                 $query->orderBy($order, $direc);
                 break;
@@ -278,7 +275,10 @@ switch ($get) {
             $newProduct->save();
 
             // Categories
-            $newProduct->categories()->sync($product->categories->pluck('id')->toArray());
+            $categories = $product->categories()->withPivot('scope')->get();
+            foreach ($categories as $category) {
+                $newProduct->categories()->attach($category->id, ['scope' => $category->pivot->scope]);
+            }
 
             // Attribures
             if ($product->attrValues->count()) {
