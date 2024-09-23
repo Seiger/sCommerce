@@ -293,17 +293,18 @@
 @push('scripts.bot')
     <div id="actions">
         <div class="btn-group">
-            <a id="Button5" class="btn btn-secondary"
-               href="{!!$moduleUrl!!}{{request()->has('page') ? '&page=' . request()->page : ''}}">
+            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}{{request()->has('page') ? '&page=' . request()->page : ''}}">
                 <i class="fa fa-times-circle"></i><span>@lang('sCommerce::global.to_list_products')</span>
             </a>
             <a id="Button1" class="btn btn-success" href="javascript:void(0);" onclick="saveForm('#form');">
                 <i class="fa fa-floppy-o"></i>
                 <span>@lang('global.save')</span>
             </a>
-            <a id="Button3" class="btn btn-danger" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}"
-               data-delete="{{$item->id}}" data-name="{{$item->pagetitle}}">
-                <i class="fa fa-trash"></i> <span>@lang('global.remove')</span>
+            <a id="Button6" class="btn btn-info" data-href="{!!$moduleUrl!!}&get=productDuplicate&i={{$item->id}}" data-duplicate="{{$item->id}}" data-name="{{$item->pagetitle}}">
+                <i class="fa fa-clone"></i> <span>@lang('global.duplicate')</span>
+            </a>
+            <a id="Button3" class="btn btn-danger" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle}}">
+                <i class="fa fa-trash"></i> <span>@lang('global.delete')</span>
             </a>
         </div>
     </div>

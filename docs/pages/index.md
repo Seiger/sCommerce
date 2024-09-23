@@ -51,23 +51,27 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [ ] Constructor Attribute.
   - [x] Custom Attribute.
 - [ ] Dynamic Filters for Product Search.
+- [x] Duplicate Product.
+- [ ] AI-Powered Product Search.
+- [ ] Flexible Product Bundles.
 - [ ] Promo Code System.
+- [ ] Wishlist and Favorites.
 - [ ] Customer Reviews and Ratings.
-- [x] Multi-currency Support (ISO 4217).
+- [ ] Personalized Recommendations.
+- [ ] Automated Email Marketing.
 - [x] Plugin events.
+  - [x] sCommerceManagerAddTabEvent.
+  - [x] sCommerceAfterProductSave.
+  - [x] sCommerceAfterProductDuplicate.
+- [x] Multi-currency Support (ISO 4217).
 - [ ] Integration with Payment Systems.
 - [ ] Integration with Warehouses.
 - [ ] Integration with Trading Platforms.
 - [x] **[sLang](https://github.com/Seiger/sLang)** Integration.
 - [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
 - [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.
-- [ ] Advanced Analytics and Reporting.
-- [ ] Personalized Recommendations.
 - [ ] Social Media Integration.
-- [ ] AI-Powered Product Search.
-- [ ] Flexible Product Bundles.
-- [ ] Automated Email Marketing.
-- [ ] Wishlist and Favorites.
+- [ ] Advanced Analytics and Reporting.
 
 ## Minimum requirements
 

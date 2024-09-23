@@ -12,6 +12,26 @@ additional sCommerce parameters. Below is a list of reserved events.
 
 ### sCommerceManagerAddTabEvent
 
+```php
+Event::listen('evolution.sCommerceManagerAddTabEvent', function($params) {
+    dd($params);
+});
+```
+
 ## Product manipulation
 
-### OnAfterProductSave
+### sCommerceAfterProductSave
+
+```php
+Event::listen('evolution.sCommerceAfterProductSave', function($params) {
+    dd($params);
+});
+```
+
+### sCommerceAfterProductDuplicate
+
+```php
+Event::listen('evolution.sCommerceAfterProductDuplicate', function($params) {
+    dd($params);
+});
+```

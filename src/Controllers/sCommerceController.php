@@ -305,6 +305,37 @@ class sCommerceController
     }
 
     /**
+     * Copy a directory and all its contents recursively.
+     *
+     * @param string $dir The path to the directory to be removed.
+     * @return void
+     */
+    function copyDirRecursive(string $sourceDirectory, string $destinationDirectory): void
+    {
+        $directory = opendir($sourceDirectory);
+
+        if (is_dir($destinationDirectory) === false) {
+            mkdir($destinationDirectory);
+        }
+
+        chmod($destinationDirectory, octdec(evo()->getConfig('new_folder_permissions', '777')));
+
+        while (($file = readdir($directory)) !== false) {
+            if ($file === '.' || $file === '..') {
+                continue;
+            }
+
+            if (is_dir($sourceDirectory . '/' . $file) === true) {
+                recurseCopy($sourceDirectory. '/' .$file, $destinationDirectory . '/' . $file);
+            } else {
+                copy($sourceDirectory . '/' . $file, $destinationDirectory . '/' . $file);
+            }
+        }
+
+        closedir($directory);
+    }
+
+    /**
      * Removes a directory and all its contents recursively.
      *
      * @param string $dir The path to the directory to be removed.
@@ -320,9 +351,9 @@ class sCommerceController
                     unlink($obj);
                 }
             }
-        } else {
-            rmdir($dir);
         }
+
+        rmdir($dir);
     }
 
     /**

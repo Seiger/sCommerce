@@ -3,6 +3,7 @@
  * E-commerce management module
  */
 
+use Carbon\Carbon;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
@@ -212,6 +213,7 @@ switch ($get) {
         } else {
             $categories[(int)request()->input('parent', sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))] = ['scope' => 'primary'];
         }
+        $product->categories()->sync([]);
         $product->categories()->sync($categories);
 
         if (!$product->texts->count()) {
@@ -243,7 +245,106 @@ switch ($get) {
         $_SESSION['itemname'] = $product->title;
         $sCommerceController->setProductsListing();
         $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=product'));
-        evo()->invokeEvent('OnAfterProductSave', compact('product', 'text'));
+        evo()->invokeEvent('sCommerceAfterProductSave', compact('product', 'text'));
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    case "productDuplicate":
+        $requestId = (int)request()->input('i', 0);
+        $product = sCommerce::getProduct($requestId);
+
+        if ($requestId > 0 && $product && isset($product->id) && (int)$product->id > 0) {
+            // Product
+            $newProduct = sCommerce::getProduct(0);
+            $newProduct->published = 0;
+            $newProduct->availability = $product->availability;
+            $newProduct->sku = $product->sku;
+            $newProduct->alias = $sCommerceController->validateAlias($product->alias . '-duplicate', 0);
+            $newProduct->position = $product->position;
+            $newProduct->rating = $product->rating;
+            $newProduct->quantity = $product->quantity;
+            $newProduct->price_regular = $product->price_regular;
+            $newProduct->price_special = $product->price_special;
+            $newProduct->price_opt_regular = $product->price_opt_regular;
+            $newProduct->price_opt_special = $product->price_opt_special;
+            $newProduct->currency = $product->currency;
+            $newProduct->weight = $product->weight;
+            $newProduct->cover = $product->cover;
+            $newProduct->relevants = $product->relevants;
+            $newProduct->similar = $product->similar;
+            $newProduct->tmplvars = $product->tmplvars;
+            $newProduct->votes = $product->votes;
+            $newProduct->type = $product->type;
+            $newProduct->additional = $product->additional;
+            $newProduct->representation = $product->representation;
+            $newProduct->save();
+
+            // Categories
+            $newProduct->categories()->sync($product->categories->pluck('id')->toArray());
+
+            // Attribures
+            if ($product->attrValues->count()) {
+                foreach ($product->attrValues as $attrValue) {
+                    $newProduct->attrValues()->attach($attrValue->id, ['valueid' => $attrValue->pivot->valueid, 'value' => $attrValue->pivot->value]);
+                }
+            }
+
+            // Texts
+            foreach ($product->texts as $text) {
+                $array = $text->toArray();
+                unset($array['tid'], $array['product']);
+                $array['pagetitle'] = $array['pagetitle'] . ' - Duplicate';
+                $newProduct->texts()->create($array);
+                $newProduct->texts()->update($array);
+            }
+
+            // Images
+            $galleryDirectory = MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id;
+            if (is_dir($galleryDirectory)) {
+                $sCommerceController->copyDirRecursive(
+                    $galleryDirectory,
+                    MODX_BASE_PATH . 'assets/sgallery/product/' . $newProduct->id,
+                );
+
+                $galleries = sGallery::collections()->documentId($product->id)->itemType('product')->get();
+                if ($galleries->count()) {
+                    foreach ($galleries as $gallery) {
+                        if ($gallery) {
+                            $gArr = $gallery->toArray();
+                            $thisFile = sGalleryModel::whereParent($newProduct->id)
+                                ->whereBlock($gArr['block'])
+                                ->whereItemType($gArr['type'])
+                                ->whereFile($gArr['file'])
+                                ->firstOrCreate();
+                            $thisFile->parent = $newProduct->id;
+                            $thisFile->block = $gArr['block'];
+                            $thisFile->position = $gArr['position'];
+                            $thisFile->file = $gArr['file'];
+                            $thisFile->type = $gArr['type'];
+                            $thisFile->item_type = $gArr['item_type'];
+                            $thisFile->update();
+
+                            $fields = sGalleryField::where('key', $gallery->id)->get();
+                            foreach ($fields as $field) {
+                                $fArr = $field->toArray();
+                                $fTranslate = new sGalleryField();
+                                $fTranslate->key = $thisFile->id;
+                                $fTranslate->lang = $fArr['lang'];
+                                $fTranslate->alt = $fArr['alt'];
+                                $fTranslate->title = $fArr['title'];
+                                $fTranslate->description = $fArr['description'];
+                                $fTranslate->link_text = $fArr['link_text'];
+                                $fTranslate->link = $fArr['link'];
+                                $fTranslate->save();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $_SESSION['itemaction'] = 'Duplicate Product';
+        $_SESSION['itemname'] = $product->title;
+        $back = '&get=product&i=' . $newProduct->id;
+        evo()->invokeEvent('sCommerceAfterProductDuplicate', ['oldProduct' => $product, 'newProduct' => sCommerce::getProduct($newProduct->id)]);
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "productDelete":
         $product = sCommerce::getProduct((int)request()->input('i', 0));
@@ -251,13 +352,17 @@ switch ($get) {
         if ($product && isset($product->id) && (int)$product->id > 0) {
             $_SESSION['itemaction'] = 'Deleting Product';
             $_SESSION['itemname'] = $product->title;
-            $sCommerceController->removeDirRecursive(MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id);
-            $galleries = sGallery::all('product', $product->id);
-            if ($galleries->count()) {
-                foreach ($galleries as $gallery) {
-                    if ($gallery) {
-                        sGalleryField::where('key', $gallery->id)->delete();
-                        $gallery->delete();
+
+            $galleryDirectory = MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id;
+            if (file_exists($galleryDirectory)) {
+                $sCommerceController->removeDirRecursive(MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id);
+                $galleries = sGallery::collections()->documentId($product->id)->itemType('product')->get();
+                if ($galleries->count()) {
+                    foreach ($galleries as $gallery) {
+                        if ($gallery) {
+                            sGalleryField::where('key', $gallery->id)->delete();
+                            $gallery->delete();
+                        }
                     }
                 }
             }

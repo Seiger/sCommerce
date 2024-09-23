@@ -109,6 +109,31 @@
                 return false;
             });
 
+            // Duplicate item
+            $(document).on("click", "[data-duplicate]", function(e) {
+                var _this = $(this);
+                alertify.confirm(
+                    "@lang('sCommerce::global.confirm_duplicate')",
+                    "@lang('sCommerce::global.you_sure_duplicate') <b>"+_this.attr('data-name')+"</b> @lang('sCommerce::global.with_id') <b>"+_this.attr('data-duplicate')+"</b>",
+                    function() {
+                        alertify.success("@lang('sCommerce::global.copied')");
+                        window.location.href = _this.attr('data-href');
+                    },
+                    function() {
+                        alertify.error("@lang('global.cancel')");
+                        document.querySelector('.ajs-ok').classList.remove('ajs-ok-info');
+                    }
+                ).set({
+                    labels: {ok:"@lang('global.duplicate')", cancel:"@lang('global.cancel')"},
+                    transition: 'zoom',
+                    movable: false,
+                    closableByDimmer: false,
+                    pinnable: false
+                });
+                document.querySelector('.ajs-ok').classList.add('ajs-ok-info');
+                return false;
+            });
+
             // Ordering
             $('.sorting').on('click', function () {
                 const urlParams = new URLSearchParams(window.location.search);

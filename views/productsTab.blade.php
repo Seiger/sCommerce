@@ -200,7 +200,7 @@
                             <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
                         </a>
                         <a href="#" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">
-                            <i class="fa fa-trash"></i> <span>@lang('global.remove')</span>
+                            <i class="fa fa-trash"></i> <span>@lang('global.delete')</span>
                         </a>
                     </div>
                 </td>
