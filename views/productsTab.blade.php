@@ -4,15 +4,15 @@
         $domains = \Seiger\sMultisite\Models\sMultisite::all();
     }
 @endphp
-<div class="row-col pl-0 scom-conters">
-    <div class="d-flex flex-row align-items-center">
-        <div class="scom-conters-item scom-all pl-0">@lang('sCommerce::global.total_products'): <span>{{$total ?? 0}}</span></div>
-        <div class="scom-conters-item scom-status-title scom-active">@lang('sCommerce::global.publisheds'): <span>{{$active ?? 0}}</span></div>
-        <div class="scom-conters-item scom-status-title scom-disactive">@lang('sCommerce::global.unpublisheds'): <span>{{$disactive ?? 0}}</span></div>
+<div class="row form-row">
+    <div class="row-col col-lg-4 col-md-12 pl-0 scom-conters">
+        <div class="d-flex flex-row align-items-center">
+            <div class="scom-conters-item scom-all pl-0">@lang('sCommerce::global.total_products'): <span>{{$total ?? 0}}</span></div>
+            <div class="scom-conters-item scom-status-title scom-active">@lang('sCommerce::global.publisheds'): <span>{{$active ?? 0}}</span></div>
+            <div class="scom-conters-item scom-status-title scom-disactive">@lang('sCommerce::global.unpublisheds'): <span>{{$disactive ?? 0}}</span></div>
+        </div>
     </div>
-</div>
-<div class="input-group">
-    <div class="input-group mb-3">
+    <div class="row-col col-lg-8 col-md-12 input-group mb-2">
         <input name="search"
                value="{{request()->search ?? ''}}"
                type="search"
@@ -30,7 +30,12 @@
         </div>
     </div>
 </div>
-@php($resources = \EvolutionCMS\Models\SiteContent::select('id', 'pagetitle')->whereIn('id', $items->pluck('category')->unique()->toArray())->get()->pluck('pagetitle', 'id')->toArray())
+<div class="row form-row mb-2 scom-btn-container">
+    <a @class(['btn', 'btn-info' => $cat == 0, 'btn-light' => $cat != 0]) href="{!!$moduleUrl!!}&get=products" class="btn btn-info">@lang('sCommerce::global.all_products')</a>
+    @foreach($resources as $id => $resource)
+        <a @class(['btn', 'btn-info' => $cat == $id, 'btn-light' => $cat != $id]) href="{!!$moduleUrl!!}&get=products&cat={{$id}}">{{$resource}}</a>
+    @endforeach
+</div>
 <div class="table-responsive seiger__module-table">
     <table class="table table-condensed table-hover sectionTrans scom-table">
         <thead>

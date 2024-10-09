@@ -47,13 +47,15 @@
     .tab-row-container{background:#CECECF;}
     .tab-row .tab a{color:#0D0D0D;font-family:'Roboto';font-size:14px;font-weight:400;line-height:115%;text-transform:uppercase;padding:16px;}
     .sbuttons-wraper{position:sticky;top:5px;text-align:center;}
-    .scom-conters{margin-bottom:24px;margin-top:8px;}
+    .scom-conters{margin-bottom:14px;margin-top:8px;}
     .scom-conters-item{margin-right:24px;}
     .scom-status-title{font-size:14px;font-weight:400;line-height:120%;}
     .scom-all{color:var(--text-text-base, #0D0D0D);font-size:16px;font-weight:700;line-height:120%;}
     .scom-active{color:var(--brand-green, #009891);}
     .scom-disactive{color:var(--brand-pink, #EF4B67);}
-    .form-control.scom-input{height:42px;font-size:16px;font-weight:400;line-height:120%;padding:16px 12px;}
+    .form-control.scom-input{height:42px;font-weight:400;line-height:120%;padding:16px 12px;}
+    .scom-btn-container{display:flex;flex-flow:row wrap;justify-content:space-between;gap:5px;}
+    .scom-btn-container .btn:last-child {margin-right: auto;}
     .scom-clear-search{padding:5px;margin-left:-44px;z-index:10;cursor:pointer;}
     .scom-table thead th, .scom-table thead th button{color:var(--text-text-middle, #63666B);font-size:12px;font-weight:700;line-height:120%;padding-top:12px;padding-bottom:12px;}
     .scom-table thead th:first-of-type{padding-left:43px;}

@@ -4,6 +4,7 @@
  */
 
 use Carbon\Carbon;
+use EvolutionCMS\Models\SiteContent;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
@@ -60,7 +61,16 @@ switch ($get) {
         $perpage = Cookie::get('scom_products_page_items', 50);
         $order = request()->input('order', 'id');
         $direc = request()->input('direc', 'desc');
+        $cat = request()->input('cat', 0);
+        $allCats = DB::table('s_product_category')->groupBy('category')->get()->pluck('category')->toArray();
+        $cat = in_array($cat, $allCats) ? $cat : 0;
         $query = sProduct::lang($sCommerceController->langDefault())->search();
+
+        if ($cat > 0) {
+            $query->whereHas('categories', function ($q) use ($cat) {
+                $q->where('category', $cat);
+            });
+        }
 
         if (count(sCommerce::config('products.additional_fields', []))) {
             foreach (sCommerce::config('products.additional_fields', []) as $field) {
@@ -101,6 +111,8 @@ switch ($get) {
         $data['total'] = sProduct::count();
         $data['active'] = sProduct::wherePublished(1)->count();
         $data['disactive'] = $data['total'] - $data['active'];
+        $data['resources'] = SiteContent::select('id', 'pagetitle')->whereIn('id', $allCats)->orderBy('pagetitle')->get()->pluck('pagetitle', 'id')->toArray();
+        $data['cat'] = $cat;
         $_SESSION['itemaction'] = 'Viewing a list of products';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
