@@ -6,8 +6,7 @@
 <h3>{{(int)request()->input('i', 0) == 0 ? __('sCommerce::global.new_product') : ($item->pagetitle ?? __('sCommerce::global.no_text'))}}</h3>
 <div class="split my-3"></div>
 
-<form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=productSave"
-      onsubmit="documentDirty=false;">
+<form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=productSave" onsubmit="documentDirty=false;">
     <input type="hidden" name="back" value="&get=product&i={{(int)request()->input('i', 0)}}"/>
     <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}"/>
     <div class="row-col col-12">

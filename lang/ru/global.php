@@ -164,4 +164,9 @@
     'price_configuration' => 'Настройка цены',
     'price_symbol' => 'Показать символ',
     'price_symbol_help' => 'Отображение символа валюты при выводе цены',
+    'change_sorting' => 'Изменить сортировку',
+    'sort_order' => 'Порядок сортировки',
+    'sortproducts' => 'Сортировка по позиции',
+    'sortproducts_icon' => 'fa fa-sort',
+    'sortproducts_help' => 'Сортировка товаров по позиции в категории',
 ];

@@ -106,6 +106,7 @@ return new class extends Migration
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
             $table->string('scope')->index()->default('');
+            $table->unsignedInteger('position')->default(0)->comment('Product position in Category');
         });
 
         Schema::create('s_product_attribute_values', function (Blueprint $table) {

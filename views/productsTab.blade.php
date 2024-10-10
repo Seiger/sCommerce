@@ -175,7 +175,7 @@
                         @foreach($categories as $category)
                             @php($scope = str_replace('primary_', '', $category->pivot->scope))
                             @php($website = $domains->where('key', $scope)->first())
-                                <a href="https://{{$website->domain}}/" target="_blank">{{$website->site_name}}</a>
+                            <a href="https://{{$website->domain}}/" target="_blank">{{$website->site_name}}</a>
                         @endforeach
                     </td>
                 @endif
@@ -256,34 +256,11 @@
             <a id="Button2" href="{!!$moduleUrl!!}&get=product&i=0" class="btn btn-primary" title="@lang('sCommerce::global.add_product_help')">
                 <i class="fa fa-plus"></i> <span>@lang('global.add')</span>
             </a>
+            @if($cat > 0)
+                <a id="Button7" href="{!!$moduleUrl!!}&get=sortproducts&cat={{$cat}}" class="btn btn-info" title="@lang('sCommerce::global.change_sorting')">
+                    <i class="fa fa-sort"></i> <span>@lang('sCommerce::global.change_sorting')</span>
+                </a>
+            @endif
         </div>
     </div>
-    <script>
-        $('.js_delete').on('click', function () {
-            let subscriber = $(this).closest('tr').attr('id').split('-')[1];
-            alertify
-                .confirm(
-                    "@lang('sSettings::global.are_you_sure')",
-                    "Якщо Ви натиснете кнопку видалити, користувача буде видалено безповоротно.",
-                    function(){
-                        alertify.error("@lang('sSettings::global.deleted')");
-                        jQuery.ajax({
-                            url: '{!!$moduleUrl!!}&get=user-delete',
-                            type: 'POST',
-                            dataType: 'JSON',
-                            data: 'subscriber=' + subscriber,
-                            success: function (ajax) {
-                                if (ajax.status == 1) {
-                                    window.location.reload();
-                                }
-                            }
-                        });
-                    },
-                    function(){
-                        alertify.success("@lang('sSettings::global.canceled')")
-                    })
-                .set('labels',{ok:"@lang('global.delete')",cancel:"@lang('global.cancel')"})
-                .set({transition:'zoom'});
-        });
-    </script>
 @endpush

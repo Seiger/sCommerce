@@ -165,4 +165,9 @@
     'price_configuration' => 'Price configuration',
     'price_symbol' => 'Show symbol',
     'price_symbol_help' => 'Display the currency symbol when displaying the price',
+    'change_sorting' => 'Change sorting',
+    'sort_order' => 'Sort order',
+    'sortproducts' => 'Sort by position',
+    'sortproducts_icon' => 'fa fa-sort',
+    'sortproducts_help' => 'Sorting products by position in a category',
 ];

@@ -13,6 +13,7 @@ use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
+use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sCommerce\Models\sReview;
@@ -59,18 +60,19 @@ switch ($get) {
     */
     case "products":
         $perpage = Cookie::get('scom_products_page_items', 50);
-        $order = request()->input('order', 'id');
-        $direc = request()->input('direc', 'desc');
         $cat = request()->input('cat', 0);
         $allCats = DB::table('s_product_category')->groupBy('category')->get()->pluck('category')->toArray();
         $cat = in_array($cat, $allCats) ? $cat : 0;
-        $query = sProduct::lang($sCommerceController->langDefault())->search();
 
         if ($cat > 0) {
-            $query->whereHas('categories', function ($q) use ($cat) {
-                $q->where('category', $cat);
-            });
+            $order = request()->input('order', 'position');
+            $direc = request()->input('direc', 'asc');
+        } else {
+            $order = request()->input('order', 'id');
+            $direc = request()->input('direc', 'desc');
         }
+
+        $query = sProduct::lang($sCommerceController->langDefault())->search();
 
         if (count(sCommerce::config('products.additional_fields', []))) {
             foreach (sCommerce::config('products.additional_fields', []) as $field) {
@@ -84,6 +86,14 @@ switch ($get) {
                     )
                 );
             }
+        }
+
+        if ($cat > 0) {
+            $query->whereHas('categories', function ($q) use ($cat) {
+                $q->where('category', $cat);
+            })->addSelect([
+                'position' => DB::table('s_product_category')->select('position')->where('s_product_category.category', $cat)->whereColumn('s_product_category.product', 's_products.id')
+            ]);
         }
 
         switch ($order) {
@@ -116,6 +126,54 @@ switch ($get) {
         $_SESSION['itemaction'] = 'Viewing a list of products';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
+    case "sortproducts":
+        $tabs = ['sortproducts'];
+        $cat = request()->input('cat', 0);
+        $catName = sCategory::find($cat)->pagetitle ?? __('sCommerce::global.title');
+        $query = sProduct::lang($sCommerceController->langDefault());
+
+        if (count(sCommerce::config('products.additional_fields', []))) {
+            foreach (sCommerce::config('products.additional_fields', []) as $field) {
+                $query->addSelect(
+                    DB::Raw(
+                        '(select `' . DB::getTablePrefix() . 's_product_translates`.`constructor` ->> "$.'.$field.'"
+                        from `' . DB::getTablePrefix() . 's_product_translates` 
+                        where `' . DB::getTablePrefix() . 's_product_translates`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`
+                        and `' . DB::getTablePrefix() . 's_product_translates`.`lang` = "base"
+                        ) as ' . $field
+                    )
+                );
+            }
+        }
+
+        $query->addSelect(['position' => DB::table('s_product_category')->select('position')->where('s_product_category.category', $cat)->whereColumn('s_product_category.product', 's_products.id')])
+            ->whereHas('categories', function ($q) use ($cat) {$q->where('category', $cat);})
+            ->orderBy('position');
+
+        $data['cat'] = $cat;
+        $data['catName'] = $catName;
+        $data['items'] = $query->get();
+        $_SESSION['itemaction'] = 'Sorting a list of products by Category ' . $catName;
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        break;
+    case "sortproductssave":
+        $cat = request()->input('cat', 0);
+        $catName = sCategory::find($cat)->pagetitle ?? __('sCommerce::global.title');
+        $products = request()->get('products', []);
+
+        foreach ($products as $position => $product) {
+            DB::table('s_product_category')->where('category', $cat)->where('product', $product)->update(['position' => $position]);
+        }
+
+        $_SESSION['itemaction'] = 'Save Sorting products in Category ' . $catName;
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        $back = '&get=products&cat='.$cat;
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    /*
+     |--------------------------------------------------------------------------
+     | Product
+     |--------------------------------------------------------------------------
+     */
     case "product":
         $tabs = ['product'];
         $iUrl = trim($iUrl) ?: '&i=0';
@@ -155,6 +213,7 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $alias = request()->input('alias', 'new-product');
         $product = sCommerce::getProduct($requestId);
+        $prodCats = $product->categories->mapWithKeys(function ($value) {return [$value->id => $value->pivot->position];})->all();
 
         $votes = data_is_json($product->votes ?? '', true);
         $type = $product->type ?: 'simple';
@@ -194,7 +253,7 @@ switch ($get) {
         $product->availability = (int)request()->input('availability', 0);
         $product->sku = request()->input('sku', '');
         $product->alias = $sCommerceController->validateAlias($alias, (int)$product->id);
-        $product->position = (int)request()->input('position', 0);
+        $product->position = $product->categories()->where('scope', 'like', 'primary%')->first()->pivot->position ?? 0;
         $product->rating = ($rating == 0 ? 5 : $rating);
         $product->quantity = (int)request()->input('quantity', 0);
         $product->price_regular = $sCommerceController->validatePrice(request()->input('price_regular', 0));
@@ -211,16 +270,20 @@ switch ($get) {
         $product->type = $type;
         $product->save();
 
-        $categories = (array)request()->input('categories', []);
+        $inputCats = (array)request()->input('categories', []);
+        $categories = [];
+        foreach ($inputCats as $cat) {
+            $categories[$cat] = ['position' => ($prodCats[$cat] ?? 0)];
+        }
         if (evo()->getConfig('check_sMultisite', false)) {
             foreach(Seiger\sMultisite\Models\sMultisite::all() as $domain) {
                 $parent = (int)request()->input('parent_' . $domain->key, 0);
                 if ($parent > 0) {
-                    $categories[$parent] = ['scope' => 'primary_' . $domain->key];
+                    $categories[$parent] = ['scope' => 'primary_' . $domain->key, 'position' => ($prodCats[$parent] ?? 0)];
                 }
             }
         } else {
-            $categories[(int)request()->input('parent', sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))] = ['scope' => 'primary'];
+            $categories[(int)request()->input('parent', sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))] = ['scope' => 'primary', 'position' => ($prodCats[$parent] ?? 0)];
         }
         $product->categories()->sync([]);
         $product->categories()->sync($categories);
@@ -239,6 +302,7 @@ switch ($get) {
             }
         }
 
+        $text = null;
         foreach ($product->texts as $text) {
             $constructor = data_is_json($text->constructor, true);
             if (is_array($constructor)) {

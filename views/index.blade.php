@@ -68,7 +68,6 @@
     <script>
         $(document).ready(function () {
             $('.select2').select2();
-            $('.sortable').sortable({update:function(event,ui){documentDirty=true}});
 
             $("table img").on("mouseenter", function () {
                 var alt = $(this).attr("alt");
@@ -139,10 +138,15 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const order = $(this).attr('data-order');
                 let direc = 'asc';
+                let newHref = '{!!$moduleUrl!!}&get=products&order=' + order;
                 if (urlParams.get('order') == order && urlParams.get('direc') == direc) {
                     direc = 'desc';
                 }
-                window.location.href = '{!!$moduleUrl!!}&get=products&order='+order+'&direc='+direc;
+                newHref = newHref + '&direc=' + direc;
+                if (urlParams.has('cat')) {
+                    newHref = newHref + '&cat=' + '{{$cat ?? ''}}';
+                }
+                window.location.href = newHref;
             });
 
             // Flash messages
@@ -153,6 +157,9 @@
             alertify.success("{{session('error')}}");
             @endif
         });
+
+        // Enable table sorting
+        evo.sortable('.sortable > tbody > tr', {complete:function(e){documentDirty=true}});
 
         // Search form
         const searchForm = document.querySelector('input[name="search"]');
