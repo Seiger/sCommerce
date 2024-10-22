@@ -1,7 +1,7 @@
 <?php return [
     'description' => '<b>sCommerce</b> дозволяє здійснювати управління товарами та замовленнями на сайті.',
     'icon' => 'fa fa-store',
-    'title' => 'Магазин',
+    'title' => 'Комерція',
     'products' => 'Товари',
     'products_help' => 'Перелік всіх товарів магазину.',
     'products_icon' => 'fa fa-store-alt',
@@ -169,4 +169,6 @@
     'sortproducts' => 'Сортування за позицією',
     'sortproducts_icon' => 'fa fa-sort',
     'sortproducts_help' => 'Сортування товарів за позицією в категорії ',
+    'additional_fields_to_products_tab' => 'Додаткові поля',
+    'additional_fields_to_products_tab_help' => 'Додаткові поля для списка товарів.',
 ];

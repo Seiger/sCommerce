@@ -113,7 +113,6 @@ class sCommerceServiceProvider extends ServiceProvider
     protected function publishFiles()
     {
         $this->publishes([
-            dirname(dirname(__DIR__)) . '/sgallery/config/sGalleryAlias.php' => config_path('app/aliases/sGallery.php', true),
             dirname(dirname(__DIR__)) . '/sgallery/config/sGallerySettings.php' => config_path('seiger/settings/sGallery.php', true),
             dirname(dirname(__DIR__)) . '/sgallery/images/youtube-logo.png' => public_path('assets/site/youtube-logo.png'),
             dirname(__DIR__) . '/config/sCommerceAlias.php' => config_path('app/aliases/sCommerce.php', true),

@@ -576,7 +576,7 @@
                                     <label>@lang('sCommerce::global.helptext')</label>
                                 </div>
                                 <div class="col">
-                                    <input type="text" class="form-control" name="constructors[helptext][]" value="{{$item['helptext']}}" onchange="documentDirty=true;">
+                                    <input type="text" class="form-control" name="constructors[helptext][]" value="" onchange="documentDirty=true;">
                                 </div>
                             </div>
                             <div class="row form-row">
