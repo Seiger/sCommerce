@@ -1,5 +1,7 @@
 <?php return [
-    'description' => '<b>sCommerce</b> дозволяє здійснювати управління товарами та замовленнями на сайті.',
+    'add_attribute_help' => 'Додати новий атрибут.',
+    'add_block' => 'Додати блок',
+    'description' => '<strong>sCommerce</strong> дозволяє здійснювати управління товарами та замовленнями на сайті.',
     'icon' => 'fa fa-store',
     'title' => 'Комерція',
     'products' => 'Товари',
@@ -40,7 +42,6 @@
     'category' => 'Категорія',
     'representation_products_fields' => 'Представлення списку товарів',
     'show_field' => 'Відображати поле',
-    'add_attribute_help' => 'Додати новий атрибут.',
     'add_product_help' => 'Додати новий товар.',
     'new_product' => 'Новий товар',
     'no_text' => 'Текст не додано',
@@ -75,7 +76,6 @@
     'product_link_rule_root' => 'від корня сайту',
     'product_link_rule_catalog' => 'від корня каталогу',
     'product_link_rule_category' => 'від категорії товару',
-    'add_block' => 'Додати блок',
     'confirm_delete' => 'Підтвердити видалення',
     'confirm_copy' => 'Підтвердити копіювання',
     'you_sure' => 'Ви впевнені, що хочете видалити запис',
@@ -171,4 +171,6 @@
     'sortproducts_help' => 'Сортування товарів за позицією в категорії ',
     'additional_fields_to_products_tab' => 'Додаткові поля',
     'additional_fields_to_products_tab_help' => 'Додаткові поля для списка товарів.',
+    'in_new_tab' => 'У новій вкладці',
+    'in_new_tab_help' => 'Запускати <strong>sCommerce</strong> у новій вкладці.',
 ];

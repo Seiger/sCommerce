@@ -100,7 +100,7 @@ Event::listen('evolution.OnManagerMenuPrerender', function($params) {
             __('sCommerce::global.title'),
             "",
             "",
-            "main",
+            sCommerce::config('basic.in_new_tab', 1) == 1 ? "_blank" : "main",
             0,
             sCommerce::config('basic.main_menu_order', 11),
         ];

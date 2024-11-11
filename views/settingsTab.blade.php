@@ -182,6 +182,16 @@
     </div>
     <div class="row form-row">
         <div class="col-auto">
+            <label for="basic__in_new_tab">@lang('sCommerce::global.in_new_tab')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.in_new_tab_help')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__in_new_tab);" @if(sCommerce::config('basic.in_new_tab', 1) == 1) checked @endif>
+            <input type="hidden" id="basic__in_new_tab" name="basic__in_new_tab" value="{{sCommerce::config('basic.in_new_tab', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
             <label for="basic__main_menu_order">@lang('sCommerce::global.main_menu_order')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.main_menu_order_help')"></i>
         </div>

@@ -6,6 +6,7 @@
         ],
         "catalog_root" => 1,
         "in_main_menu" => 1,
+        "in_new_tab" => 1,
         "main_currency" => "EUR",
         "main_menu_order" => 11,
         "orders_on" => 0,
