@@ -214,7 +214,7 @@ class sCommerceController
             }
         } else {
             $root = SiteContent::find($category);
-            $this->categories[$root->id] = __('sCommerce::global.catalog_root');
+            $this->categories[$root->id] = __('sCommerce::global.catalog_root') . ($root->id > 0 ? ' (' . $root->pagetitle . ')' : '');
             if ($root->hasChildren()) {
                 foreach ($root->children as $item) {
                     $this->categoryCrumb($item);

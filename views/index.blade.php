@@ -2,7 +2,6 @@
 @extends('manager::template.page')
 @section('content')
     <h1><i class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
-
     <div class="sectionBody">
         <div class="tab-pane" id="resourcesPane">
             <script>tpResources = new WebFXTabPane(document.getElementById('resourcesPane'), false);</script>
@@ -37,7 +36,6 @@
         </div>
     </div>
 @endsection
-
 @push('scripts.top')
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -45,8 +43,7 @@
     @include('sCommerce::partials.style')
     <script>
         function evoRenderImageCheck(a) {
-            var b = document.getElementById('image_for_' + a.target.id),
-                c = new Image;
+            var b = document.getElementById('image_for_' + a.target.id), c = new Image;
             a.target.value ? (c.src = "<?php echo evo()->getConfig('site_url')?>" + a.target.value, c.onerror = function () {
                 b.style.backgroundImage = '', b.setAttribute('data-image', '');
             }, c.onload = function () {
@@ -55,7 +52,6 @@
         }
     </script>
 @endpush
-
 @push('scripts.bot')
     {!!$editor!!}
     <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/css/alertify.min.css"/>
@@ -63,22 +59,10 @@
     <script src="media/script/jquery.quicksearch.js"></script>
     <script src="media/script/jquery.nucontextmenu.js"></script>
     <script src="media/script/bootstrap/js/bootstrap.min.js"></script>
-    <script src="actions/resources/functions.js"></script>
     <script src="media/calendar/datepicker.js"></script>
     <script>
         $(document).ready(function () {
             $('.select2').select2();
-
-            $("table img").on("mouseenter", function () {
-                var alt = $(this).attr("alt");
-                if (alt.length > 0) {
-                    $("#img-preview").attr("src", alt).show();
-                }
-            });
-
-            $("table img").on("mouseleave", function () {
-                $("#img-preview").hide();
-            });
 
             $('#confirmDelete').on('show.bs.modal', function (e) {
                 $(this).find('#confirm-id').text($(e.relatedTarget).data('id'));
@@ -160,6 +144,22 @@
 
         // Enable table sorting
         evo.sortable('.sortable > tbody > tr', {complete:function(e){documentDirty=true}});
+
+        // Image preview
+        document.querySelectorAll("table img").forEach(function (img) {
+            img.addEventListener("mouseenter", function () {
+                var alt = img.getAttribute("alt");
+                if (alt && alt.length > 0) {
+                    var preview = document.getElementById("img-preview");
+                    preview.setAttribute("src", alt);
+                    preview.style.display = "block";
+                }
+            });
+
+            img.addEventListener("mouseleave", function () {
+                document.getElementById("img-preview").style.display = "none";
+            });
+        });
 
         // Search form
         const searchForm = document.querySelector('input[name="search"]');
@@ -318,8 +318,7 @@
                 elm.innerHTML = (pId + " (" + pName + ")");
             }
         }
-    </script>
-    <script>
+
         //dropdown
         document.addEventListener("click", function (event) {
             const dropdowns = document.querySelectorAll('.dropdown');
@@ -361,6 +360,7 @@
                 setCookie(cookieName, itemValue, 30)
             })
         })
+        document.title = "@lang('sCommerce::global.title') - {{strip_tags(__('sCommerce::global.description'))}}";
     </script>
     <img src="{{evo()->getConfig('site_url', '/')}}assets/site/noimage.png" id="img-preview" style="display: none;" class="post-thumbnail">
     <div id="copyright"><a href="https://seiger.github.io/sCommerce/" target="_blank"><img src="{{evo()->getConfig('site_url', '/')}}assets/site/seigerit-blue.svg" alt="Seiger IT Logo"/></a></div>

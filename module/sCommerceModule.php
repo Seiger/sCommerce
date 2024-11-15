@@ -283,7 +283,8 @@ switch ($get) {
                 }
             }
         } else {
-            $categories[(int)request()->input('parent', sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))] = ['scope' => 'primary', 'position' => ($prodCats[$parent] ?? 0)];
+            $parent = (int)request()->input('parent', sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)));
+            $categories[$parent] = ['scope' => 'primary', 'position' => ($prodCats[$parent] ?? 0)];
         }
         $product->categories()->sync([]);
         $product->categories()->sync($categories);

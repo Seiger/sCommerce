@@ -145,27 +145,14 @@
                     <div class="row form-row">
                         <div class="col-auto col-title">
                             <label for="parent">@lang('sCommerce::global.category')</label>
-                            <i class="fa fa-question-circle"
-                               data-tooltip="@lang('sCommerce::global.categories_product_help')"></i>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_product_help')"></i>
                         </div>
                         <div class="col">
-                            <div>
-                                @php($parentlookup = false)
-                                @if(($item->category ?? sCommerce::config('basic.catalog_root', 0)) == 0)
-                                    @php($parentname = evo()->getConfig('site_name'))
-                                @else
-                                    @php($parentlookup = ($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))))
-                                @endif
-                                @if($parentlookup !== false && is_numeric($parentlookup))
-                                    @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
-                                    @if(!$parentname)
-                                        @php(evo()->webAlertAndQuit($_lang["error_no_parent"]))
-                                    @endif
-                                @endif
-                                <i id="plock" class="fa fa-folder" onclick="enableParentSelection(!allowParentSelection);"></i>
-                                <b id="parentName">{{$parentlookup}} ({{entities($parentname)}})</b>
-                                <input type="hidden" name="parent" value="{{($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))}}" onchange="documentDirty=true;"/>
-                            </div>
+                            <select id="parent" class="form-control select2" name="parent" onchange="documentDirty=true;">
+                                @foreach($sCommerceController->listCategories() as $key => $value)
+                                    <option value="{{$key}}" @if($key == ($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))) selected @endif>{{$value}}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                 </div>
