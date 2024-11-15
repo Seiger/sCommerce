@@ -1,6 +1,7 @@
 @php use Seiger\sCommerce\Facades\sCommerce; @endphp
 @extends('manager::template.page')
 @section('content')
+    <div id="mainloader"><div class="evo__logo">EVO</div></div>
     <h1><i class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
     <div class="sectionBody">
         <div class="tab-pane" id="resourcesPane">
