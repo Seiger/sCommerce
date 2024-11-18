@@ -310,7 +310,7 @@ class sCommerceController
      * @param string $dir The path to the directory to be removed.
      * @return void
      */
-    function copyDirRecursive(string $sourceDirectory, string $destinationDirectory): void
+    public function copyDirRecursive(string $sourceDirectory, string $destinationDirectory): void
     {
         $directory = opendir($sourceDirectory);
 
