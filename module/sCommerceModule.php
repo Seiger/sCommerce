@@ -684,6 +684,7 @@ switch ($get) {
         }
         $contentField = str_replace([chr(9), chr(10), chr(13), '  '], '', $contentField);
 
+        $product = sCommerce::getProduct($requestId);
         $content = sProductTranslate::whereProduct($requestId)->whereLang($requestLang)->firstOrNew();
         $content->pagetitle = request()->input('pagetitle', '');
         $content->longtitle = request()->input('longtitle', '');
@@ -692,7 +693,6 @@ switch ($get) {
         $content->builder = json_encode(array_values(request()->input('builder', [])));
         $content->constructor = json_encode(request()->input('constructor', []));
         if (($content->product ?? 0) == 0) {
-            $product = sCommerce::getProduct($requestId);
             if (!$product->id) {
                 $product->alias = $sCommerceController->validateAlias(trim($content->pagetitle) ?: 'new-product', $requestId);
                 $product->save();
@@ -708,6 +708,7 @@ switch ($get) {
         $_SESSION['itemname'] = $product->title;
         $sCommerceController->setProductsListing();
         $back = str_replace('&i=0', '&i=' . $content->product, (request()->back ?? '&get=product'));
+        evo()->invokeEvent('sCommerceAfterProductContentSave', compact('product', 'content'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------

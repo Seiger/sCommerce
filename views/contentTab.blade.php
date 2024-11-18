@@ -115,6 +115,9 @@
             @endif
         @endforeach--}}
     </div>
+    @if(is_array($events = evo()->invokeEvent('sCommerceFormFieldRender', ['field' => 'seo', 'lang' => request()->input('lang', $sCommerceController->langDefault()), 'dataInput' => $sCommerceController->getData()])))
+        @foreach($events as $event){!!$event!!}@endforeach
+    @endif
 </form>
 
 @push('scripts.bot')
