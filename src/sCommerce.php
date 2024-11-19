@@ -184,7 +184,7 @@ class sCommerce
      */
     public function convertPiceNumber($price, $currencyFrom, $currencyTo): float
     {
-        $rate = $this->config('currencies.'.$currencyFrom.'_'.$currencyTo, 1);
+        $rate = config('seiger.settings.sCommerceCurrencies.' . $currencyFrom . '_' . $currencyTo, 1);
         return floatval($price) * $rate;
     }
 

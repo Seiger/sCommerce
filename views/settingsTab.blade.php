@@ -1,26 +1,8 @@
 @php use Seiger\sCommerce\Models\sAttribute; @endphp
 @if(!is_writable(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerce.php'))<div class="alert alert-danger" role="alert">@lang('sCommerce::global.not_writable')</div>@endif
+@if(!is_writable(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerceCurrencies.php'))<div class="alert alert-danger" role="alert">@lang('sCommerce::global.not_writable_currencies')</div>@endif
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=settingsSave" onsubmit="documentDirty=false;">
     <input type="hidden" name="back" value="&get=settings" />
-    @if(count(sCommerce::config('basic.available_currencies', [])) && trim(sCommerce::config('basic.main_currency', '')))
-        <h3>@lang('sCommerce::global.currency_conversion')</h3>
-        @php($currs = sCommerce::getCurrencies(sCommerce::config('basic.available_currencies', [])))
-        @foreach($currs as $curr)
-            @foreach($currs as $cur)
-                @if($curr['alpha'] != $cur['alpha'])
-                    <div class="row form-row">
-                        <div class="col-auto">
-                            <label for="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}">{{$curr['alpha']}} --> {{$cur['alpha']}}</label>
-                        </div>
-                        <div class="col col-4 col-md-3 col-lg-2">
-                            <input type="number" id="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}" name="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}" class="form-control" value="{{sCommerce::config('currencies.'.$curr['alpha'].'_'.$cur['alpha'], 1)}}" onchange="documentDirty=true;">
-                        </div>
-                    </div>
-                @endif
-            @endforeach
-        @endforeach
-        <div class="split my-3"></div>
-    @endif
     <div class="col col-12 col-sm-12 col-md-6">
         <h3 class="sectionTrans">
             @lang('sCommerce::global.additional_fields_main_product_tab')

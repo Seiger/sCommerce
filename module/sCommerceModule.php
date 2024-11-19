@@ -33,6 +33,9 @@ $iUrl = (int)request()->input('i', 0) > 0 ? '&i=' . (int)request()->input('i', 0
 $editor = [];
 
 $tabs = ['products', 'reviews', 'attributes'];
+if (count(sCommerce::config('basic.available_currencies', [])) > 1 && trim(sCommerce::config('basic.main_currency', ''))) {
+    $tabs[] = 'currencies';
+}
 if (evo()->hasPermission('settings')) {
     $tabs[] = 'settings';
 }
@@ -1083,6 +1086,22 @@ switch ($get) {
         }
 
         $back = request()->back ?? '&get=reviews';
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    /*
+    |--------------------------------------------------------------------------
+    | Currencies
+    |--------------------------------------------------------------------------
+    */
+    case "currencies":
+        $_SESSION['itemaction'] = 'Editing Currencies';
+        break;
+    case "currenciesSave":
+        $sCommerceController->updateCurrenciesConfigs();
+        evo()->clearCache('full');
+
+        $_SESSION['itemaction'] = 'Saving Currencies';
+        session()->flash('success', __('sCommerce::global.settings_save_success'));
+        $back = request()->back ?? '&get=currencies';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------

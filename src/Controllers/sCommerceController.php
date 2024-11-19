@@ -69,6 +69,60 @@ class sCommerceController
     }
 
     /**
+     * Update file currencies
+     *
+     * This method updates the file currencies based on the provided tabs array.
+     * It generates a PHP file with the updated settings and saves it in a specific location.
+     *
+     * @return bool
+     */
+    public function updateCurrenciesConfigs(): bool
+    {
+        $filters = ['currencies'];
+        $all = request()->all();
+
+        // Data array formation
+        foreach ($filters as $filter) {
+            foreach ($all as $key => $value) {
+                if (str_starts_with($key, $filter . '__')) {
+                    $key = str_replace($filter . '__', '', $key);
+                    if (is_array($value)) {
+                        $array = [];
+                        foreach ($value as $k => $v) {
+                            if (is_array($v)) {
+                                foreach ($v as $k1 => $v1) {
+                                    if ($this->isInteger($v1)) {
+                                        $v1 = intval($v1);
+                                    }
+                                    $v[$k1] = $v1;
+                                }
+                            } elseif ($this->isInteger($v)) {
+                                $v = intval($v);
+                            }
+                            $value[$k] = $v;
+                        }
+                    } elseif ($this->isInteger($value)) {
+                        $value = intval($value);
+                    } elseif ($this->isFloat($value)) {
+                        $value = floatval($value);
+                    }
+                    $config[$filter][$key] = $value;
+                }
+            }
+        }
+
+        // Preparation of deadlines with data
+        $string = '<?php return ' . $this->dataToString($config['currencies']) . ';';
+
+        // Save the config
+        $handle = fopen(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerceCurrencies.php', "w");
+        fwrite($handle, $string);
+        fclose($handle);
+
+        return true;
+    }
+
+    /**
      * Update file configurations
      *
      * This method updates the file configurations based on the provided tabs array.

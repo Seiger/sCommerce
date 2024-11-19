@@ -279,7 +279,7 @@
 @push('scripts.bot')
     <div id="actions">
         <div class="btn-group">
-            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}{{request()->has('page') ? '&page=' . request()->page : ''}}">
+            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}&get=products{{request()->has('page') ? '&page=' . request()->page : ''}}">
                 <i class="fa fa-times-circle"></i><span>@lang('sCommerce::global.to_list_products')</span>
             </a>
             <a id="Button1" class="btn btn-success" href="javascript:void(0);" onclick="saveForm('#form');">

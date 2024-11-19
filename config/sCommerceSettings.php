@@ -15,10 +15,6 @@
         "price_symbol" => 1,
         "price_thousands_separator" => ",",
     ],
-    "currencies" => [
-        "EUR_USD" => 1.08,
-        "USD_EUR" => 0.92,
-    ],
     "product" => [
         "link_rule" => "root",
         "quantity_on" => 0,
