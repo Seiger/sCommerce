@@ -72,7 +72,7 @@
         </div>
     </div>
     <div class="row-col col-12">
-        @php($mainAttributes = sCommerce::config('constructor.main_product'))
+        @php($mainAttributes = sCommerce::config('constructor.main_product', []))
         @foreach($mainAttributes as $attribute)
             <input type="hidden" name="constructor[{{$attribute['key']}}]" value="{{$product->{'constructor_'.$attribute['key']}??''}}">
         @endforeach

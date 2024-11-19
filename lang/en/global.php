@@ -97,6 +97,7 @@
     "price_opt" => "Wholesale price",
     "price_opt_special" => "Special wholesale price",
     "price_special" => "Special Price",
+    "price_special_help" => "Special Price of the product is in the currency of the store.",
     "price_symbol" => "Show symbol",
     "price_symbol_help" => "Display the currency symbol when displaying the price",
     "price_thousands_separator" => "Thousands separator",

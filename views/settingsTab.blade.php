@@ -294,7 +294,7 @@
     <div class="row form-row">
         <div class="col-auto">
             <label for="product__quantity_on" class="warning">@lang('sCommerce::global.quantity')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.rating_on_help')"></i>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.quantity_on_help')"></i>
         </div>
         <div class="col">
             <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__quantity_on);" @if(sCommerce::config('product.quantity_on', 1) == 1) checked @endif>
@@ -329,6 +329,16 @@
         <div class="col">
             <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_price);" @if(sCommerce::config('product.show_field_price', 1) == 1) checked @endif>
             <input type="hidden" id="product__show_field_price" name="product__show_field_price" value="{{sCommerce::config('product.show_field_price', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="product__show_field_price_special" class="warning">@lang('sCommerce::global.price_special')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_special')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_price_special);" @if(sCommerce::config('product.show_field_price_special', 1) == 1) checked @endif>
+            <input type="hidden" id="product__show_field_price_special" name="product__show_field_price_special" value="{{sCommerce::config('product.show_field_price_special', 1)}}" onchange="documentDirty=true;">
         </div>
     </div>
     <div class="row form-row">

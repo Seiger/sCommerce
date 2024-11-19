@@ -45,7 +45,7 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">ID <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (sCommerce::config('products.show_field_sku', 1) == 1)
+                @if (sCommerce::config('products.show_field_sku', 1) && sCommerce::config('product.show_field_sku', 1))
                 <th class="sorting @if($order == 'sku') sorted @endif" data-order="sku">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.sku') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
@@ -53,27 +53,27 @@
             <th class="sorting @if($order == 'pagetitle') sorted @endif" data-order="pagetitle">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.product_name') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
-            @if (sCommerce::config('products.show_field_price', 1) == 1)
+            @if (sCommerce::config('products.show_field_price', 1) && sCommerce::config('product.show_field_price', 1))
                 <th class="sorting @if($order == 'price_regular') sorted @endif" data-order="price_regular">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (sCommerce::config('products.show_field_price_special', 1) == 1)
+            @if (sCommerce::config('products.show_field_price_special', 1) && sCommerce::config('product.show_field_price_special', 1))
                 <th class="sorting @if($order == 'price_special') sorted @endif" data-order="price_special">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (sCommerce::config('products.show_field_price_opt', 1) == 1)
+            @if (sCommerce::config('products.show_field_price_opt', 1) && sCommerce::config('product.show_field_price_opt', 1))
                 <th class="sorting @if($order == 'price_opt_regular') sorted @endif" data-order="price_opt_regular">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (sCommerce::config('products.show_field_price_opt_special', 1) == 1)
+            @if (sCommerce::config('products.show_field_price_opt_special', 1) && sCommerce::config('product.show_field_price_opt_special', 1))
                 <th class="sorting @if($order == 'price_opt_special') sorted @endif" data-order="price_opt_special">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (sCommerce::config('products.show_field_quantity', 1) == 1)
+            @if (sCommerce::config('products.show_field_quantity', 1) && sCommerce::config('product.quantity_on', 1))
                 <th class="sorting @if($order == 'quantity') sorted @endif" data-order="quantity">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.quantity') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
@@ -124,14 +124,14 @@
                 @if (sCommerce::config('products.show_field_id', 1) == 1)
                     <td>{{$item->id}}</td>
                 @endif
-                @if (sCommerce::config('products.show_field_sku', 1) == 1)
+                @if (sCommerce::config('products.show_field_sku', 1) && sCommerce::config('product.show_field_sku', 1))
                     <td>{{$item->sku}}</td>
                 @endif
                 <td>
                     <img src="{{$item->coverSrc}}" alt="{{$item->coverSrc}}" class="product-thumbnail">
                     <a href="{{$item->link}}" target="_blank"><b>{{$item->pagetitle ?? __('sCommerce::global.no_text')}}</b></a>
                 </td>
-                @if (sCommerce::config('products.show_field_price', 1) == 1)
+                    @if (sCommerce::config('products.show_field_price', 1) && sCommerce::config('product.show_field_price', 1))
                     <td>
                         @if(sCommerce::config('basic.price_symbol', 1))
                             {{$item->priceTo($item->currency)}}
@@ -140,16 +140,16 @@
                         @endif
                     </td>
                 @endif
-                @if (sCommerce::config('products.show_field_price_special', 1) == 1)
+                @if (sCommerce::config('products.show_field_price_special', 1) && sCommerce::config('product.show_field_price_special', 1))
                     <td>{{$item->price_special}}</td>
                 @endif
-                @if (sCommerce::config('products.show_field_price_opt', 1) == 1)
+                @if (sCommerce::config('products.show_field_price_opt', 1) && sCommerce::config('product.show_field_price_opt', 1))
                     <td>{{$item->price_opt_regular}}</td>
                 @endif
-                @if (sCommerce::config('products.show_field_price_opt_special', 1) == 1)
+                @if (sCommerce::config('products.show_field_price_opt_special', 1) && sCommerce::config('product.show_field_price_opt_special', 1))
                     <td>{{$item->price_opt_special}}</td>
                 @endif
-                @if (sCommerce::config('products.show_field_quantity', 1) == 1)
+                @if (sCommerce::config('products.show_field_quantity', 1) && sCommerce::config('product.quantity_on', 1))
                     <td>{{$item->quantity}}</td>
                 @endif
                 @if (sCommerce::config('products.show_field_availability', 1) == 1)

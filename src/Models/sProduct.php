@@ -383,7 +383,7 @@ class sProduct extends Model
     public function getPriceAttribute(): string
     {
         if (!isset($_SESSION['currency'])) {
-            $_SESSION['currency'] = sCommerce::config('basic.main_currency', 'EUR');
+            $_SESSION['currency'] = sCommerce::config('basic.main_currency', 'USD');
         }
 
         return $this->priceTo($_SESSION['currency']);
@@ -410,5 +410,45 @@ class sProduct extends Model
     public function priceToNumber($currency): float
     {
         return sCommerce::convertPiceNumber($this->price_regular, $this->currency, $currency);
+    }
+
+    /**
+     * Gets the price special attribute of the sProduct.
+     * Formats the price based on configuration values.
+     *
+     * @return string The formatted price of the product.
+     *
+     * @throws ErrorException if configuration values are not set.
+     */
+    public function getspecialPriceAttribute(): string
+    {
+        if (!isset($_SESSION['currency'])) {
+            $_SESSION['currency'] = sCommerce::config('basic.main_currency', 'USD');
+        }
+
+        return $this->specialPriceTo($_SESSION['currency']);
+    }
+
+    /**
+     * Convert the price special to the specified currency and format it as a string.
+     *
+     * @param string $currency The target currency.
+     * @return string The formatted price.
+     */
+    public function specialPriceTo($currency): string
+    {
+        return sCommerce::convertPice($this->price_special, $this->currency, $currency);
+    }
+
+    /**
+     * Convert the product special price to a number in a specified currency.
+     *
+     * @param string $currency The desired currency to convert to.
+     *
+     * @return float The converted price in the specified currency.
+     */
+    public function priceSpecialToNumber($currency): float
+    {
+        return sCommerce::convertPiceNumber($this->price_special, $this->currency, $currency);
     }
 }

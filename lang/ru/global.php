@@ -97,6 +97,7 @@
     "price_opt" => "Оптовая цена",
     "price_opt_special" => "Специальная оптовая цена",
     "price_special" => "Специальная цена",
+    "price_special_help" => "Специальная цена товара в валюте магазина.",
     "price_symbol" => "Показать символ",
     "price_symbol_help" => "Отображение символа валюты при выводе цены",
     "price_thousands_separator" => "Разделитель тысяч",

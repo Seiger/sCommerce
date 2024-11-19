@@ -18,25 +18,22 @@
                         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.published_help')"></i>
                     </div>
                     <div class="col">
-                        <input type="checkbox" id="publishedcheck" class="form-checkbox form-control"
-                               name="publishedcheck" value="" onchange="documentDirty=true;"
-                               onclick="changestate(document.form.published);"
-                               @if(isset($item->published) && $item->published) checked @endif>
+                        <input type="checkbox" id="publishedcheck" class="form-checkbox form-control" name="publishedcheck" value="" onchange="documentDirty=true;" onclick="changestate(document.form.published);" @if(isset($item->published) && $item->published) checked @endif>
                         <input type="hidden" id="published" name="published" value="{{$item->published ?? 0}}" onchange="documentDirty=true;">
                         @if(sCommerce::config('product.views_on', 1) == 1)&emsp;
-                        <i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')">
-                            <b>{{$item->views ?? 0}}</b>
-                        </i>
+                            <i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')">
+                                <b>{{$item->views ?? 0}}</b>
+                            </i>
                         @endif
                         @if(sCommerce::config('product.rating_on', 1) == 1)&emsp;
-                        <i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')">
-                            <b>{{$item->rating ?? 5}}</b>
-                        </i>
+                            <i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')">
+                                <b>{{$item->rating ?? 5}}</b>
+                            </i>
                         @endif
                         @if(sCommerce::config('product.quantity_on', 1) == 1)&emsp;
-                        <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.quantity')">
-                            <b>{{$item->quantity ?? 0}}</b>
-                        </i>
+                            <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.quantity')">
+                                <b>{{$item->quantity ?? 0}}</b>
+                            </i>
                         @endif
                     </div>
                 </div>
@@ -102,6 +99,54 @@
                                 </select>
                             </div>
                             <input id="price" class="form-control" name="price_regular" value="{{$item->price_regular ?? ''}}" onblur="documentDirty=true;">
+                        </div>
+                    </div>
+                </div>
+            @endif
+            @if(sCommerce::config('product.show_field_price_special', 1) == 1)
+                <div class="row-col col-lg-3 col-md-6 col-12">
+                    <div class="row form-row">
+                        <div class="col-auto col-title">
+                            <label for="price_special">@lang('sCommerce::global.price_special')</label>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_special_help')"></i>
+                        </div>
+                        <div class="input-group col">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><small>{{sCommerce::getCurrencies([$item->currency ?? sCommerce::config('basic.main_currency', 'USD')])->first()['symbol']}}</small></span>
+                            </div>
+                            <input id="price_special" class="form-control" name="price_special" value="{{$item->price_special ?? ''}}" onblur="documentDirty=true;">
+                        </div>
+                    </div>
+                </div>
+            @endif
+            @if(sCommerce::config('product.show_field_price_opt', 1) == 1)
+                <div class="row-col col-lg-3 col-md-6 col-12">
+                    <div class="row form-row">
+                        <div class="col-auto col-title">
+                            <label for="price_opt_regular">@lang('sCommerce::global.price_opt')</label>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_opt_help')"></i>
+                        </div>
+                        <div class="input-group col">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><small>{{sCommerce::getCurrencies([$item->currency ?? sCommerce::config('basic.main_currency', 'USD')])->first()['symbol']}}</small></span>
+                            </div>
+                            <input id="price_opt_regular" class="form-control" name="price_opt_regular" value="{{$item->price_opt_regular ?? ''}}" onblur="documentDirty=true;">
+                        </div>
+                    </div>
+                </div>
+            @endif
+            @if(sCommerce::config('product.show_field_price_opt_special', 1) == 1)
+                <div class="row-col col-lg-3 col-md-6 col-12">
+                    <div class="row form-row">
+                        <div class="col-auto col-title">
+                            <label for="price_opt_special">@lang('sCommerce::global.price_opt_special')</label>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_opt_special_help')"></i>
+                        </div>
+                        <div class="input-group col">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><small>{{sCommerce::getCurrencies([$item->currency ?? sCommerce::config('basic.main_currency', 'USD')])->first()['symbol']}}</small></span>
+                            </div>
+                            <input id="price_opt_special" class="form-control" name="price_opt_special" value="{{$item->price_opt_special ?? ''}}" onblur="documentDirty=true;">
                         </div>
                     </div>
                 </div>
