@@ -31,7 +31,7 @@ class sProduct extends Model
      *
      * @var array
      */
-    protected $appends = ['title', 'category', 'link', 'coverSrc', 'price'];
+    protected $appends = ['title', 'category', 'link', 'coverSrc', 'price', 'specialPrice'];
 
     /**
      * Availability constants
@@ -420,7 +420,7 @@ class sProduct extends Model
      *
      * @throws ErrorException if configuration values are not set.
      */
-    public function getspecialPriceAttribute(): string
+    public function getSpecialPriceAttribute(): string
     {
         if (!isset($_SESSION['currency'])) {
             $_SESSION['currency'] = sCommerce::config('basic.main_currency', 'USD');
@@ -447,7 +447,7 @@ class sProduct extends Model
      *
      * @return float The converted price in the specified currency.
      */
-    public function priceSpecialToNumber($currency): float
+    public function specialPriceToNumber($currency): float
     {
         return sCommerce::convertPiceNumber($this->price_special, $this->currency, $currency);
     }

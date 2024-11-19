@@ -343,6 +343,26 @@
     </div>
     <div class="row form-row">
         <div class="col-auto">
+            <label for="product__show_field_price_opt" class="warning">@lang('sCommerce::global.price_opt')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_opt')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_price_opt);" @if(sCommerce::config('product.show_field_price_opt', 1) == 1) checked @endif>
+            <input type="hidden" id="product__show_field_price_opt" name="product__show_field_price_opt" value="{{sCommerce::config('product.show_field_price_opt', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="product__show_field_price_opt_special" class="warning">@lang('sCommerce::global.price_opt_special')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.price_opt_special')"></i>
+        </div>
+        <div class="col">
+            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_price_opt_special);" @if(sCommerce::config('product.show_field_price_opt_special', 1) == 1) checked @endif>
+            <input type="hidden" id="product__show_field_price_opt_special" name="product__show_field_price_opt_special" value="{{sCommerce::config('product.show_field_price_opt_special', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
             <label for="product__show_field_categories" class="warning">@lang('sCommerce::global.categories')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.categories')"></i>
         </div>

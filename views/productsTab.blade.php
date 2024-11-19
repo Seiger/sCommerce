@@ -45,7 +45,7 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">ID <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-                @if (sCommerce::config('products.show_field_sku', 1) && sCommerce::config('product.show_field_sku', 1))
+            @if (sCommerce::config('products.show_field_sku', 1) && sCommerce::config('product.show_field_sku', 1))
                 <th class="sorting @if($order == 'sku') sorted @endif" data-order="sku">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.sku') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
@@ -131,7 +131,7 @@
                     <img src="{{$item->coverSrc}}" alt="{{$item->coverSrc}}" class="product-thumbnail">
                     <a href="{{$item->link}}" target="_blank"><b>{{$item->pagetitle ?? __('sCommerce::global.no_text')}}</b></a>
                 </td>
-                    @if (sCommerce::config('products.show_field_price', 1) && sCommerce::config('product.show_field_price', 1))
+                @if (sCommerce::config('products.show_field_price', 1) && sCommerce::config('product.show_field_price', 1))
                     <td>
                         @if(sCommerce::config('basic.price_symbol', 1))
                             {{$item->priceTo($item->currency)}}
@@ -141,7 +141,13 @@
                     </td>
                 @endif
                 @if (sCommerce::config('products.show_field_price_special', 1) && sCommerce::config('product.show_field_price_special', 1))
-                    <td>{{$item->price_special}}</td>
+                    <td>
+                        @if(sCommerce::config('basic.price_symbol', 1))
+                            {{$item->specialPriceTo($item->currency)}}
+                        @else
+                            {{sCommerce::getCurrencies([$item->currency])->first()['symbol']}}{{$item->specialPriceTo($item->currency)}}
+                        @endif
+                    </td>
                 @endif
                 @if (sCommerce::config('products.show_field_price_opt', 1) && sCommerce::config('product.show_field_price_opt', 1))
                     <td>{{$item->price_opt_regular}}</td>
