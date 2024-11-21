@@ -64,7 +64,9 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Automated Email Marketing.
 - [x] Plugin events.
   - [x] sCommerceManagerAddTabEvent.
+  - [x] sCommerceFormFieldRender.
   - [x] sCommerceAfterProductSave.
+  - [x] sCommerceAfterProductContentSave.
   - [x] sCommerceAfterProductDuplicate.
 - [x] Multi-currency Support (ISO 4217).
 - [ ] Integration with Payment Systems.

@@ -1,4 +1,5 @@
 @php
+    use Seiger\sCommerce\Models\sProduct;
     $order = request()->has('order') ? request()->input('order') : 'id';
     if (evo()->getConfig('check_sMultisite', false)) {
         $domains = \Seiger\sMultisite\Models\sMultisite::all();
@@ -78,7 +79,7 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.quantity') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (sCommerce::config('products.show_field_availability', 1) == 1)
+            @if (sCommerce::config('products.show_field_availability', 1) && sCommerce::config('product.show_field_availability', 1))
                 <th class="sorting @if($order == 'availability') sorted @endif" data-order="availability">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.availability') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
@@ -158,8 +159,8 @@
                 @if (sCommerce::config('products.show_field_quantity', 1) && sCommerce::config('product.quantity_on', 1))
                     <td>{{$item->quantity}}</td>
                 @endif
-                @if (sCommerce::config('products.show_field_availability', 1) == 1)
-                    <td>{{$item->availability}}</td>
+                @if (sCommerce::config('products.show_field_availability', 1) && sCommerce::config('product.show_field_availability', 1))
+                    <td>{{sProduct::listAvailability()[$item->availability]}}</td>
                 @endif
                 @if (sCommerce::config('products.show_field_category', 1) == 1)
                     <td>

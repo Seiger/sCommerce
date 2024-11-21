@@ -8,7 +8,7 @@
             <input type="hidden" name="{{$prefix}}{{$attribute->id}}" value="">
             <div class="input-group-prepend"><span class="input-group-text"><small>@lang('sCommerce::global.type_attr_multiselect')</small></span></div>
             <select id="{{$prefix}}{{$attribute->id}}" class="form-control select2" name="{{$prefix}}{{$attribute->id}}[]" multiple onchange="documentDirty=true;">
-                @foreach($options as $option)
+                @foreach(($options ?? []) as $option)
                     <option value="{{$option}}" @if(in_array($option, $value)) selected @endif>{{$option}}</option>
                 @endforeach
             </select>

@@ -38,7 +38,7 @@
                     </div>
                 </div>
             </div>
-            @if(sCommerce::config('product.show_field_availability', 1) == 1)
+            @if(sCommerce::config('product.show_field_availability', 1))
                 <div class="row-col col-lg-3 col-md-6 col-12">
                     <div class="row form-row">
                         <div class="col-auto col-title">
@@ -136,7 +136,7 @@
                     </div>
                 </div>
             @endif
-            @if(sCommerce::config('product.quantity_on', 1) == 2)&emsp;
+            @if(sCommerce::config('product.quantity_on', 1) == 2)
                 <div class="row-col col-lg-3 col-md-6 col-12">
                     <div class="row form-row">
                         <div class="col-auto col-title">
