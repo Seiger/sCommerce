@@ -293,16 +293,6 @@
     </div>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="product__quantity_on" class="warning">@lang('sCommerce::global.quantity')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.quantity_on_help')"></i>
-        </div>
-        <div class="col">
-            <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__quantity_on);" @if(sCommerce::config('product.quantity_on', 1) == 1) checked @endif>
-            <input type="hidden" id="product__quantity_on" name="product__quantity_on" value="{{sCommerce::config('product.quantity_on', 1)}}" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
             <label for="product__show_field_availability" class="warning">@lang('sCommerce::global.availability')</label>
             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.availability')"></i>
         </div>
@@ -359,6 +349,19 @@
         <div class="col">
             <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_price_opt_special);" @if(sCommerce::config('product.show_field_price_opt_special', 1) == 1) checked @endif>
             <input type="hidden" id="product__show_field_price_opt_special" name="product__show_field_price_opt_special" value="{{sCommerce::config('product.show_field_price_opt_special', 1)}}" onchange="documentDirty=true;">
+        </div>
+    </div>
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="product__quantity_on" class="warning">@lang('sCommerce::global.quantity')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.quantity_on_help')"></i>
+        </div>
+        <div class="col col-4 col-md-3 col-lg-2">
+            <select id="product__quantity_on" class="form-control" name="product__quantity_on" onchange="documentDirty=true;">
+                <option value="0" @if(sCommerce::config('product.quantity_on', '1') == '0') selected @endif>@lang('sCommerce::global.turned_off')</option>
+                <option value="1" @if(sCommerce::config('product.quantity_on', '1') == '1') selected @endif>@lang('sCommerce::global.only_display') (@lang('sCommerce::global.manager_cannot_change'))</option>
+                <option value="2" @if(sCommerce::config('product.quantity_on', '1') == '2') selected @endif>@lang('sCommerce::global.display_field')</option>
+            </select>
         </div>
     </div>
     <div class="row form-row">

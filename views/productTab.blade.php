@@ -30,7 +30,7 @@
                                 <b>{{$item->rating ?? 5}}</b>
                             </i>
                         @endif
-                        @if(sCommerce::config('product.quantity_on', 1) == 1)&emsp;
+                        @if(sCommerce::config('product.quantity_on', 1))&emsp;
                             <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.quantity')">
                                 <b>{{$item->quantity ?? 0}}</b>
                             </i>
@@ -68,21 +68,6 @@
                     </div>
                 </div>
             @endif
-            <div class="row-col col-lg-3 col-md-6 col-12">
-                <div class="row form-row">
-                    <div class="col-auto col-title">
-                        <label for="alias">@lang('global.resource_alias')</label>
-                        <i class="fa fa-question-circle" data-tooltip="@lang('global.resource_alias_help')"></i>
-                    </div>
-                    <div class="input-group col">
-                        <input type="text" id="alias" class="form-control" name="alias" maxlength="512"
-                               value="{{$item->alias ?? 'new-product'}}" onchange="documentDirty=true;"
-                               spellcheck="true">
-                        <a id="preview" href="{{$item->link ?? '/'}}" class="btn btn-outline-secondary form-control"
-                           type="button" target="_blank">@lang('global.preview')</a>
-                    </div>
-                </div>
-            </div>
             @if(sCommerce::config('product.show_field_price', 1) == 1)
                 <div class="row-col col-lg-3 col-md-6 col-12">
                     <div class="row form-row">
@@ -151,6 +136,34 @@
                     </div>
                 </div>
             @endif
+            @if(sCommerce::config('product.quantity_on', 1) == 2)&emsp;
+                <div class="row-col col-lg-3 col-md-6 col-12">
+                    <div class="row form-row">
+                        <div class="col-auto col-title">
+                            <label for="quantity">@lang('sCommerce::global.quantity')</label>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.sku_help')"></i>
+                        </div>
+                        <div class="col">
+                            <input id="quantity" class="form-control" name="quantity" value="{{$item->quantity ?? ''}}" onblur="documentDirty=true;">
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+        <div class="split my-3"></div>
+        <div class="row form-row">
+            <div class="row-col col-lg-3 col-md-6 col-12">
+                <div class="row form-row">
+                    <div class="col-auto col-title">
+                        <label for="alias">@lang('global.resource_alias')</label>
+                        <i class="fa fa-question-circle" data-tooltip="@lang('global.resource_alias_help')"></i>
+                    </div>
+                    <div class="input-group col">
+                        <input type="text" id="alias" class="form-control" name="alias" maxlength="512" value="{{$item->alias ?? 'new-product'}}" onchange="documentDirty=true;" spellcheck="true">
+                        <a id="preview" href="{{$item->link ?? '/'}}" class="btn btn-outline-secondary form-control" type="button" target="_blank">@lang('global.preview')</a>
+                    </div>
+                </div>
+            </div>
             @if (evo()->getConfig('check_sMultisite', false))
                 <span id="parentName" class="hidden"></span>
                 <input type="hidden" name="parent" value="0"/>
@@ -219,6 +232,9 @@
                     </div>
                 </div>
             @endif
+        </div>
+        <div class="split my-3"></div>
+        <div class="row form-row">
             @if(sCommerce::config('product.show_field_relevant', 1) == 1)
                 <div class="row-col col-lg-6 col-md-6 col-12">
                     <div class="row form-row">
