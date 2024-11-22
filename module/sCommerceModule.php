@@ -264,7 +264,11 @@ switch ($get) {
         $product->price_opt_regular = $sCommerceController->validatePrice(request()->input('price_opt_regular', 0));
         $product->price_opt_special = $sCommerceController->validatePrice(request()->input('price_opt_special', 0));
         $product->currency = request()->input('currency', sCommerce::config('basic.main_currency', 'USD'));
-        $product->weight = (float)request()->input('weight', 0);
+        $product->weight = $sCommerceController->validateNumber(request()->input('weight', 0));
+        $product->width = $sCommerceController->validateNumber(request()->input('width', 0));
+        $product->height = $sCommerceController->validateNumber(request()->input('height', 0));
+        $product->length = $sCommerceController->validateNumber(request()->input('length', 0));
+        $product->volume = $sCommerceController->validateNumber(request()->input('volume', 0));
         $product->cover = str_replace(MODX_SITE_URL, '', $cover->src ?? '/assets/site/noimage.png');
         $product->relevants = json_encode(request()->input('relevants', []));
         $product->similar = json_encode(request()->input('similar', []));
@@ -344,6 +348,10 @@ switch ($get) {
             $newProduct->price_opt_special = $product->price_opt_special;
             $newProduct->currency = $product->currency;
             $newProduct->weight = $product->weight;
+            $newProduct->width = $product->width;
+            $newProduct->height = $product->height;
+            $newProduct->length = $product->length;
+            $newProduct->volume = $product->volume;
             $newProduct->cover = $product->cover;
             $newProduct->relevants = $product->relevants;
             $newProduct->similar = $product->similar;

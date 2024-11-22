@@ -63,6 +63,7 @@ return new class extends Migration
         */
         Schema::create('s_products', function (Blueprint $table) {
             $table->id('id');
+            $table->uuid('uuid')->default(DB::raw('(UUID())'));
             $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
             $table->unsignedTinyInteger('availability')->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
             $table->string('sku')->index()->comment('It is the SKU Product code');
@@ -71,11 +72,15 @@ return new class extends Migration
             $table->unsignedInteger('views')->default(0)->index()->comment('Count view the product');
             $table->unsignedInteger('rating')->default(5)->index()->comment('Rating the product base on votes');
             $table->unsignedInteger('type')->default(0)->comment('Type the product');
-            $table->unsignedDecimal('price_regular', 9, 2)->default(0);
-            $table->unsignedDecimal('price_special', 9, 2)->default(0);
-            $table->unsignedDecimal('price_opt_regular', 9, 2)->default(0);
-            $table->unsignedDecimal('price_opt_special', 9, 2)->default(0);
-            $table->unsignedDecimal('weight', 11, 4)->default(0);
+            $table->unsignedDecimal('price_regular', 9, 2)->default(0)->comment('The regular price of the product');
+            $table->unsignedDecimal('price_special', 9, 2)->default(0)->comment('The special price of the product');
+            $table->unsignedDecimal('price_opt_regular', 9, 2)->default(0)->comment('The wholesale price of the product');
+            $table->unsignedDecimal('price_opt_special', 9, 2)->default(0)->comment('The special wholesale price of the product');
+            $table->unsignedDecimal('weight', 11, 4)->default(0)->comment('The weight of production is indicated if necessary for technical purposes');
+            $table->unsignedDecimal('width', 11, 4)->default(0)->comment('The width of production is indicated if necessary for technical purposes');
+            $table->unsignedDecimal('height', 11, 4)->default(0)->comment('The height of production is indicated if necessary for technical needs');
+            $table->unsignedDecimal('length', 11, 4)->default(0)->comment('The length of production is indicated if necessary for technical needs');
+            $table->unsignedDecimal('volume', 11, 4)->default(0)->comment('The volume of production is indicated if necessary for technical needs');
             $table->integer('quantity')->default(0)->comment('Quantity products in stock');
             $table->char('currency', 3)->default('USD')->comment('Currency price this product');
             $table->string('cover', 512)->default('')->comment('Cover image file link');

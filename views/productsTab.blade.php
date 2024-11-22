@@ -94,6 +94,31 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.websites') {{--<i class="fas fa-sort" style="color: #036efe;"></i>--}}</button>
                 </th>
             @endif
+            @if (sCommerce::config('products.show_field_weight', 1) && sCommerce::config('product.show_field_weight', 1))
+                <th class="sorting @if($order == 'weight') sorted @endif" data-order="weight">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.weight') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (sCommerce::config('products.show_field_width', 1) && sCommerce::config('product.show_field_width', 1))
+                <th class="sorting @if($order == 'width') sorted @endif" data-order="width">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.width') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (sCommerce::config('products.show_field_height', 1) && sCommerce::config('product.show_field_height', 1))
+                <th class="sorting @if($order == 'height') sorted @endif" data-order="height">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.height') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (sCommerce::config('products.show_field_length', 1) && sCommerce::config('product.show_field_length', 1))
+                <th class="sorting @if($order == 'length') sorted @endif" data-order="length">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.length') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
+            @if (sCommerce::config('products.show_field_volume', 1) && sCommerce::config('product.show_field_volume', 1))
+                <th class="sorting @if($order == 'volume') sorted @endif" data-order="volume">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.volume') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+            @endif
             @if (sCommerce::config('products.show_field_visibility', 1) == 1)
                 <th class="sorting @if($order == 'published') sorted @endif" data-order="published">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.visibility') <i class="fas fa-sort" style="color: #036efe;"></i></button>
@@ -185,6 +210,21 @@
                             <a href="https://{{$website->domain}}/" target="_blank">{{$website->site_name}}</a>
                         @endforeach
                     </td>
+                @endif
+                @if (sCommerce::config('products.show_field_weight', 1) && sCommerce::config('product.show_field_weight', 1))
+                    <td>{{round($item->weight, 4)}}</td>
+                @endif
+                @if (sCommerce::config('products.show_field_width', 1) && sCommerce::config('product.show_field_width', 1))
+                    <td>{{round($item->width, 4)}}</td>
+                @endif
+                @if (sCommerce::config('products.show_field_height', 1) && sCommerce::config('product.show_field_height', 1))
+                    <td>{{round($item->height, 4)}}</td>
+                @endif
+                @if (sCommerce::config('products.show_field_length', 1) && sCommerce::config('product.show_field_length', 1))
+                    <td>{{round($item->length, 4)}}</td>
+                @endif
+                @if (sCommerce::config('products.show_field_volume', 1) && sCommerce::config('product.show_field_volume', 1))
+                    <td>{{round($item->volume, 4)}}</td>
                 @endif
                 @if (sCommerce::config('products.show_field_visibility', 1) == 1)
                     <td>

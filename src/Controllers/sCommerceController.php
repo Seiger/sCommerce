@@ -411,6 +411,24 @@ class sCommerceController
     }
 
     /**
+     * Validate and sanitize a number value.
+     *
+     * @param mixed $number The number value to be validated.
+     * @return int|float The validated and sanitized price value.
+     */
+    public function validateNumber(mixed $number): int|float
+    {
+        $validateNumber = 0;
+        $number = str_replace(',', '.', $number);
+
+        if (is_numeric($number)) {
+            $number = intval($number) == floatval($number) ? intval($number) : floatval($number);
+        }
+
+        return $number;
+    }
+
+    /**
      * Validate and sanitize a price value.
      *
      * @param mixed $price The price value to be validated.
