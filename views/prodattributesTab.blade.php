@@ -17,14 +17,16 @@
                         @include('sCommerce::partials.attributeCheckbox')
                         @break
                     @case(sAttribute::TYPE_ATTR_SELECT)
+                        @php($options = $attribute->values->pluck('base', 'avid')->toArray())
                         @include('sCommerce::partials.attributeSelect')
                         @break
                     @case(sAttribute::TYPE_ATTR_MULTISELECT)
-                        @php($value = json_decode($attribute->value ?? '', true))
+                        @php($options = $attribute->values->pluck('base', 'avid')->toArray())
+                        @php($value = is_array($attribute->value) ? $attribute->value : [])
                         @include('sCommerce::partials.attributeMultiselect')
                         @break
                     @case(sAttribute::TYPE_ATTR_TEXT)
-                        @php($value = json_decode($attribute->value ?? '', true))
+                        @php($value = json_decode($attribute->value ?? '', true) ?? [])
                         @include('sCommerce::partials.attributeText')
                         @break
                     @case(sAttribute::TYPE_ATTR_CUSTOM)

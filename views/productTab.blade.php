@@ -274,10 +274,12 @@
                             @break
                         @case(sAttribute::TYPE_ATTR_SELECT)
                             @php($options = $attribute->options)
+                            @php($options = array_combine(array_values($options), $options))
                             @include('sCommerce::partials.attributeSelect')
                             @break
                         @case(sAttribute::TYPE_ATTR_MULTISELECT)
                             @php($options = $attribute->options)
+                            @php($options = array_combine(array_values($options), $options))
                             @php($value = is_array($attribute->value) ? $attribute->value : [])
                             @include('sCommerce::partials.attributeMultiselect')
                             @break

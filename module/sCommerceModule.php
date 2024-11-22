@@ -472,12 +472,31 @@ switch ($get) {
             $q->whereIn('category', $categoryParentsIds);
         })->orderBy('position')->get();
 
-        $attrValues = $product->attrValues->mapWithKeys(function ($value) {
-            return [$value->id => $value];
-        })->all();
+        $attrValues = [];
+        foreach ($product->attrValues as $value) {
+            if ($value->type == sAttribute::TYPE_ATTR_MULTISELECT) {
+                $attrValues[$value->id][] = $value;
+            } else {
+                $attrValues[$value->id] = $value;
+            }
+        }
 
         $attributes->mapWithKeys(function ($attribute) use ($attrValues) {
-            $attribute->value = $attrValues[$attribute->id]->pivot->value ?? '';
+            if (isset($attrValues[$attribute->id])) {
+                if (is_array($attrValues[$attribute->id])) {
+                    $value = [];
+                    foreach ($attrValues[$attribute->id] as $attrValue) {
+                        if ($attrValue->type == sAttribute::TYPE_ATTR_MULTISELECT) {
+                            $value[] = intval($attrValue->pivot->valueid);
+                        }
+                    }
+                    $attribute->value = $value;
+                } else {
+                    $attribute->value = $attrValues[$attribute->id]->pivot->value ?? '';
+                }
+            } else {
+                $attribute->value = '';
+            }
             return $attribute;
         });
 
@@ -527,6 +546,22 @@ switch ($get) {
                                     if (trim($value)) {
                                         $value = intval($value);
                                         $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
+                                    }
+                                    break;
+                                case sAttribute::TYPE_ATTR_SELECT : // 3
+                                    if (trim($value)) {
+                                        $valueId = intval($value);
+                                        $product->attrValues()->attach($key, ['valueid' => $valueId, 'value' => $value]);
+                                    }
+                                    break;
+                                case sAttribute::TYPE_ATTR_MULTISELECT : // 4
+                                    if (is_array($value) && count($value)) {
+                                        foreach ($value as $k => $v) {
+                                            if (trim($v)) {
+                                                $vId = intval($v);
+                                                $product->attrValues()->attach($key, ['valueid' => $vId, 'value' => $v]);
+                                            }
+                                        }
                                     }
                                     break;
                                 case sAttribute::TYPE_ATTR_TEXT : // 5

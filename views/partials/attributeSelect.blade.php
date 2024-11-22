@@ -8,8 +8,8 @@
             <div class="input-group-prepend"><span class="input-group-text"><small>@lang('sCommerce::global.type_attr_select')</small></span></div>
             <select id="{{$prefix}}{{$attribute->id}}" class="form-control select2" name="{{$prefix}}{{$attribute->id}}" onchange="documentDirty=true;">
                 <option value=""></option>
-                @foreach($options as $option)
-                    <option value="{{$option}}" @if($option == ($attribute->value ?? '')) selected @endif>{{$option}}</option>
+                @foreach(($options ?? []) as $key => $option)
+                    <option value="{{$key}}" @if($key == ($attribute->value ?? '')) selected @endif>{{$option}}</option>
                 @endforeach
             </select>
         </div>
