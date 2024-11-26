@@ -205,7 +205,14 @@ class sProduct extends Model
 
         foreach (sCommerce::config('constructor', []) as $constructor) {
             foreach ($constructor as $field => $item) {
-                $builder->addSelect(
+                $builder->addSelect([
+                    'constructor_' . $field => sProductTranslate::query()
+                        ->select('constructor->' . $field)
+                        ->whereLang('base')
+                        ->whereColumn('product', 's_products.id')
+                        ->take(1)
+                ]);
+                /*$builder->addSelect(
                     DB::Raw(
                         '(select `' . DB::getTablePrefix() . 's_product_translates`.`constructor` ->> "$.' . $field . '"
                         from `' . DB::getTablePrefix() . 's_product_translates` 
@@ -213,7 +220,7 @@ class sProduct extends Model
                         and `' . DB::getTablePrefix() . 's_product_translates`.`lang` = "base"
                         ) as constructor_' . $field
                     )
-                );
+                );*/
             }
         }
 
