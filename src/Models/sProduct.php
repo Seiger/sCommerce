@@ -304,6 +304,36 @@ class sProduct extends Model
     }
 
     /**
+     * Get the attribute associated with the product by alias.
+     *
+     * @param $alias
+     * @return mixed
+     */
+    public function attribute($alias)
+    {
+        $attribute = $this->attrValues()->whereAlias($alias)->first();
+
+        if ($attribute) {
+            switch ($attribute->type) {
+                case sAttribute::TYPE_ATTR_NUMBER:
+                case sAttribute::TYPE_ATTR_CHECKBOX:
+                    $value = intval($attribute->pivot->value ?? 0);
+                    $attribute->value = $value;
+                    $attribute->label = $value;
+                    break;
+                case sAttribute::TYPE_ATTR_SELECT:
+                    $avid = intval($attribute->pivot->valueid ?? 0);
+                    $value = $attribute->values()->whereAvid($avid)->first();
+                    $attribute->value = $value?->alias ?? '';
+                    $attribute->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
+                    break;
+            }
+        }
+
+        return $attribute;
+    }
+
+    /**
      * Retrieves the category attribute for the product.
      *
      * @param string|null $key The key for the site scope. If null, the default site key is used.

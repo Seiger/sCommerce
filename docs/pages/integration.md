@@ -190,3 +190,91 @@ Illuminate\Database\Eloquent\Collection {#1422 ▼
   #escapeWhenCastingToString: false
 }
 ```
+
+## Product attribute
+
+You can get the value of a product attribute by passing its [key]({{site.baseurl}}/attributes/attributes/#key).
+
+#### Result of the attribute() call
+
+```php
+ Seiger\sCommerce\Models\sAttribute {#1663 ▼
+  #connection: "default"
+  #table: "s_attributes"
+  #primaryKey: "id"
+  #keyType: "int"
+  +incrementing: true
+  #with: []
+  #withCount: []
+  +preventsLazyLoading: false
+  #perPage: 15
+  +exists: true
+  +wasRecentlyCreated: false
+  #escapeWhenCastingToString: false
+  #attributes: array:11 [▼
+    "id" => "1"
+    "published" => "1"
+    "asfilter" => "1"
+    "position" => "0"
+    "type" => "3"
+    "alias" => "brand"
+    "helptext" => "Brand"
+    "created_at" => "2024-11-25 20:55:13"
+    "updated_at" => "2024-11-25 20:58:37"
+    "value" => "leon"
+    "label" => "Leon"
+  ]
+  #original: array:13 [▶]
+  #changes: []
+  #casts: []
+  #classCastCache: []
+  #attributeCastCache: []
+  #dateFormat: null
+  #appends: []
+  #dispatchesEvents: []
+  #observables: []
+  #relations: array:1 [▶]
+  #touches: []
+  +timestamps: true
+  +usesUniqueIds: false
+  #hidden: []
+  #visible: []
+  #fillable: []
+  #guarded: array:1 [▶]
+}
+```
+
+#### Example of the attribute() call
+
+```php
+<?php namespace EvolutionCMS\Main\Controllers;
+
+...
+
+class SCommerceProductController extends BaseController
+{
+    public function render()
+    {
+        parent::render();
+
+        $product = evo()->documentObject['product'];
+        $brand = $product->attribute('brand');
+        dd($brand);
+        
+        ...
+    }
+    
+    ...
+    
+}
+```
+
+#### Present attribute in the blade
+
+```php
+<div class="item-brand">
+    @lang('Brand'): <a href="@makeUrl(sCommerce::config('basic.catalog_root'))?brand={{$product->attribute('brand')?->value ?? ''}}">
+        {{$product->attribute('brand')?->label ?? ''}}
+    </a>
+</div>
+```
