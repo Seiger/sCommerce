@@ -45,7 +45,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [x] Text Attribute.
   - [ ] TextArea Attribute.
   - [ ] RichText Attribute.
-  - [ ] Color Attribute.
+  - [x] Color Attribute.
   - [ ] Date Attribute.
   - [ ] DateTime Attribute.
   - [ ] Image Attribute.

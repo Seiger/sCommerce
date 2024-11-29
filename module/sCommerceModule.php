@@ -557,6 +557,7 @@ switch ($get) {
                                     }
                                     break;
                                 case sAttribute::TYPE_ATTR_SELECT : // 3
+                                case sAttribute::TYPE_ATTR_COLOR : // 8
                                     if (trim($value)) {
                                         $valueId = intval($value);
                                         $product->attrValues()->attach($key, ['valueid' => $valueId, 'value' => $value]);
@@ -793,6 +794,7 @@ switch ($get) {
         if (in_array($attribute->type, [
             sAttribute::TYPE_ATTR_SELECT,
             sAttribute::TYPE_ATTR_MULTISELECT,
+            sAttribute::TYPE_ATTR_COLOR,
         ])) {
             $tabs[] = 'attrvalues';
         }
@@ -820,6 +822,7 @@ switch ($get) {
         if (in_array($attribute->type, [
             sAttribute::TYPE_ATTR_SELECT,
             sAttribute::TYPE_ATTR_MULTISELECT,
+            sAttribute::TYPE_ATTR_COLOR,
         ])) {
             $tabs[] = 'attrvalues';
         }

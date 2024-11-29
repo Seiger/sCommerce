@@ -327,6 +327,13 @@ class sProduct extends Model
                     $attribute->value = $value?->alias ?? '';
                     $attribute->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
                     break;
+                case sAttribute::TYPE_ATTR_COLOR:
+                    $avid = intval($attribute->pivot->valueid ?? 0);
+                    $value = $attribute->values()->whereAvid($avid)->first();
+                    $attribute->value = $value?->alias ?? '';
+                    $attribute->code = $value?->code ?? '';
+                    $attribute->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
+                    break;
             }
         }
 

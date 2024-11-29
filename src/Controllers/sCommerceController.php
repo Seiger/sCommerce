@@ -311,7 +311,7 @@ class sCommerceController
     public function listSubCategories(object &$category, int $dept): object
     {
         if ($category->hasChildren() && $dept--) {
-            $children = $category->children()->active()->get();
+            $children = $category->children()->active()->orderBy('menuindex')->get();
             $children->map(function ($item) use ($dept) {
                 return $this->listSubCategories($item, $dept);
             });

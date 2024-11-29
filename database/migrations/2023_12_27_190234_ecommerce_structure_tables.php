@@ -46,7 +46,8 @@ return new class extends Migration
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
             $table->unsignedInteger('position')->default(0)->index()->comment('Position the Attribute value in list');
             $table->string('alias', 512)->index()->comment('It using for generate url');
-            $table->tinyText('base')->default('');
+            $table->string('code', 512)->comment('Code of Attribute value e.x. blue, #007bff');
+            $table->tinyText('base')->default('')->comment('Base translate for Title');
             $table->unique(['attribute', 'alias']);
             $table->timestamps();
         });

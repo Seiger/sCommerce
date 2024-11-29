@@ -29,6 +29,11 @@
                         @php($value = json_decode($attribute->value ?? '', true) ?? [])
                         @include('sCommerce::partials.attributeText')
                         @break
+                    @case(sAttribute::TYPE_ATTR_COLOR)
+                        @php($options = $attribute->values->pluck('base', 'avid')->toArray())
+                        @php($colors = $attribute->values->pluck('code', 'avid')->toArray())
+                        @include('sCommerce::partials.attributeColor')
+                        @break
                     @case(sAttribute::TYPE_ATTR_CUSTOM)
                         @php(View::getFinder()->setPaths([MODX_BASE_PATH . 'assets/modules/scommerce/attribute']))
                         @include($attribute->alias)

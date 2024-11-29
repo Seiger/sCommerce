@@ -27,14 +27,19 @@
                                         </div>
                                     </div>
                                 @endforeach
-                                <div class="row form-row">
-                                    <div class="col-auto">
-                                        <label>@lang('sCommerce::global.key')</label>
+                                @if(sAttribute::TYPE_ATTR_COLOR == $item->type)
+                                    <div class="row form-row">
+                                        <div class="col-auto">
+                                            <label>@lang('sCommerce::global.code')</label>
+                                        </div>
+                                        <div class="col">
+                                            <div class="col">
+                                                <input type="text" class="form-control" name="values[code][]" value="{{$value->code}}" onchange="documentDirty=true;">
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="col">
-                                        <input type="text" class="form-control" name="values[alias][]" value="{{$value->alias}}" onchange="documentDirty=true;">
-                                    </div>
-                                </div>
+                                @endif
+                                <input type="hidden" name="values[alias][]" value="{{$value->alias}}">
                                 <input type="hidden" name="values[avid][]" value="{{$value->avid}}">
                             </div>
                         </div>
@@ -82,6 +87,18 @@
                                     </div>
                                 </div>
                             @endforeach
+                            @if(sAttribute::TYPE_ATTR_COLOR == $item->type)
+                                <div class="row form-row">
+                                    <div class="col-auto">
+                                        <label>@lang('sCommerce::global.code')</label>
+                                    </div>
+                                    <div class="col">
+                                        <div class="col">
+                                            <input type="text" class="form-control" name="values[code][]" value="" onchange="documentDirty=true;">
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
                             <div class="row form-row">
                                 <div class="col-auto">
                                     <label>@lang('sCommerce::global.key')</label>

@@ -37,6 +37,7 @@
     "category" => "Category",
     "category_help" => "Define the main category of the product. Used to form the main link and navigation chain.",
     "change_sorting" => "Change sorting",
+    "code" => "Code",
     "confirm_delete" => "Confirm deletion",
     "confirm_duplicate" => "Confirm duplication",
     "content" => "Content",
