@@ -134,7 +134,13 @@ class sCommerce
         if (!$this->currencies) {
             $this->currencies = Cache::remember('currencies', 2629743, function () {
                 $reflector = new \ReflectionClass(self::class);
-                return include_once str_replace('src/sCommerce.php', 'config/currencies.php', $reflector->getFileName());
+                $list = include_once str_replace('src/sCommerce.php', 'config/currencies.php', $reflector->getFileName());
+                return $list->map(function ($item) {
+                    if ($this->config('currencies.'.$item['alpha'])) {
+                        $item = array_merge($item, $this->config('currencies.'.$item['alpha']));
+                    }
+                    return $item;
+                });
             });
         }
 
@@ -155,22 +161,27 @@ class sCommerce
      * @param string $currencyTo The currency to convert to.
      * @return string The converted price as a formatted string.
      */
-    public function convertPice($price, $currencyFrom, $currencyTo): string
+    public function convertPrice($price, $currencyFrom, $currencyTo): string
     {
+        $curr = $this->getCurrencies([$currencyTo])->first();
+
         $price = number_format(
-            $this->convertPiceNumber($price, $currencyFrom, $currencyTo),
-            $this->config('basic.price_decimals', 2),
-            $this->config('basic.price_decimal_separator', '.'),
-            $this->config('basic.price_thousands_separator', "&nbsp;")
+            $this->convertPriceNumber($price, $currencyFrom, $currencyTo),
+            ($curr['exp'] ?? 2),
+            ($curr['decimals'] ?? '.'),
+            str_replace('&nbsp;', ' ', trim($curr['thousands'] ?? '&nbsp;'))
         );
-        $symbol = '';
-        if ($this->config('basic.price_symbol', 1)) {
-            $s = $this->getCurrencies([$currencyTo])->first()['symbol'];
-            if (trim($s) && $s != $currencyTo) {
-                $symbol = $s;
+
+        if ($curr['show'] ?? 1) {
+            $symbol = str_replace('&nbsp;', ' ', trim($curr['symbol'] ?? '&nbsp;'));
+            if (($curr['position'] ?? 'before') == 'after') {
+                $price = $price . $symbol;
+            } else {
+                $price = $symbol . $price;
             }
         }
-        return $symbol . $price;
+
+        return $price;
     }
 
     /**
@@ -182,7 +193,7 @@ class sCommerce
      *
      * @return float The converted price.
      */
-    public function convertPiceNumber($price, $currencyFrom, $currencyTo): float
+    public function convertPriceNumber($price, $currencyFrom, $currencyTo): float
     {
         $rate = config('seiger.settings.sCommerceCurrencies.' . $currencyFrom . '_' . $currencyTo, 1);
         return floatval($price) * $rate;

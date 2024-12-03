@@ -1,6 +1,9 @@
 @php use Seiger\sCommerce\Facades\sCommerce; @endphp
 @extends('manager::template.page')
 @section('content')
+    <style>
+        .nice-select{-webkit-tap-highlight-color:rgba(0,0,0,0);background-color:#fff;border-radius:5px;border:solid 1px #e8e8e8;box-sizing:border-box;clear:both;cursor:pointer;display:block;float:left;font-family:inherit;font-size:14px;font-weight:normal;height:38px;line-height:25px;outline:none;padding-left:18px;padding-right:30px;position:relative;text-align:left !important;transition:all .2s ease-in-out;user-select:none;white-space:nowrap;width:auto}.nice-select:hover{border-color:#dbdbdb}.nice-select:active,.nice-select.open,.nice-select:focus{border-color:#999}.nice-select:after{border-bottom:2px solid #999;border-right:2px solid #999;content:"";display:block;height:5px;margin-top:-4px;pointer-events:none;position:absolute;right:12px;top:50%;transform-origin:66% 66%;transform:rotate(45deg);transition:all .15s ease-in-out;width:5px}.nice-select.open:after{transform:rotate(-135deg)}.nice-select.open .nice-select-dropdown{opacity:1;pointer-events:auto;transform:scale(1) translateY(0)}.nice-select.disabled{border-color:#ededed;color:#999;pointer-events:none}.nice-select.disabled:after{border-color:#ccc}.nice-select.wide{width:100%}.nice-select.wide .nice-select-dropdown{left:0 !important;right:0 !important}.nice-select.right{float:right}.nice-select.right .nice-select-dropdown{left:auto;right:0}.nice-select.small{font-size:12px;height:36px;line-height:34px}.nice-select.small:after{height:4px;width:4px}.nice-select.small .option{line-height:34px;min-height:34px}.nice-select .nice-select-dropdown{margin-top:4px;background-color:#fff;border-radius:5px;box-shadow:0 0 0 1px rgba(68,68,68,.11);pointer-events:none;position:absolute;top:100%;left:0;transform-origin:50% 0;transform:scale(0.75) translateY(19px);transition:all .2s cubic-bezier(0.5, 0, 0, 1.25),opacity .15s ease-out;z-index:9;opacity:0}.nice-select .list{border-radius:5px;box-sizing:border-box;overflow:hidden;padding:0;max-height:210px;overflow-y:auto}.nice-select .list:hover .option:not(:hover){background-color:rgba(0,0,0,0) !important}.nice-select .option{cursor:pointer;font-weight:400;line-height:40px;list-style:none;outline:none;padding-left:18px;padding-right:29px;text-align:left;transition:all .2s}.nice-select .option:hover,.nice-select .option.focus,.nice-select .option.selected.focus{background-color:#f6f6f6}.nice-select .option.selected{font-weight:bold}.nice-select .option.disabled{background-color:rgba(0,0,0,0);color:#999;cursor:default}.nice-select .extra{float:right}.nice-select .optgroup{font-weight:bold}.no-csspointerevents .nice-select .nice-select-dropdown{display:none}.no-csspointerevents .nice-select.open .nice-select-dropdown{display:block}.nice-select .list::-webkit-scrollbar{width:0}.nice-select .has-multiple{white-space:inherit;height:auto;padding:7px 12px;min-height:36px;line-height:22px}.nice-select .has-multiple span.current{border:1px solid #ccc;background:#eee;padding:0 10px;border-radius:3px;display:inline-block;line-height:24px;font-size:14px;margin-bottom:3px;margin-right:3px}.nice-select .has-multiple .multiple-options{display:block;line-height:24px;padding:0}.nice-select .nice-select-search-box{box-sizing:border-box;width:100%;padding:5px;pointer-events:none;border-radius:5px 5px 0 0}.nice-select .nice-select-search{box-sizing:border-box;background-color:#fff;border:1px solid #e8e8e8;border-radius:3px;color:#444;display:inline-block;vertical-align:middle;padding:7px 12px;margin:0 10px 0 0;width:100%;min-height:36px;line-height:22px;height:auto;outline:0 !important;font-size:14px}
+    </style>
     <div id="mainloader"><div class="evo__logo">EVO</div></div>
     <h1><i class="@lang('sCommerce::global.icon')" data-tooltip="@lang('sCommerce::global.description')"></i> @lang('sCommerce::global.title')</h1>
     <div class="sectionBody">
@@ -41,6 +44,8 @@
     <link rel="shortcut icon" href="{{evo()->getConfig('site_url', '/')}}assets/site/scommerce.ico" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nice-select2@2.2.0/dist/css/nice-select2.min.css"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nice-select2@2.2.0/dist/js/nice-select2.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
     @include('sCommerce::partials.style')
     <script>
@@ -56,8 +61,8 @@
 @endpush
 @push('scripts.bot')
     {!!$editor!!}
-    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/css/alertify.min.css"/>
-    <script src="https://cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/alertify.min.js"></script>
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/css/alertify.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/alertifyjs@1.14.0/build/alertify.min.js"></script>
     <script src="media/script/jquery.quicksearch.js"></script>
     <script src="media/script/jquery.nucontextmenu.js"></script>
     <script src="media/script/bootstrap/js/bootstrap.min.js"></script>
@@ -137,15 +142,21 @@
 
             // Flash messages
             @if (session()->has('success'))
-            alertify.success("{{session('success')}}");
+                alertify.success("{{session('success')}}");
             @endif
             @if (session()->has('error'))
-            alertify.success("{{session('error')}}");
+                alertify.success("{{session('error')}}");
             @endif
         });
 
         // Enable table sorting
         evo.sortable('.sortable > tbody > tr', {complete:function(e){documentDirty=true}});
+        evo.sortable('.sortable > div', {complete:function(e){documentDirty=true}});
+
+        let niceSelect2 = document.querySelectorAll('.niceSelect2');
+        niceSelect2?.forEach(select => {
+            NiceSelect.bind(document.getElementById(select.id), {searchable: true});
+        });
 
         // Image preview
         document.querySelectorAll("table img").forEach(function (img) {

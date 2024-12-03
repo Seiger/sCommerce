@@ -3,15 +3,15 @@
 @if(!is_writable(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerceCurrencies.php'))<div class="alert alert-danger" role="alert">@lang('sCommerce::global.not_writable_currencies')</div>@endif
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=settingsSave" onsubmit="documentDirty=false;">
     <input type="hidden" name="back" value="&get=settings" />
+    <h3 class="sectionTrans">
+        @lang('sCommerce::global.additional_fields_main_product_tab')
+        <div class="btn-group">
+            <span class="btn btn-primary" onclick="addItem('main_product_constructors')">
+                <i class="fa fa-plus"></i> <span>@lang('global.add')</span>
+            </span>
+        </div>
+    </h3>
     <div class="col col-12 col-sm-12 col-md-6">
-        <h3 class="sectionTrans">
-            @lang('sCommerce::global.additional_fields_main_product_tab')
-            <div class="btn-group">
-                <span class="btn btn-primary" onclick="addItem('main_product_constructors')">
-                    <i class="fa fa-plus"></i> <span>@lang('global.add')</span>
-                </span>
-            </div>
-        </h3>
         <div id="main_product_constructors" class="row form-row widgets sortable">
             @foreach(sCommerce::config('constructor.main_product', []) as $item)
                 <div class="col-sm-12">
@@ -196,80 +196,7 @@
         </div>
     </div>
     <div class="split my-3"></div>
-    <h3>@lang('sCommerce::global.price_configuration')</h3>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="basic__available_currencies">@lang('sCommerce::global.available_currencies')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.available_currencies_help')"></i>
-        </div>
-        <div class="col">
-            <select id="basic__available_currencies" class="form-control select2" name="basic__available_currencies[]" multiple onchange="documentDirty=true;">
-                @foreach(sCommerce::getCurrencies() as $currency)
-                    <option value="{{$currency['alpha']}}" @if(in_array($currency['alpha'], sCommerce::config('basic.available_currencies', []))) selected @endif title="{{$currency['name']}}">{{$currency['alpha']}} ({{$currency['symbol']}})</option>
-                @endforeach
-            </select>
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="basic__main_currency">@lang('sCommerce::global.main_currency')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.main_currency_help')"></i>
-        </div>
-        <div class="col col-4 col-md-3 col-lg-2">
-            <select id="basic__main_currency" class="form-control" name="basic__main_currency" onchange="documentDirty=true;">
-                @foreach(sCommerce::getCurrencies(sCommerce::config('basic.available_currencies', [])) as $cur)
-                    <option value="{{$cur['alpha']}}" @if(sCommerce::config('basic.main_currency', '') == $cur['alpha']) selected @endif title="{{$cur['name']}}">{{$cur['alpha']}} ({{$cur['symbol']}})</option>
-                @endforeach
-            </select>
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="basic__price_symbol">@lang('sCommerce::global.price_symbol')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_symbol_help')"></i>
-        </div>
-        <div class="col col-4 col-md-3 col-lg-2">
-            <select id="basic__price_symbol" class="form-control" name="basic__price_symbol" onchange="documentDirty=true;">
-                <option value="0" @if(sCommerce::config('basic.price_symbol', 1) == 0) selected @endif>@lang('global.no')</option>
-                <option value="1" @if(sCommerce::config('basic.price_symbol', 1) == 1) selected @endif>@lang('global.yes')</option>
-            </select>
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="basic__price_decimal_characters">@lang('sCommerce::global.price_decimals')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_decimals_help')"></i>
-        </div>
-        <div class="col col-4 col-md-3 col-lg-2">
-            <select id="basic__price_decimals" class="form-control" name="basic__price_decimals" onchange="documentDirty=true;">
-                <option value="0" @if(sCommerce::config('basic.price_decimals', 2) == 0) selected @endif>0</option>
-                <option value="1" @if(sCommerce::config('basic.price_decimals', 2) == 1) selected @endif>1</option>
-                <option value="2" @if(sCommerce::config('basic.price_decimals', 2) == 2) selected @endif>2</option>
-            </select>
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="basic__price_decimal_separator">@lang('sCommerce::global.price_decimal_separator')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_decimal_separator_help')"></i>
-        </div>
-        <div class="col col-4 col-md-3 col-lg-2">
-            <select id="basic__price_decimal_separator" class="form-control" name="basic__price_decimal_separator" onchange="documentDirty=true;">
-                <option value="." @if(sCommerce::config('basic.price_decimal_separator', '.') == '.') selected @endif>.</option>
-                <option value="," @if(sCommerce::config('basic.price_decimal_separator', '.') == ',') selected @endif>,</option>
-            </select>
-        </div>
-    </div>
-    <div class="row form-row">
-        <div class="col-auto">
-            <label for="basic__price_thousands_separator">@lang('sCommerce::global.price_thousands_separator')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.price_thousands_separator_help')"></i>
-        </div>
-        <div class="col col-4 col-md-3 col-lg-2">
-            <input type="text" id="basic__price_thousands_separator" name="basic__price_thousands_separator" class="form-control" value="{{sCommerce::config('basic.price_thousands_separator', "&nbsp;")}}" onchange="documentDirty=true;">
-        </div>
-    </div>
-    <div class="split my-3"></div>
+    @include('sCommerce::partials.settingsCurrencyPriceConfiguration')
     <h3>@lang('sCommerce::global.management_product_functionality')</h3>
     <div class="row form-row">
         <div class="col-auto">

@@ -15,6 +15,7 @@
     .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok{color:#fff;background-color:#d9534f;border-color:#d9534f;}
     .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok-green{color:#fff;background-color:#28a745;border-color:#28a745;}
     .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok-info{color:#fff;background-color:#5bc0de;border-color:#5bc0de;}
+    .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok-blue{color:#fff;background-color:#0275d8;border-color:#0275d8;}
     .badge.bg-seigerit{background-color:#0057b8 !important;color:#ffd700;font-size:85%;}
     .badge.bg-super{vertical-align:super;font-size:60% !important;}
     .builder .row{display:flex;flex-wrap:wrap;margin-left:-.25rem;margin-right:-.25rem;cursor:default}

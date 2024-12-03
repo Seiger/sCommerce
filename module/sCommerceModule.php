@@ -1154,6 +1154,17 @@ switch ($get) {
     | Settings
     |--------------------------------------------------------------------------
     */
+    case "getCurrencyItem":
+        $data['success'] = 0;
+        $item = request()->string('item')->trim()->value();
+        if ($item) {
+            $currency = sCommerce::getCurrencies([$item]);
+            if ($currency) {
+                $data['success'] = 1;
+                $data['view'] = $sCommerceController->view('partials.settingsCurrencyItem', $currency->first())->render();
+            }
+        }
+        die(json_encode($data));
     case "settings":
         if (!evo()->hasPermission('settings')) {
             $back = request()->back ?? '&get=orders';

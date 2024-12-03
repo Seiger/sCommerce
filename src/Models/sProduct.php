@@ -441,7 +441,7 @@ class sProduct extends Model
      */
     public function priceTo($currency): string
     {
-        return sCommerce::convertPice($this->price_regular, $this->currency, $currency);
+        return sCommerce::convertPrice($this->price_regular, $this->currency, $currency);
     }
 
     /**
@@ -453,7 +453,7 @@ class sProduct extends Model
      */
     public function priceToNumber($currency): float
     {
-        return sCommerce::convertPiceNumber($this->price_regular, $this->currency, $currency);
+        return sCommerce::convertPriceNumber($this->price_regular, $this->currency, $currency);
     }
 
     /**
@@ -481,7 +481,7 @@ class sProduct extends Model
      */
     public function specialPriceTo($currency): string
     {
-        return sCommerce::convertPice($this->price_special, $this->currency, $currency);
+        return sCommerce::convertPrice($this->price_special, $this->currency, $currency);
     }
 
     /**
@@ -493,6 +493,6 @@ class sProduct extends Model
      */
     public function specialPriceToNumber($currency): float
     {
-        return sCommerce::convertPiceNumber($this->price_special, $this->currency, $currency);
+        return sCommerce::convertPriceNumber($this->price_special, $this->currency, $currency);
     }
 }
