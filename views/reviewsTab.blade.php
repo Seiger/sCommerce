@@ -92,7 +92,7 @@
 </div>
 <div class="seiger__bottom">
     <div class="seiger__bottom-item"></div>
-    <div class="paginator">{{--$items->render()--}}</div>
+    <div class="paginator">{{$items->render()}}</div>
     <div class="seiger__list">
         <span class="seiger__label">@lang('sCommerce::global.items_on_page')</span>
         <div class="dropdown">
@@ -106,16 +106,16 @@
             </button>
             <ul class="dropdown__menu">
                 <li class="dropdown__menu-item">
-                    <a class="dropdown__menu-link" data-items="50" href="{!!$moduleUrl!!}&get=products">50</a>
+                    <a class="dropdown__menu-link" data-items="50" href="{!!$moduleUrl!!}&get=reviews">50</a>
                 </li>
                 <li class="dropdown__menu-item">
-                    <a class="dropdown__menu-link" data-items="100" href="{!!$moduleUrl!!}&get=products">100</a>
+                    <a class="dropdown__menu-link" data-items="100" href="{!!$moduleUrl!!}&get=reviews">100</a>
                 </li>
                 <li class="dropdown__menu-item">
-                    <a class="dropdown__menu-link" data-items="150" href="{!!$moduleUrl!!}&get=products">150</a>
+                    <a class="dropdown__menu-link" data-items="150" href="{!!$moduleUrl!!}&get=reviews">150</a>
                 </li>
                 <li class="dropdown__menu-item">
-                    <a class="dropdown__menu-link" data-items="200" href="{!!$moduleUrl!!}&get=products">200</a>
+                    <a class="dropdown__menu-link" data-items="200" href="{!!$moduleUrl!!}&get=reviews">200</a>
                 </li>
             </ul>
         </div>
