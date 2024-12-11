@@ -79,7 +79,7 @@
                             <div class="input-group-prepend">
                                 <select name="currency" class="form-control" onchange="documentDirty=true;" style="background-color: #e9ecef;">
                                     @foreach(sCommerce::getCurrencies(sCommerce::config('basic.available_currencies', [])) as $cur)
-                                        <option value="{{$cur['alpha']}}" @if(($item->currency ?? sCommerce::config('basic.main_currency', 'USD')) == $cur['alpha']) selected @endif data-tooltip="{{$cur['name']}}">{{$cur['symbol']}}</option>
+                                        <option value="{{$cur['alpha']}}" @if(($item->currency ?? sCommerce::config('basic.main_currency', 'USD')) == $cur['alpha']) selected @endif data-tooltip="{{$cur['name']}}">{{str_replace('&nbsp;', ' ', trim($cur['symbol'] ?? '&nbsp;'))}}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -97,7 +97,7 @@
                         </div>
                         <div class="input-group col">
                             <div class="input-group-prepend">
-                                <span class="input-group-text"><small>{{sCommerce::getCurrencies([$item->currency ?? sCommerce::config('basic.main_currency', 'USD')])->first()['symbol']}}</small></span>
+                                <span class="input-group-text"><small>{{str_replace('&nbsp;', ' ', trim(sCommerce::getCurrencies([$item->currency ?? sCommerce::config('basic.main_currency', 'USD')])->first()['symbol']))}}</small></span>
                             </div>
                             <input id="price_special" class="form-control" name="price_special" value="{{$item->price_special ?? ''}}" onblur="documentDirty=true;">
                         </div>
