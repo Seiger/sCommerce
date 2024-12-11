@@ -19,6 +19,8 @@ use Seiger\sCommerce\Facades\sCommerce;
  * @method static Builder|sProduct lang(string $locale)
  * @method Builder|sProduct search()
  * @method Builder|sProduct active()
+ * @property-read string $attrValues The attributes associated with the product.
+ * @property-read string $attribute The attribute associated with the product by alias.
  * @property-read string $title The Title of the product.
  * @property-read string $category The Category of the product.
  * @property-read string $link The URL of the product.
@@ -314,6 +316,7 @@ class sProduct extends Model
         $attribute = $this->attrValues()->whereAlias($alias)->first();
 
         if ($attribute) {
+            $attribute->title = $attribute->text->pagetitle;
             switch ($attribute->type) {
                 case sAttribute::TYPE_ATTR_NUMBER:
                 case sAttribute::TYPE_ATTR_CHECKBOX:

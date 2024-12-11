@@ -139,6 +139,17 @@ class sAttribute extends Model
     }
 
     /**
+     * Get selected related atribute translate
+     *
+     * @return Illuminate\Database\Eloquent\Relations\HasMany The relation object for the attribute translations.
+     */
+    public function text($locale = '')
+    {
+        $locale = trim($locale) ? $locale : config('app.locale');
+        return $this->hasOne(sAttributeTranslate::class, 'attribute', 'id')->whereIn('lang', [$locale, 'base']);
+    }
+
+    /**
      * Retrieve the translations associated with this attribute.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
