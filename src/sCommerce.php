@@ -4,6 +4,7 @@ use EvolutionCMS\Models\ClosureTable;
 use EvolutionCMS\Models\SiteContent;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
@@ -27,6 +28,35 @@ class sCommerce
      * @var Collection
      */
     protected $currencies;
+
+    /**
+     * The current currency for the session.
+     * Loaded lazily and stored statically to optimize retrieval across multiple calls.
+     *
+     * @var string
+     */
+    protected static string $currentCurrency;
+
+    /**
+     * Retrieve a paginated list of products based on provided product IDs.
+     *
+     * This method fetches products filtered by their IDs and active status,
+     * with optional language support and pagination settings.
+     *
+     * @param array $productIds An array of product IDs to fetch.
+     * @param string|null $lang The language to fetch the products in. Defaults to the current locale.
+     * @param int $perPage The number of products to return per page. Defaults to 1000.
+     * @return object The paginated list of products as a Laravel collection.
+     */
+
+    public function getProducts(array $productIds, string $lang = null, int $perPage = 1000): object
+    {
+        if (!$lang) {
+            $lang = evo()->getLocale();
+        }
+
+        return sProduct::lang($lang)->whereIn('id', $productIds)->active()->paginate($perPage);
+    }
 
     /**
      * Retrieves the product based on the given ID and language.
@@ -103,7 +133,7 @@ class sCommerce
         $categories = array_merge([$category], $sCommerceController->listAllActiveSubCategories($category, $dept));
         $productIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->get()->pluck('product')->toArray();
 
-        return sProduct::lang($lang)->whereIn('id', $productIds)->active()->paginate($perPage);
+        return $this->getProducts($productIds, $lang, $perPage);
     }
 
     /**
@@ -161,8 +191,10 @@ class sCommerce
      * @param string $currencyTo The currency to convert to.
      * @return string The converted price as a formatted string.
      */
-    public function convertPrice($price, $currencyFrom, $currencyTo): string
+    public function convertPrice($price, $currencyFrom = null, $currencyTo = null): string
     {
+        $currencyFrom = $currencyFrom ?? static::loadCurrentCurrency();
+        $currencyTo = $currencyTo ?? $currencyFrom;
         $curr = $this->getCurrencies([$currencyTo])->first();
 
         $price = number_format(
@@ -260,8 +292,52 @@ class sCommerce
      * @param mixed $default (optional) The default value to return if the key does not exist. Default is null.
      * @return mixed The value retrieved from the config file or the default value if the key does not exist.
      */
-    public function config(string $key, mixed $default = null): mixed
+    public static function config(string $key, mixed $default = null): mixed
     {
         return config('seiger.settings.sCommerce.' . $key, $default);
+    }
+
+    /**
+     * Loads the current currency from the session or the default configuration.
+     * This method is used internally to ensure the currency is properly initialized.
+     *
+     * @return string The currency code (e.g., USD, EUR, UAH).
+     */
+    protected static function loadCurrentCurrency(): string
+    {
+        // Try to retrieve currency from session
+        $currency = $_SESSION['currency'];
+
+        // Check cookies if currency is still not set
+        if (!$currency && Cookie::has('currency')) {
+            $currency = Cookie::get('currency');
+        }
+
+        // Fallback to default currency from configuration
+        if (!$currency) {
+            $currency = static::config('basic.main_currency', 'USD');
+        }
+
+        // Store currency in session if it is not already set
+        if (!$_SESSION['currency'] || $_SESSION['currency'] !== $currency) {
+            $_SESSION['currency'] = $currency;
+        }
+
+        return $currency;
+    }
+
+    /**
+     * Retrieves the current currency for the session.
+     * If the currency is not yet loaded, it initializes it using the loadCurrentCurrency method.
+     *
+     * @return string The currency code (e.g., USD, EUR).
+     */
+    public static function currentCurrency(): string
+    {
+        if (!isset(static::$currentCurrency)) {
+            static::$currentCurrency = static::loadCurrentCurrency();
+        }
+
+        return static::$currentCurrency;
     }
 }

@@ -131,6 +131,8 @@
     "product_link_rule_help" => "Выберите правило для формирования ссылки на товар.",
     "product_link_rule_root" => "от корня сайта",
     "product_name" => "Название товара",
+    "product_title_is_out_of_stock" => "Продукт :title недостаточное количество на складе.",
+    "product_with_id_not_found" => "Товар с ID :id не найден.",
     "products" => "Товари",
     "products_help" => "Перечень всех товаров магазина.",
     "products_icon" => "fa fa-store-alt",

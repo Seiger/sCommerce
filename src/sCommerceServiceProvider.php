@@ -1,7 +1,6 @@
 <?php namespace Seiger\sCommerce;
 
 use EvolutionCMS\ServiceProvider;
-use Seiger\sCommerce\Facades\sCart as sCartFacade;
 use Seiger\sCommerce\sCart;
 
 /**
@@ -20,21 +19,21 @@ class sCommerceServiceProvider extends ServiceProvider
     {
         // Only Manager
         if (IN_MANAGER_MODE) {
-            // Add custom routes for package
-            $this->loadRoutes();
-
             // Migration for create tables
             $this->loadMigrations();
-
-            // Views
-            $this->loadViews();
-
-            // MultiLang
-            $this->loadTranslations();
 
             // Files
             $this->publishFiles();
         }
+
+        // Add custom routes for package
+        $this->loadRoutes();
+
+        // Views
+        $this->loadViews();
+
+        // MultiLang
+        $this->loadTranslations();
 
         // Check sCommerce configuration
         $this->mergeConfigFrom(dirname(__DIR__) . '/config/sCommerceCheck.php', 'cms.settings');
@@ -44,8 +43,8 @@ class sCommerceServiceProvider extends ServiceProvider
         $this->app->alias(sCommerce::class, 'sCommerce');
 
         // Register the sCart class as a singleton
-        $this->app->singleton('sCart', fn($app) => sCart::getInstance());
-        class_alias(sCartFacade::class, 'sCart');
+        $this->app->singleton(sCart::class);
+        $this->app->alias(sCart::class, 'sCart');
     }
 
     /**

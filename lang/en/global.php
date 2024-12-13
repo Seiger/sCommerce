@@ -131,6 +131,8 @@
     "product_link_rule_help" => "Choose a rule for forming a link to the product.",
     "product_link_rule_root" => "from the root of the site",
     "product_name" => "Product Name",
+    "product_title_is_out_of_stock" => "Product :title is out of stock.",
+    "product_with_id_not_found" => "Product with ID :id not found.",
     "products" => "Products",
     "products_help" => "List of all store products.",
     "products_icon" => "fa fa-store-alt",

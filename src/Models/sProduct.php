@@ -33,7 +33,23 @@ class sProduct extends Model
      *
      * @var array
      */
-    protected $appends = ['title', 'category', 'link', 'coverSrc', 'price', 'specialPrice'];
+    protected $appends = [
+        'title',
+        'category',
+        'link',
+        'coverSrc',
+        'price',
+        'specialPrice'
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'quantity' => 'integer',
+    ];
 
     /**
      * Availability constants
@@ -429,11 +445,7 @@ class sProduct extends Model
      */
     public function getPriceAttribute(): string
     {
-        if (!isset($_SESSION['currency'])) {
-            $_SESSION['currency'] = sCommerce::config('basic.main_currency', 'USD');
-        }
-
-        return $this->priceTo($_SESSION['currency']);
+        return $this->priceTo(sCommerce::currentCurrency());
     }
 
     /**
@@ -469,11 +481,7 @@ class sProduct extends Model
      */
     public function getSpecialPriceAttribute(): string
     {
-        if (!isset($_SESSION['currency'])) {
-            $_SESSION['currency'] = sCommerce::config('basic.main_currency', 'USD');
-        }
-
-        return $this->specialPriceTo($_SESSION['currency']);
+        return $this->specialPriceTo(sCommerce::currentCurrency());
     }
 
     /**

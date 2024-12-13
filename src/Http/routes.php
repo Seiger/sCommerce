@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-//use Seiger\sMultisite\Controllers\sCommerceController;
+use Seiger\sCommerce\Facades\sCart;
 
-/*Route::middleware('mgr')->prefix('scommerce/')->name('sCommerce.')->group(function () {
-    Route::get('/', [sCommerce::class, 'index'])->name('index');
-});*/
+Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(function () {
+    Route::post('add-to-cart', fn() => tap(sCart::addProduct(), fn($result) => response()->json($result, $result['success'] === true ? 200 : 404)))->name('addToCart');
+});

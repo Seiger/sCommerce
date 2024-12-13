@@ -131,6 +131,8 @@
     "product_link_rule_help" => "Оберіть правило для формування посилання на товар.",
     "product_link_rule_root" => "від корня сайту",
     "product_name" => "Назва товару",
+    "product_title_is_out_of_stock" => "Продукт :title недостатня кількість на складі.",
+    "product_with_id_not_found" => "Товар із ID :id не знайдено.",
     "products" => "Товари",
     "products_help" => "Перелік всіх товарів магазину.",
     "products_icon" => "fa fa-store-alt",
