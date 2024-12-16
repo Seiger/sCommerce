@@ -29,7 +29,7 @@
         }).then((response) => {
             return response.json();
         }).then((data) => {
-            document.dispatchEvent(new CustomEvent('sCommerce.addedToCart', {detail: data}));
+            document.dispatchEvent(new CustomEvent('sCommerceAddedToCart', {detail: data}));
             e.target.disabled = false;
         }).catch(function(error) {
             if (error === 'SyntaxError: Unexpected token < in JSON at position 0') {

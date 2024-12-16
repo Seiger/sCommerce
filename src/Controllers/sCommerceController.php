@@ -132,7 +132,7 @@ class sCommerceController
      */
     public function updateFileConfigs(): bool
     {
-        $filters = ['basic', 'constructor', 'currencies', 'product', 'products'];
+        $filters = ['basic', 'cart', 'constructor', 'currencies', 'product', 'products'];
         $all = request()->all();
 
         if (isset($all['main_product_constructors']) && is_array($all['main_product_constructors']) && count($all['main_product_constructors'])) {

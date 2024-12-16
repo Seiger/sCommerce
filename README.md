@@ -62,6 +62,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [x] sCommerceAfterProductSave.
   - [x] sCommerceAfterProductContentSave.
   - [x] sCommerceAfterProductDuplicate.
+- [x] Javascript events.
+  - [x] sCommerceAddedToCart.
 - [x] Multi-currency Support (ISO 4217).
 - [ ] Integration with Payment Systems.
 - [ ] Integration with Warehouses.

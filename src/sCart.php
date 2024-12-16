@@ -9,6 +9,17 @@ use Seiger\sCommerce\Models\sProduct;
 class sCart
 {
     protected $cartData;
+    protected $productDetails = [
+        'id',
+        'title',
+        'link',
+        'coverSrc',
+        'category',
+        'sku',
+        'quantity',
+        'price',
+        'specialPrice'
+    ];
 
     public function __construct()
     {
@@ -20,7 +31,7 @@ class sCart
      *
      * @return array An array of items, each with product ID and quantity.
      */
-    public function getItems(): array
+    /*public function getItems(): array
     {
         $items = [];
 
@@ -35,7 +46,7 @@ class sCart
         }
 
         return $items;
-    }
+    }*/
 
     /**
      * Retrieve detailed information about items in the cart.
@@ -46,7 +57,7 @@ class sCart
      * @return array An array of detailed items, each including the product ID, quantity,
      *               and additional details such as product attributes and their values.
      */
-    public function getDetailedItems(): array
+    /*public function getDetailedItems(): array
     {
         $items = [];
 
@@ -65,7 +76,7 @@ class sCart
         }
 
         return $items;
-    }
+    }*/
 
     /**
      * Add a product to the cart.
@@ -83,9 +94,9 @@ class sCart
             $quantity = max(request()->integer('quantity'), 1);
         }
 
-        $product = $this->getProductDetails($productId);
+        $product = sCommerce::getProduct($productId);
 
-        if (!$product) {
+        if (!$product || !$product->id) {
             Log::warning('sCart - ' . __('sCommerce::global.product_with_id_not_found', ['id' => $productId]));
 
             return [
@@ -114,16 +125,12 @@ class sCart
         $this->cartData[$productId][$optionId] = ($quantity == 1 ? 1 : $quantity);
         $this->saveCartData();
 
-        $totalCartSum = $this->getTotalCartSum();
-
         return [
             'success' => true,
             'message' => "Product with ID {$productId} added to Cart.",
-            'productId' => $productId,
             'product' => $this->getProductFields($product),
             'quantity' => $this->cartData[$productId][$optionId],
-            'totalCartSum' => $totalCartSum,
-            'totalCartSumFormatted' => sCommerce::convertPrice($totalCartSum),
+            'miniCart' => $this->getMiniCart(),
         ];
     }
 
@@ -133,11 +140,11 @@ class sCart
      * @param int $productId The ID of the product to remove.
      * @return void
      */
-    public function removeProduct(int $productId): void
+    /*public function removeProduct(int $productId): void
     {
         unset($this->cartData[$productId]);
         $this->saveCartData();
-    }
+    }*/
 
     /**
      * Update the quantity of a product in the cart.
@@ -146,34 +153,40 @@ class sCart
      * @param int $quantity The new quantity of the product.
      * @return void
      */
-    public function updateQuantity(int $productId, int $quantity): void
+    /*public function updateQuantity(int $productId, int $quantity): void
     {
         if (isset($this->cartData[$productId])) {
             $this->cartData[$productId]['quantity'] = $quantity;
             $this->saveCartData();
         }
-    }
+    }*/
 
     /**
      * Get the total sum of items in the cart in current Currency.
      *
-     * @return float The total sum of items in the cart.
+     * @return array The total sum  and items in the cart.
      */
-    public function getTotalCartSum(): float
+    public function getMiniCart(): array
     {
-        $total = 0;
+        $totalSum = 0;
+        $items = [];
         $productIds = array_keys($this->cartData);
         $products = sCommerce::getProducts($productIds);
 
         foreach ($products as $product) {
             foreach ($this->cartData[$product->id] as $optionId => $quantity) {
+                $items[] = $this->getProductFields($product);
                 $price = $product->price_special > 0 ? $product->price_special : $product->price_regular;
                 $price = sCommerce::convertPriceNumber($price, $product->currency, sCommerce::currentCurrency());
-                $total += $price * $quantity;
+                $totalSum += $price * $quantity;
             }
         }
 
-        return $total;
+        $cart['totalSum'] = $totalSum;
+        $cart['totalSumFormatted'] = sCommerce::convertPrice($totalSum);
+        $cart['items'] = $items;
+
+        return $cart;
     }
 
     /**
@@ -201,21 +214,6 @@ class sCart
     }
 
     /**
-     * Get details of a product by its ID.
-     *
-     * This method retrieves detailed information about a product from the database.
-     *
-     * @param int $productId The ID of the product.
-     * @throws \UnexpectedValueException If the returned object is not a product.
-     */
-    private function getProductDetails(int $productId): ?sProduct
-    {
-        $fields = ['id', 'title', 'link', 'coverSrc', 'category', 'sku', 'quantity', 'price', 'specialPrice'];
-        $product = sCommerce::getProduct($productId);
-        return $product && $product->id ? $product : null;
-    }
-
-    /**
      * Get details of a product by its ID with selected fields.
      *
      * This method retrieves detailed information about a product from the database.
@@ -225,18 +223,17 @@ class sCart
      */
     private function getProductFields(object $product): ?array
     {
-        $fields = [
-            'id',
-            'title',
-            'link',
-            'coverSrc',
-            'category',
-            'sku',
-            'quantity',
-            'price',
-            'specialPrice'
-        ];
-        return $product->only($fields);
+        $attributes = [];
+        if (count($attributesDisplay = sCommerce::config('cart.product_attributes_display', []))) {
+            foreach ($attributesDisplay as $attrDisplay) {
+                $ad = $product->attribute($attrDisplay);
+                if ($ad) {
+                    $attributes[$ad['alias']] = array_diff($ad->only(['id', 'position', 'type', 'alias', 'title', 'value', 'code', 'label']), [null]);
+                }
+            }
+        }
+
+        return array_merge($product->only($this->productDetails), $attributes);
     }
 
     /**
@@ -246,7 +243,7 @@ class sCart
      * @param array $attributes The attributes associated with the product in the cart.
      * @return array An array of attributes and their values for the product.
      */
-    private function getProductAttributes(int $productId, array $attributes): array
+    /*private function getProductAttributes(int $productId, array $attributes): array
     {
         $productAttributes = [];
 
@@ -264,5 +261,5 @@ class sCart
         }
 
         return $productAttributes;
-    }
+    }*/
 }
