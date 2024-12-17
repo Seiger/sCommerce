@@ -27,58 +27,6 @@ class sCart
     }
 
     /**
-     * Get a list of items in the cart with their IDs and quantities.
-     *
-     * @return array An array of items, each with product ID and quantity.
-     */
-    /*public function getItems(): array
-    {
-        $items = [];
-
-        foreach ($this->cartData as $productId => $optionId) {
-            foreach ($optionId as $quantity) {
-                $items[] = [
-                    'productId' => $productId,
-                    //'optionId' => $optionId,
-                    'quantity' => $quantity
-                ];
-            }
-        }
-
-        return $items;
-    }*/
-
-    /**
-     * Retrieve detailed information about items in the cart.
-     *
-     * This method returns a list of items in the cart with detailed information,
-     * including the product details and any attributes associated with the items.
-     *
-     * @return array An array of detailed items, each including the product ID, quantity,
-     *               and additional details such as product attributes and their values.
-     */
-    /*public function getDetailedItems(): array
-    {
-        $items = [];
-
-        foreach ($this->cartData as $productId => $optionId) {
-            $product = sProduct::find($productId);
-
-            if (!$product) {
-                continue;
-            }
-
-            $items[] = [
-                'product_id' => $productId,
-                'product' => $product,
-                'quantity' => $attributes['quantity'] ?? 1,
-            ];
-        }
-
-        return $items;
-    }*/
-
-    /**
      * Add a product to the cart.
      *
      * @param int $productId The ID of the product to add.
@@ -155,26 +103,24 @@ class sCart
      * @param int $productId The ID of the product to remove.
      * @return void
      */
-    /*public function removeProduct(int $productId): void
+    public function removeProduct(int $productId = 0): array
     {
+        if ($productId === 0) {
+            $productId = request()->integer('productId');
+        }
+
         unset($this->cartData[$productId]);
         $this->saveCartData();
-    }*/
 
-    /**
-     * Update the quantity of a product in the cart.
-     *
-     * @param int $productId The ID of the product.
-     * @param int $quantity The new quantity of the product.
-     * @return void
-     */
-    /*public function updateQuantity(int $productId, int $quantity): void
-    {
-        if (isset($this->cartData[$productId])) {
-            $this->cartData[$productId]['quantity'] = $quantity;
-            $this->saveCartData();
-        }
-    }*/
+        $message = __('sCommerce::global.product_with_id', ['id' => $productId]) . ' ' . __('sCommerce::global.removed_from_cart') . '.';
+
+        return [
+            'success' => true,
+            'message' => $message,
+            'product' => ['id' => $productId],
+            'miniCart' => $this->getMiniCart(),
+        ];
+    }
 
     /**
      * Get the total sum of items in the cart in current Currency.
@@ -211,7 +157,6 @@ class sCart
      */
     protected function loadCartData(): array
     {
-        //return session('sCart', []);
         return $_SESSION['sCart'] ?? [];
     }
 
@@ -222,9 +167,6 @@ class sCart
      */
     protected function saveCartData(): void
     {
-        // Save cart data to the session or database
-        // Implementation needed based on your storage method
-        //session(['sCart' => $this->cartData]);
         $_SESSION['sCart'] = $this->cartData;
     }
 
@@ -250,31 +192,4 @@ class sCart
 
         return array_merge($product->only($this->productDetails), $attributes);
     }
-
-    /**
-     * Retrieve attributes for a given product ID from the cart data.
-     *
-     * @param int $productId The ID of the product.
-     * @param array $attributes The attributes associated with the product in the cart.
-     * @return array An array of attributes and their values for the product.
-     */
-    /*private function getProductAttributes(int $productId, array $attributes): array
-    {
-        $productAttributes = [];
-
-        foreach ($attributes['attributes'] ?? [] as $attributeId => $value) {
-            $attribute = sAttribute::find($attributeId);
-
-            // Add attribute to the array if it exists
-            if ($attribute) {
-                $productAttributes[] = [
-                    'attribute_id' => $attributeId,
-                    'attribute' => $attribute,
-                    'value' => $value
-                ];
-            }
-        }
-
-        return $productAttributes;
-    }*/
 }

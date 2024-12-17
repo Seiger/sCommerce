@@ -3,11 +3,15 @@
     document.addEventListener("click", function(e) {
         if (e.target) {
             switch(true) {
-                case Boolean(e.target.closest('button')?.hasAttribute("data-sBuy")):
-                    let productId = parseInt(e.target.closest('button').getAttribute('data-sBuy'));
-                    let quantity = 1;
-                    let trigger = 'buy';
+                case Boolean(e.target.closest('[data-sBuy]')?.hasAttribute("data-sBuy")):
+                    productId = parseInt(e.target.closest('button').getAttribute('data-sBuy'));
+                    quantity = 1;
+                    trigger = 'buy';
                     addToCart(e, productId, quantity, trigger);
+                    break;
+                case Boolean(e.target.closest('[data-sRemove]')?.hasAttribute("data-sRemove")):
+                    productId = parseInt(e.target.closest('[data-sRemove]').getAttribute('data-sRemove'));
+                    removeFromCart(e, productId);
                     break;
             }
         }
@@ -16,9 +20,9 @@
         if (e.target) {
             switch(true) {
                 case Boolean(e.target?.hasAttribute("data-sQuantity")):
-                    let productId = parseInt(e.target.getAttribute('data-sQuantity'));
-                    let quantity = parseInt(e.target.value);
-                    let trigger = 'quantity';
+                    productId = parseInt(e.target.getAttribute('data-sQuantity'));
+                    quantity = parseInt(e.target.value);
+                    trigger = 'quantity';
                     addToCart(e, productId, quantity, trigger);
                     break;
             }
@@ -44,6 +48,34 @@
             return response.json();
         }).then((data) => {
             document.dispatchEvent(new CustomEvent('sCommerceAddedToCart', {detail: data}));
+            e.target.disabled = false;
+        }).catch(function(error) {
+            if (error === 'SyntaxError: Unexpected token < in JSON at position 0') {
+                console.error('Request failed SyntaxError: The response must contain a JSON string.');
+            } else {
+                console.error('Request failed', error, '.');
+            }
+            e.target.disabled = false;
+        });
+    }
+    function removeFromCart(e, productId) {
+        e.preventDefault();
+        e.target.disabled = true;
+
+        let form = new FormData();
+        form.append('productId', productId);
+
+        fetch('{{route('sCommerce.removeFromCart')}}', {
+            method: "post",
+            cache: "no-store",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: form
+        }).then((response) => {
+            return response.json();
+        }).then((data) => {
+            document.dispatchEvent(new CustomEvent('sCommerceRemovedFromCart', {detail: data}));
             e.target.disabled = false;
         }).catch(function(error) {
             if (error === 'SyntaxError: Unexpected token < in JSON at position 0') {

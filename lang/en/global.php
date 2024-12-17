@@ -150,6 +150,7 @@
     "rating" => "Rating",
     "rating_on_help" => "Enable product rating calculation functionality.",
     "relevant" => "Relevant products",
+    "removed_from_cart" => "Removed from cart",
     "representation_products_fields" => "Presentation of the list of products",
     "review" => "Review",
     "review_global" => "Global review",
