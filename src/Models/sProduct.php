@@ -48,7 +48,7 @@ class sProduct extends Model
      * @var array
      */
     protected $casts = [
-        'quantity' => 'integer',
+        'inventory' => 'integer',
     ];
 
     /**

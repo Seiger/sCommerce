@@ -16,7 +16,7 @@ class sCart
         'coverSrc',
         'category',
         'sku',
-        'quantity',
+        'inventory',
         'price',
         'specialPrice'
     ];
@@ -86,7 +86,7 @@ class sCart
      * @param int $quantity The quantity of the product to add.
      * @return void
      */
-    public function addProduct(int $productId = 0, int $optionId = 0, int $quantity = 1): array
+    public function addProduct(int $productId = 0, int $optionId = 0, int $quantity = 1, string $trigger = null): array
     {
         if ($productId === 0) {
             $productId = request()->integer('productId');
@@ -94,14 +94,19 @@ class sCart
             $quantity = max(request()->integer('quantity'), 1);
         }
 
+        if (!$trigger) {
+            $trigger = request()->string('trigger')->trim()->value() ?? 'buy';
+        }
+
         $product = sCommerce::getProduct($productId);
 
         if (!$product || !$product->id) {
-            Log::warning('sCart - ' . __('sCommerce::global.product_with_id_not_found', ['id' => $productId]));
+            $message = __('sCommerce::global.product_with_id', ['id' => $productId]) . __('sCommerce::global.not_found') . '.';
+            Log::warning('sCart - ' . $message);
 
             return [
                 'success' => false,
-                'message' =>  __('sCommerce::global.product_with_id_not_found', ['id' => $productId]),
+                'message' =>  $message,
             ];
         }
 
@@ -109,27 +114,37 @@ class sCart
             $this->cartData[$productId][$optionId] = 0;
         }
 
-        if (sCommerce::config('product.quantity_on', 0)) {
-            if ($product->quantity < 0) {
-                Log::alert('sCart - ' . __('sCommerce::global.product_title_is_out_of_stock', ['title' => $product->title]));
+        if (sCommerce::config('product.inventory_on', 0)) {
+            if ($product->inventory < 0) {
+                $message = __('sCommerce::global.product_title_is_out_of_stock', ['title' => $product->title]);
+                Log::alert('sCart - ' . $message);
 
                 return [
                     'success' => false,
-                    'message' =>  __('sCommerce::global.product_title_is_out_of_stock', ['title' => $product->title]),
+                    'message' =>  $message,
                 ];
             } else {
-                $quantity = min($quantity, $product->quantity);
+                $quantity = min($quantity, $product->inventory);
             }
         }
 
-        $this->cartData[$productId][$optionId] = ($quantity == 1 ? 1 : $quantity);
+        $quantity = ($quantity == 1 ? 1 : $quantity);
+        $this->cartData[$productId][$optionId] = $quantity;
         $this->saveCartData();
+
+        switch ($trigger) {
+            case 'quantity':
+                $message = __('sCommerce::global.product_with_id', ['id' => $productId]) . ' ' . __('sCommerce::global.changed_quantity') . '.';
+                break;
+            default:
+                $message = __('sCommerce::global.product_with_id', ['id' => $productId]) . ' ' . __('sCommerce::global.added_to_cart') . '.';
+                break;
+        }
 
         return [
             'success' => true,
-            'message' => "Product with ID {$productId} added to Cart.",
-            'product' => $this->getProductFields($product),
-            'quantity' => $this->cartData[$productId][$optionId],
+            'message' => $message,
+            'product' => array_merge($this->getProductFields($product), compact('quantity')),
             'miniCart' => $this->getMiniCart(),
         ];
     }
@@ -175,7 +190,7 @@ class sCart
 
         foreach ($products as $product) {
             foreach ($this->cartData[$product->id] as $optionId => $quantity) {
-                $items[] = $this->getProductFields($product);
+                $items[] = array_merge($this->getProductFields($product), compact('quantity'));
                 $price = $product->price_special > 0 ? $product->price_special : $product->price_regular;
                 $price = sCommerce::convertPriceNumber($price, $product->currency, sCommerce::currentCurrency());
                 $totalSum += $price * $quantity;

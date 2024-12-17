@@ -3,21 +3,35 @@
     document.addEventListener("click", function(e) {
         if (e.target) {
             switch(true) {
-                case Boolean(e.target.closest('button')?.hasAttribute("data-buy")):
-                    addToCart(e);
+                case Boolean(e.target.closest('button')?.hasAttribute("data-sBuy")):
+                    let productId = parseInt(e.target.closest('button').getAttribute('data-sBuy'));
+                    let quantity = 1;
+                    let trigger = 'buy';
+                    addToCart(e, productId, quantity, trigger);
                     break;
             }
         }
     });
-    function addToCart(e) {
+    document.addEventListener("change", function(e) {
+        if (e.target) {
+            switch(true) {
+                case Boolean(e.target?.hasAttribute("data-sQuantity")):
+                    let productId = parseInt(e.target.getAttribute('data-sQuantity'));
+                    let quantity = parseInt(e.target.value);
+                    let trigger = 'quantity';
+                    addToCart(e, productId, quantity, trigger);
+                    break;
+            }
+        }
+    });
+    function addToCart(e, productId, quantity, trigger) {
         e.preventDefault();
         e.target.disabled = true;
-        let count = 1;
-        let productId = parseInt(e.target.closest('button').getAttribute('data-buy'));
 
         let form = new FormData();
         form.append('productId', productId);
-        form.append('count', count);
+        form.append('quantity', quantity);
+        form.append('trigger', trigger);
 
         fetch('{{route('sCommerce.addToCart')}}', {
             method: "post",

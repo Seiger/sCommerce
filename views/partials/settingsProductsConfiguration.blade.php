@@ -61,12 +61,12 @@
 </div>
 <div class="row form-row">
     <div class="col-auto">
-        <label for="products__show_field_quantity" class="warning">@lang('sCommerce::global.quantity')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.quantity')"></i>
+        <label for="products__show_field_inventory" class="warning">@lang('sCommerce::global.inventory')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.inventory')"></i>
     </div>
     <div class="col">
-        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_quantity);" @if(sCommerce::config('products.show_field_quantity', 1) == 1) checked @endif>
-        <input type="hidden" id="products__show_field_quantity" name="products__show_field_quantity" value="{{sCommerce::config('products.show_field_quantity', 1)}}" onchange="documentDirty=true;">
+        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_inventory);" @if(sCommerce::config('products.show_field_quantity', 1) == 1) checked @endif>
+        <input type="hidden" id="products__show_field_inventory" name="products__show_field_inventory" value="{{sCommerce::config('products.show_field_inventory', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
 <div class="row form-row">

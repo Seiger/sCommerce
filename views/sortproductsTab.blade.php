@@ -40,9 +40,9 @@
                         <button class="seiger-sort-btn" style="padding:0;border:none;background:transparent;">@lang('sCommerce::global.price_opt_special')</button>
                     </th>
                 @endif
-                @if (sCommerce::config('products.show_field_quantity', 1) == 1)
+                @if (sCommerce::config('products.show_field_inventory', 1) == 1)
                     <th>
-                        <button class="seiger-sort-btn" style="padding:0;border:none;background:transparent;">@lang('sCommerce::global.quantity')</button>
+                        <button class="seiger-sort-btn" style="padding:0;border:none;background:transparent;">@lang('sCommerce::global.inventory')</button>
                     </th>
                 @endif
                 @if (sCommerce::config('products.show_field_availability', 1) == 1)
@@ -109,8 +109,8 @@
                     @if (sCommerce::config('products.show_field_price_opt_special', 1) == 1)
                         <td>{{$item->price_opt_special}}</td>
                     @endif
-                    @if (sCommerce::config('products.show_field_quantity', 1) == 1)
-                        <td>{{$item->quantity}}</td>
+                    @if (sCommerce::config('products.show_field_inventory', 1) == 1)
+                        <td>{{$item->inventory}}</td>
                     @endif
                     @if (sCommerce::config('products.show_field_availability', 1) == 1)
                         <td>{{$item->availability}}</td>

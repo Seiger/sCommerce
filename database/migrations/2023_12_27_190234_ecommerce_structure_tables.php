@@ -82,7 +82,7 @@ return new class extends Migration
             $table->unsignedDecimal('height', 11, 4)->default(0)->comment('The height of production is indicated if necessary for technical needs');
             $table->unsignedDecimal('length', 11, 4)->default(0)->comment('The length of production is indicated if necessary for technical needs');
             $table->unsignedDecimal('volume', 11, 4)->default(0)->comment('The volume of production is indicated if necessary for technical needs');
-            $table->integer('quantity')->default(0)->comment('Quantity products in stock');
+            $table->integer('inventory')->default(0)->comment('Quantity products in stock');
             $table->char('currency', 3)->default('USD')->comment('Currency price this product');
             $table->string('cover', 512)->default('')->comment('Cover image file link');
             $table->jsonb('relevants')->default(new Expression('(JSON_ARRAY())'));

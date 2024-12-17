@@ -294,14 +294,14 @@
     </div>
     <div class="row form-row">
         <div class="col-auto">
-            <label for="product__quantity_on" class="warning">@lang('sCommerce::global.quantity')</label>
-            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.quantity_on_help')"></i>
+            <label for="product__inventory_on" class="warning">@lang('sCommerce::global.inventory')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.inventory_on_help')"></i>
         </div>
         <div class="col col-4 col-md-3 col-lg-2">
-            <select id="product__quantity_on" class="form-control" name="product__quantity_on" onchange="documentDirty=true;">
-                <option value="0" @if(sCommerce::config('product.quantity_on', '1') == '0') selected @endif>@lang('sCommerce::global.turned_off')</option>
-                <option value="1" @if(sCommerce::config('product.quantity_on', '1') == '1') selected @endif>@lang('sCommerce::global.only_display') (@lang('sCommerce::global.manager_cannot_change'))</option>
-                <option value="2" @if(sCommerce::config('product.quantity_on', '1') == '2') selected @endif>@lang('sCommerce::global.display_field')</option>
+            <select id="product__inventory_on" class="form-control" name="product__inventory_on" onchange="documentDirty=true;">
+                <option value="0" @if(sCommerce::config('product.inventory_on', '1') == '0') selected @endif>@lang('sCommerce::global.turned_off')</option>
+                <option value="1" @if(sCommerce::config('product.inventory_on', '1') == '1') selected @endif>@lang('sCommerce::global.only_display') (@lang('sCommerce::global.manager_cannot_change'))</option>
+                <option value="2" @if(sCommerce::config('product.inventory_on', '1') == '2') selected @endif>@lang('sCommerce::global.display_field')</option>
             </select>
         </div>
     </div>

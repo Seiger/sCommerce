@@ -74,9 +74,9 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_opt_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if (sCommerce::config('products.show_field_quantity', 1) && sCommerce::config('product.quantity_on', 1))
-                <th class="sorting @if($order == 'quantity') sorted @endif" data-order="quantity">
-                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.quantity') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            @if (sCommerce::config('products.show_field_inventory', 1) && sCommerce::config('product.inventory_on', 1))
+                <th class="sorting @if($order == 'inventory') sorted @endif" data-order="inventory">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.inventory') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
             @if (sCommerce::config('products.show_field_availability', 1) && sCommerce::config('product.show_field_availability', 1))
@@ -181,8 +181,8 @@
                 @if (sCommerce::config('products.show_field_price_opt_special', 1) && sCommerce::config('product.show_field_price_opt_special', 1))
                     <td>{{$item->price_opt_special}}</td>
                 @endif
-                @if (sCommerce::config('products.show_field_quantity', 1) && sCommerce::config('product.quantity_on', 1))
-                    <td>{{$item->quantity}}</td>
+                @if (sCommerce::config('products.show_field_inventory', 1) && sCommerce::config('product.inventory_on', 1))
+                    <td>{{$item->inventory}}</td>
                 @endif
                 @if (sCommerce::config('products.show_field_availability', 1) && sCommerce::config('product.show_field_availability', 1))
                     <td>{{sProduct::listAvailability()[$item->availability]}}</td>

@@ -258,7 +258,9 @@ switch ($get) {
         $product->alias = $sCommerceController->validateAlias($alias, (int)$product->id);
         $product->position = $product->categories()->where('scope', 'like', 'primary%')->first()->pivot->position ?? 0;
         $product->rating = ($rating == 0 ? 5 : $rating);
-        $product->quantity = (int)request()->input('quantity', 0);
+        if (sCommerce::config('product.inventory_on', 0) == 2) {
+            $product->inventory = (int)request()->input('inventory', 0);
+        }
         $product->price_regular = $sCommerceController->validatePrice(request()->input('price_regular', 0));
         $product->price_special = $sCommerceController->validatePrice(request()->input('price_special', 0));
         $product->price_opt_regular = $sCommerceController->validatePrice(request()->input('price_opt_regular', 0));
@@ -341,7 +343,7 @@ switch ($get) {
             $newProduct->alias = $sCommerceController->validateAlias($product->alias . '-duplicate', 0);
             $newProduct->position = $product->position;
             $newProduct->rating = $product->rating;
-            $newProduct->quantity = $product->quantity;
+            $newProduct->inventory = $product->inventory;
             $newProduct->price_regular = $product->price_regular;
             $newProduct->price_special = $product->price_special;
             $newProduct->price_opt_regular = $product->price_opt_regular;

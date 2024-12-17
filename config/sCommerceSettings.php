@@ -17,7 +17,7 @@
     ],
     "product" => [
         "link_rule" => "root",
-        "quantity_on" => 0,
+        "inventory_on" => 0,
         "rating_on" => 0,
         "show_field_availability" => 0,
         "show_field_categories" => 1,
@@ -35,7 +35,7 @@
         "show_field_price_opt" => 0,
         "show_field_price_opt_special" => 0,
         "show_field_price_special" => 0,
-        "show_field_quantity" => 0,
+        "show_field_inventory" => 0,
         "show_field_rating" => 1,
         "show_field_sku" => 1,
         "show_field_views" => 1,
