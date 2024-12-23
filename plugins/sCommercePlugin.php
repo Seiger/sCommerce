@@ -7,6 +7,7 @@ use EvolutionCMS\Models\SiteTemplate;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Facades\sFilter;
 
 /**
  * Catch the Product by alias
@@ -14,16 +15,24 @@ use Seiger\sCommerce\Facades\sCommerce;
 Event::listen('evolution.OnPageNotFound', function($params) {
     $goTo = false;
     $aliasArr = request()->segments();
-    if ($aliasArr[0] == evo()->getConfig('lang', 'base')) {
+    if ($aliasArr[0] === evo()->getConfig('lang', 'base')) {
         unset($aliasArr[0]);
     }
     $alias = implode('/', $aliasArr);
     $goTo = Arr::exists(sCommerce::documentListing(), $alias);
-    if (!$goTo && evo()->getLoginUserID('mgr')) {
+    if (!$goTo) {
         $alias = Arr::last($aliasArr);
         $product = sCommerce::getProductByAlias($alias ?? '');
         if ($product && isset($product->id) && (int)$product->id > 0) {
-            $goTo = true;
+            if (evo()->getLoginUserID('mgr')) {
+                $goTo = true;
+            }
+        } else {
+            $doc = sFilter::validateFilters();
+            if ($doc) {
+                evo()->sendForward($doc);
+                exit();
+            };
         }
     }
     if ($goTo) {

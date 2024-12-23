@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Facades\sFilter;
 use Seiger\sCommerce\Models\sAttribute;
+use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
@@ -28,6 +30,12 @@ class sCommerce
      * @var Collection
      */
     protected $currencies;
+    protected $controller;
+
+    public function __construct()
+    {
+        $this->controller = new sCommerceController();
+    }
 
     /**
      * The current currency for the session.
@@ -51,10 +59,7 @@ class sCommerce
 
     public function getProducts(array $productIds, string $lang = null, int $perPage = 1000): object
     {
-        if (!$lang) {
-            $lang = evo()->getLocale();
-        }
-
+        $lang = !$lang ? evo()->getLocale() : $lang;
         return sProduct::lang($lang)->whereIn('id', $productIds)->active()->paginate($perPage);
     }
 
@@ -65,13 +70,9 @@ class sCommerce
      * @param string $lang (optional) The language to retrieve the product in. Default is an empty string.
      * @return object The product object matching the given ID and language, or a new empty product object if no match found.
      */
-    public function getProduct(int $productId, string $lang = ''): object
+    public function getProduct(int $productId, string $lang = null): object
     {
-        if (!trim($lang)) {
-            $sCommerceController = new sCommerceController();
-            $lang = $sCommerceController->langDefault();
-        }
-
+        $lang = !$lang ? $this->controller->langDefault() : $lang;
         $product = sProduct::lang($lang)->whereId($productId)->extractConstructor()->first();
 
         if (!$product) {
@@ -104,9 +105,8 @@ class sCommerce
      */
     public function getTreeActiveCategories(int $category, int $dept = 10): object
     {
-        $sCommerceController = new sCommerceController();
         $object = sCategory::find($category);
-        return $sCommerceController->listSubCategories($object, $dept);
+        return $this->controller->listSubCategories($object, $dept);
     }
 
     /**
@@ -120,20 +120,30 @@ class sCommerce
      */
     public function getCategoryProducts(int $category = null, string $lang = null, int $perPage = 1000, int $dept = 10): object
     {
-        $sCommerceController = new sCommerceController();
-
-        if (!$lang) {
-            $lang = evo()->getLocale();
-        }
-
-        if (!$category) {
-            $category = evo()->documentIdentifier;
-        }
-
-        $categories = array_merge([$category], $sCommerceController->listAllActiveSubCategories($category, $dept));
-        $productIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->get()->pluck('product')->toArray();
-
+        $productIds = $this->controller->productIds($category, $dept);
         return $this->getProducts($productIds, $lang, $perPage);
+    }
+
+    /**
+     * Retrieves filters associated with a specific category.
+     *
+     * This method generates a collection of filters based on attributes
+     * and their corresponding values for the products within the specified category.
+     *
+     * @param int|null $category The ID of the category for which filters are retrieved.
+     *                            If null, all categories are considered.
+     * @param string|null $lang   The language locale for the filters.
+     *                            Defaults to the application's current locale.
+     * @param int $dept           The depth level for category traversal.
+     *                            Determines how deep the category hierarchy should be explored.
+     *                            Defaults to 10.
+     *
+     * @return object|Collection A collection of filters for the specified category.
+     *                            Each filter includes attribute details and value counts.
+     */
+    public function getCategoryFilters(int $category = null, string $lang = null, int $dept = 10): object
+    {
+        return sFilter::byCategory($category, $lang, $dept);
     }
 
     /**
@@ -143,13 +153,9 @@ class sCommerce
      * @param string $lang The language code to use. Defaults to an empty string.
      * @return object The attribute object if found, otherwise a new sAttribute object.
      */
-    public function getAttribute(int $attributeId, string $lang = ''): object
+    public function getAttribute(int $attributeId, string $lang = null): object
     {
-        if (!trim($lang)) {
-            $sCommerceController = new sCommerceController();
-            $lang = $sCommerceController->langDefault();
-        }
-
+        $lang = !$lang ? $this->controller->langDefault() : $lang;
         return sAttribute::lang($lang)->whereAttribute($attributeId)->first() ?? new sAttribute();
     }
 
@@ -305,20 +311,16 @@ class sCommerce
      */
     protected static function loadCurrentCurrency(): string
     {
-        // Try to retrieve currency from session
         $currency = $_SESSION['currency'];
 
-        // Check cookies if currency is still not set
         if (!$currency && Cookie::has('currency')) {
             $currency = Cookie::get('currency');
         }
 
-        // Fallback to default currency from configuration
         if (!$currency) {
             $currency = static::config('basic.main_currency', 'USD');
         }
 
-        // Store currency in session if it is not already set
         if (!$_SESSION['currency'] || $_SESSION['currency'] !== $currency) {
             $_SESSION['currency'] = $currency;
         }

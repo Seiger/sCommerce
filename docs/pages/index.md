@@ -53,7 +53,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [ ] Geolocation Attribute.
   - [ ] Constructor Attribute.
   - [x] Custom Attribute.
-- [ ] Dynamic Filters for Product Search.
+- [x] Dynamic Filters for Product Search.
 - [x] Duplicate Product.
 - [ ] AI-Powered Product Search.
 - [ ] Flexible Product Bundles.
@@ -70,6 +70,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [x] sCommerceAfterProductDuplicate.
 - [x] Javascript events.
   - [x] sCommerceAddedToCart.
+  - [x] sCommerceRemovedFromCart.
 - [x] Multi-currency Support (ISO 4217).
 - [ ] Integration with Payment Systems.
 - [ ] Integration with Warehouses.

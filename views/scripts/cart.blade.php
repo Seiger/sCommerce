@@ -4,7 +4,7 @@
         if (e.target) {
             switch(true) {
                 case Boolean(e.target.closest('[data-sBuy]')?.hasAttribute("data-sBuy")):
-                    productId = parseInt(e.target.closest('button').getAttribute('data-sBuy'));
+                    productId = parseInt(e.target.closest('[data-sBuy]').getAttribute('data-sBuy'));
                     quantity = 1;
                     trigger = 'buy';
                     addToCart(e, productId, quantity, trigger);
@@ -40,9 +40,7 @@
         fetch('{{route('sCommerce.addToCart')}}', {
             method: "post",
             cache: "no-store",
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            },
+            headers: {"X-Requested-With": "XMLHttpRequest"},
             body: form
         }).then((response) => {
             return response.json();
@@ -68,9 +66,7 @@
         fetch('{{route('sCommerce.removeFromCart')}}', {
             method: "post",
             cache: "no-store",
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            },
+            headers: {"X-Requested-With": "XMLHttpRequest"},
             body: form
         }).then((response) => {
             return response.json();

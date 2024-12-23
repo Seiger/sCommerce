@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Facades\sFilter;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
@@ -17,6 +18,7 @@ class sCommerceController
 {
     protected $data = [];
     protected $categories = [];
+    protected $productIds = [];
 
     /**
      * Set the products listing in the cache.
@@ -321,6 +323,48 @@ class sCommerceController
         }
 
         return $category;
+    }
+
+    /**
+     * Retrieves product IDs associated with a specified category and its active subcategories.
+     *
+     * This method identifies all products linked to a given category and its subcategories
+     * up to the specified depth level. If the category is not provided,
+     * the current document identifier is used as the default category.
+     *
+     * @param int|null $category The ID of the category to fetch products for.
+     *                            Defaults to the current document identifier if not specified.
+     * @param int $dept           The depth level for traversing subcategories.
+     *                            Determines how deep into the category hierarchy the search extends.
+     *                            Defaults to 10.
+     *
+     * @return array An array of product IDs related to the specified category and its subcategories.
+     */
+    public function productIds(int $category = null, int $dept = 10)
+    {
+        $category = $category ? $category : evo()->documentIdentifier;
+
+        if (!isset($this->productIds[$category]) || !is_array($this->productIds[$category])) {
+            $categories = array_merge([$category], $this->listAllActiveSubCategories($category, $dept));
+            $filters = sFilter::getValidatedFiltersIds();
+
+            $query = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories);
+
+            if (is_array($filters) && count($filters)) {
+                foreach ($filters as $filter => $values) {
+                    $query->whereIn('product', function ($q) use ($filter, $values) {
+                        $q->select(['product'])
+                            ->from('s_product_attribute_values')
+                            ->where('attribute', $filter)
+                            ->whereIn('value', $values);
+                    });
+                }
+            }
+
+            $this->productIds[$category] = $query->get()->pluck('product')->toArray();
+        }
+
+        return $this->productIds[$category];
     }
 
     /**

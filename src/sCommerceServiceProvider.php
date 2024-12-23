@@ -45,6 +45,10 @@ class sCommerceServiceProvider extends ServiceProvider
         // Register the sCart class as a singleton
         $this->app->singleton(sCart::class);
         $this->app->alias(sCart::class, 'sCart');
+
+        // Register the sFilter class as a singleton
+        $this->app->singleton(sFilter::class);
+        $this->app->alias(sFilter::class, 'sFilter');
     }
 
     /**

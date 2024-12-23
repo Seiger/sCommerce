@@ -766,8 +766,8 @@ switch ($get) {
     */
     case "attributes":
         $perpage = Cookie::get('scom_attributes_page_items', 50);
-        $order = request()->input('order', 'id');
-        $direc = request()->input('direc', 'desc');
+        $order = request()->input('order', 'position');
+        $direc = request()->input('direc', 'asc');
         $query = sAttribute::lang($sCommerceController->langDefault())->search();
 
         switch ($order) {
