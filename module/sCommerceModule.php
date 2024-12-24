@@ -553,6 +553,7 @@ switch ($get) {
                                     }
                                     break;
                                 case sAttribute::TYPE_ATTR_CHECKBOX : // 1
+                                case sAttribute::TYPE_ATTR_PRICE_RANGE : // 16
                                     if (trim($value)) {
                                         $value = intval($value);
                                         $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);

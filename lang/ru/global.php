@@ -193,6 +193,7 @@
     "type_attr_image" => "Изображение",
     "type_attr_multiselect" => "Мультивибор",
     "type_attr_number" => "Число",
+    "type_attr_price_range" => "Диапазон цен",
     "type_attr_radio" => "Радиокнопка",
     "type_attr_richtext" => "Визуальный редактор",
     "type_attr_select" => "Вибор из списка",

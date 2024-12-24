@@ -193,6 +193,7 @@
     "type_attr_image" => "Зображення",
     "type_attr_multiselect" => "Мультивибір",
     "type_attr_number" => "Число",
+    "type_attr_price_range" => "Діапазон цін",
     "type_attr_radio" => "Радіокнопка",
     "type_attr_richtext" => "Візуальний редактор",
     "type_attr_select" => "Вибір із списка",

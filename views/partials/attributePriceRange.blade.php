@@ -1,0 +1,1 @@
+<input type="hidden" id="{{$prefix}}{{$attribute->id}}" name="{{$prefix}}{{$attribute->id}}" value="1">

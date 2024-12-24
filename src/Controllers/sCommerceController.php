@@ -353,10 +353,17 @@ class sCommerceController
             if (is_array($filters) && count($filters)) {
                 foreach ($filters as $filter => $values) {
                     $query->whereIn('product', function ($q) use ($filter, $values) {
-                        $q->select(['product'])
-                            ->from('s_product_attribute_values')
-                            ->where('attribute', $filter)
-                            ->whereIn('value', $values);
+                        if ($filter == 'priceRange') {
+                            $q->select(['id'])
+                                ->from('s_products')
+                                ->whereBetween('price_regular', $values)
+                                ->orWhereBetween('price_special', $values);
+                        } else {
+                            $q->select(['product'])
+                                ->from('s_product_attribute_values')
+                                ->where('attribute', $filter)
+                                ->whereIn('value', $values);
+                        }
                     });
                 }
             }

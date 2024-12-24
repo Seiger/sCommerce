@@ -193,6 +193,7 @@
     "type_attr_image" => "Image",
     "type_attr_multiselect" => "Multi-select",
     "type_attr_number" => "Number",
+    "type_attr_price_range" => "Price range",
     "type_attr_radio" => "Radio button",
     "type_attr_richtext" => "Rich text",
     "type_attr_select" => "Select",

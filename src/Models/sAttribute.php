@@ -37,6 +37,7 @@ class sAttribute extends Model
     //const TYPE_ATTR_GEOLOCATION = 13;
     //const TYPE_ATTR_CONSTRUCTOR = 14;
     const TYPE_ATTR_CUSTOM = 15;
+    const TYPE_ATTR_PRICE_RANGE = 16;
 
     /**
      * Return list of type of input the attribute codes and labels

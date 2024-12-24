@@ -38,6 +38,9 @@
                         @php(View::getFinder()->setPaths([MODX_BASE_PATH . 'assets/modules/scommerce/attribute']))
                         @include($attribute->alias)
                         @break
+                    @case(sAttribute::TYPE_ATTR_PRICE_RANGE)
+                        @include('sCommerce::partials.attributePriceRange')
+                        @break
                 @endswitch
             @endforeach
         </div>

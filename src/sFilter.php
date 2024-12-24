@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
+use Seiger\sCommerce\Models\sProduct;
 
 class sFilter
 {
@@ -72,7 +73,7 @@ class sFilter
                     ->whereIn('product', $productIds);
             })->orderBy('position')
             ->get()
-            ->map(function($item) use ($values) {
+            ->map(function($item) use ($values, $productIds) {
                 switch ($item->type) {
                     //case sAttribute::TYPE_ATTR_NUMBER:
                     case sAttribute::TYPE_ATTR_CHECKBOX:
@@ -94,6 +95,25 @@ class sFilter
                             $value->checked = intval(isset($this->filters[$item?->alias]) && in_array($value?->alias, $this->filters[$item?->alias]));
                             return $value;
                         });
+                        break;
+                    case sAttribute::TYPE_ATTR_PRICE_RANGE:
+                        $minMax = DB::table('s_products')
+                            ->selectRaw('min(price_regular) as min_regular, max(price_regular) as max_regular, min(price_special) as min_special, max(price_special) as max_special')
+                            ->whereIn('id', $productIds)
+                            ->get()?->first();
+                        $min_regular = $minMax?->min_regular ?? 0;
+                        $min_special = $minMax?->min_special ?? 0;
+                        $max_regular = $minMax?->max_regular ?? 0;
+                        $max_special = $minMax?->max_special ?? 0;
+                        $min = ($min_special > 0 && $min_special < $min_regular) ? $min_special : $min_regular;
+                        $max = ($max_special > 0 && $max_special > $max_regular) ? $max_special : $max_regular;
+                        $value = (object)[];
+                        $value->link = $item?->alias ?? '' . '=' . 1;
+                        $value->min = $min;
+                        $value->max = $max;
+                        $value->min_value = min($min, intval($this->filters[$item?->alias][0] ?? $min));
+                        $value->max_value = max($max, intval($this->filters[$item?->alias][1] ?? $max));
+                        $item->values = collect([$value]);
                         break;
                 }
                 return $item;
@@ -120,12 +140,17 @@ class sFilter
         }
 
         if (isset($filters) && is_array($filters) && count($filters)) {
+            $sFilters = implode(';', array_map(function ($filterName, $filterValues) {
+                return $filterName . '=' . implode(',', $filterValues);
+            }, array_keys($filters), array_values($filters)));
+
+            if ($path['currentPath'] !== $path['path'] . '/' . $sFilters) {
+                return 0;
+            }
+
             $this->filters = $filters;
             $this->filtersIds = $filtersIds;
-
-            evo()->setPlaceholder('sFilters', implode(';', array_map(function ($filterName, $filterValues) {
-                return $filterName . '=' . implode(',', $filterValues);
-            }, array_keys($filters), array_values($filters))));
+            evo()->setPlaceholder('sFilters', $sFilters);
         }
 
         return (int)$path['category'];
@@ -244,12 +269,23 @@ class sFilter
                             $newValues[] = $value?->alias;
                             $newValuesIds[] = (int)$value?->avid ?? 0;
                         } else {
-                            return [];
+                            if ($attribute?->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
+                                $value = (int)filter_var($filterValue, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 999999999]]);
+                                $newValues[] = $value;
+                                $newValuesIds[] = $value;
+                            } else {
+                                return [];
+                            }
                         }
                     }
 
-                    $filters[$attribute?->alias] = $newValues;
-                    $filtersIds[$attribute?->id] = $newValuesIds;
+                    if ($attribute?->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
+                        $filters[$attribute?->alias] = [$newValues[0] ?? 0, $newValues[1] ?? 999999999];
+                        $filtersIds['priceRange'] = [$newValuesIds[0] ?? 0, $newValuesIds[1] ?? 999999999];
+                    } else {
+                        $filters[$attribute?->alias] = $newValues;
+                        $filtersIds[$attribute?->id] = $newValuesIds;
+                    }
                 } else {
                     return [];
                 }
