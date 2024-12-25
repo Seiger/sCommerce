@@ -575,6 +575,74 @@ class sCommerceController
     }
 
     /**
+     * Validates and processes sorting parameters from the given input.
+     *
+     * @param array|string|null $params The sorting parameters, either as an array or a delimited string. If null, will fetch from the request input.
+     * @return array An associative array containing the keys 'sort', 'order', and 'table' with their respective validated values.
+     */
+    public function validateSort(array|string $params = null): array
+    {
+        $sort = null;
+        $order = null;
+        $table = null;
+        $allowed = ['attribute'];
+        $params = $params ?? request()->input('sort');
+
+        if ($params) {
+            if (is_scalar($params)) {
+                $params = preg_split('/(,|;|:)/', $params);
+            }
+
+            if (is_array($params)) {
+                $sortParameter = $params['sort'] ?? ($params[0] ?? 'position');
+                $order = $params['order'] ?? ($params[1] ?? 'asc');
+                $order = strtolower($order) == 'desc' ? 'desc' : 'asc';
+
+                switch ($sortParameter) {
+                    case "cheap" :
+                        // By product price from low to high
+                        $sort = 'price_regular';
+                        break;
+                    case "expensive" :
+                        // By product price from high to low
+                        $sort = 'price_regular';
+                        $order = 'desc';
+                        break;
+                    case "popularity" :
+                        // By product views
+                        $sort = 'views';
+                        $order = 'desc';
+                        break;
+                    case "rating" :
+                        // By product rating
+                        $sort = 'rating';
+                        $order = 'desc';
+                        break;
+                    case "position" :
+                        // By product position in category
+                        $sort = 'position';
+                        $order = 'desc';
+                        break;
+                    default :
+                        // If a sorting table is additionally passed
+                        $sortParameterArray = explode('.', $sortParameter);
+                        if (count($sortParameterArray) === 1) {
+                            $sort = $sortParameterArray[0];
+                        } else {
+                            if (in_array($sortParameterArray[0], $allowed)) {
+                                $table = $sortParameterArray[0];
+                                $sort = $sortParameterArray[1];
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+
+        return compact('sort', 'order', 'table');
+    }
+
+    /**
      * Retrieves the data array.
      *
      * @return array The data array.

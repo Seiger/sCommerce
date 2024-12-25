@@ -75,7 +75,15 @@ switch ($get) {
             $direc = request()->input('direc', 'desc');
         }
 
-        $query = sProduct::lang($sCommerceController->langDefault())->search();
+        $query = sProduct::lang($sCommerceController->langDefault())->search()
+            ->addSelect(['position' =>
+                DB::table('s_product_category')
+                    ->select('position')
+                    ->where('s_product_category.category', $cat)
+                    ->orWhere('s_product_category.scope', 'primary')
+                    ->whereColumn('s_product_category.product', 's_products.id')
+                    ->limit(1)
+            ]);
 
         if (count(sCommerce::config('products.additional_fields', []))) {
             foreach (sCommerce::config('products.additional_fields', []) as $field) {
@@ -94,9 +102,7 @@ switch ($get) {
         if ($cat > 0) {
             $query->whereHas('categories', function ($q) use ($cat) {
                 $q->where('category', $cat);
-            })->addSelect([
-                'position' => DB::table('s_product_category')->select('position')->where('s_product_category.category', $cat)->whereColumn('s_product_category.product', 's_products.id')
-            ]);
+            });
         }
 
         switch ($order) {
@@ -149,8 +155,12 @@ switch ($get) {
             }
         }
 
-        $query->addSelect(['position' => DB::table('s_product_category')->select('position')->where('s_product_category.category', $cat)->whereColumn('s_product_category.product', 's_products.id')])
-            ->whereHas('categories', function ($q) use ($cat) {$q->where('category', $cat);})
+        $query->addSelect(['position' =>
+            DB::table('s_product_category')
+                ->select('position')
+                ->where('s_product_category.category', $cat)
+                ->whereColumn('s_product_category.product', 's_products.id')
+        ])->whereHas('categories', function ($q) use ($cat) {$q->where('category', $cat);})
             ->orderBy('position');
 
         $data['cat'] = $cat;
@@ -165,7 +175,10 @@ switch ($get) {
         $products = request()->get('products', []);
 
         foreach ($products as $position => $product) {
-            DB::table('s_product_category')->where('category', $cat)->where('product', $product)->update(['position' => $position]);
+            DB::table('s_product_category')
+                ->where('category', $cat)
+                ->where('product', $product)
+                ->update(['position' => $position]);
         }
 
         $_SESSION['itemaction'] = 'Save Sorting products in Category ' . $catName;
@@ -256,7 +269,7 @@ switch ($get) {
         $product->availability = (int)request()->input('availability', 0);
         $product->sku = request()->input('sku', '');
         $product->alias = $sCommerceController->validateAlias($alias, (int)$product->id);
-        $product->position = $product->categories()->where('scope', 'like', 'primary%')->first()->pivot->position ?? 0;
+        //$product->position = $product->categories()->where('scope', 'like', 'primary%')->first()->pivot->position ?? 0;
         $product->rating = ($rating == 0 ? 5 : $rating);
         if (sCommerce::config('product.inventory_on', 0) == 2) {
             $product->inventory = (int)request()->input('inventory', 0);
@@ -341,7 +354,7 @@ switch ($get) {
             $newProduct->availability = $product->availability;
             $newProduct->sku = $product->sku;
             $newProduct->alias = $sCommerceController->validateAlias($product->alias . '-duplicate', 0);
-            $newProduct->position = $product->position;
+            //$newProduct->position = $product->position;
             $newProduct->rating = $product->rating;
             $newProduct->inventory = $product->inventory;
             $newProduct->price_regular = $product->price_regular;

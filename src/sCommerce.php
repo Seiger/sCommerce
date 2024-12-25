@@ -6,11 +6,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sFilter;
 use Seiger\sCommerce\Models\sAttribute;
-use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
@@ -31,6 +31,7 @@ class sCommerce
      */
     protected $currencies;
     protected $controller;
+    protected $categoryId;
 
     public function __construct()
     {
@@ -56,11 +57,69 @@ class sCommerce
      * @param int $perPage The number of products to return per page. Defaults to 1000.
      * @return object The paginated list of products as a Laravel collection.
      */
-
-    public function getProducts(array $productIds, string $lang = null, int $perPage = 1000): object
+    public function getProducts(array $productIds, string $lang = null, int $perPage = 1000, array|string $sort = null): object
     {
         $lang = !$lang ? evo()->getLocale() : $lang;
-        return sProduct::lang($lang)->whereIn('id', $productIds)->active()->paginate($perPage);
+        extract($this->controller->validateSort($sort));
+
+        $query = sProduct::lang($lang)
+            ->addSelect(['position' =>
+                DB::table('s_product_category')
+                    ->select('position')
+                    ->where('s_product_category.category', $this->getCategoryId())
+                    ->orWhere('s_product_category.scope', 'primary')
+                    ->whereColumn('s_product_category.product', 's_products.id')
+                    ->limit(1)
+            ])
+            ->whereIn('id', $productIds)
+            ->active();
+
+        if (isset($sort) && $sort) {
+            if (isset($table) && $table) {
+                switch ($table) {
+                    case 'attribute':
+                        $hasLang = Schema::hasColumn('s_attribute_values', $lang);
+
+                        $query->addSelect(['sort' =>
+                            DB::table('s_attribute_values')
+                                ->select(DB::raw(
+                                    $hasLang
+                                        ? "CASE WHEN " . $lang . " IS NOT NULL AND " . $lang . " != '' THEN " . $lang . " ELSE base END as value"
+                                        : "base as value"
+                                )
+                                )
+                                ->where('s_attribute_values.avid', function ($q) use ($sort) {
+                                    $q->select('valueid')
+                                        ->from('s_product_attribute_values')
+                                        ->where('s_product_attribute_values.attribute', function ($q) use ($sort) {
+                                            $q->select('id')
+                                                ->from('s_attributes')
+                                                ->where('s_attributes.alias', $sort);
+                                        })
+                                        ->whereColumn('s_product_attribute_values.product', 's_products.id')
+                                        ->limit(1);
+                                })
+                                ->union(DB::table('s_product_attribute_values')
+                                    ->select('value')
+                                    ->where('s_product_attribute_values.attribute', function ($q) use ($sort) {
+                                        $q->select('id')
+                                            ->from('s_attributes')
+                                            ->where('s_attributes.alias', $sort);
+                                    })
+                                    ->whereColumn('s_product_attribute_values.product', 's_products.id')
+                                    ->limit(1)
+                                )
+                                ->limit(1)
+                        ]);
+                        $query->orderBy('sort', $order);
+                        break;
+                }
+            } else {
+                $query->orderBy($sort, $order);
+            }
+        }
+
+        return $query->orderByDesc('position')->paginate($perPage);
     }
 
     /**
@@ -118,10 +177,11 @@ class sCommerce
      * @param int $dept The depth of sub-categories to include in the query. Default value is 10.
      * @return object The products belonging to the specified category, filtered by language and category ID.
      */
-    public function getCategoryProducts(int $category = null, string $lang = null, int $perPage = 1000, int $dept = 10): object
+    public function getCategoryProducts(int $category = null, string $lang = null, int $perPage = 1000, array $sort = null, int $dept = 10): object
     {
+        $category = $this->getCategoryId($category);
         $productIds = $this->controller->productIds($category, $dept);
-        return $this->getProducts($productIds, $lang, $perPage);
+        return $this->getProducts($productIds, $lang, $perPage, $sort);
     }
 
     /**
@@ -304,6 +364,21 @@ class sCommerce
     }
 
     /**
+     * Retrieves the current currency for the session.
+     * If the currency is not yet loaded, it initializes it using the loadCurrentCurrency method.
+     *
+     * @return string The currency code (e.g., USD, EUR).
+     */
+    public static function currentCurrency(): string
+    {
+        if (!isset(static::$currentCurrency)) {
+            static::$currentCurrency = static::loadCurrentCurrency();
+        }
+
+        return static::$currentCurrency;
+    }
+
+    /**
      * Loads the current currency from the session or the default configuration.
      * This method is used internally to ensure the currency is properly initialized.
      *
@@ -329,17 +404,18 @@ class sCommerce
     }
 
     /**
-     * Retrieves the current currency for the session.
-     * If the currency is not yet loaded, it initializes it using the loadCurrentCurrency method.
+     * Retrieves or sets the category ID.
      *
-     * @return string The currency code (e.g., USD, EUR).
+     * @param mixed|null $category The category ID to set, or null to use the existing value or the document identifier.
+     * @return int The resolved category ID.
      */
-    public static function currentCurrency(): string
+    protected function getCategoryId($category = null): int
     {
-        if (!isset(static::$currentCurrency)) {
-            static::$currentCurrency = static::loadCurrentCurrency();
+        if ($category) {
+            $this->categoryId = $category;
+        } elseif (!$this->categoryId) {
+            $this->categoryId = evo()->documentIdentifier;
         }
-
-        return static::$currentCurrency;
+        return (int)$this->categoryId;
     }
 }

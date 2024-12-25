@@ -69,7 +69,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('availability')->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
             $table->string('sku')->index()->comment('It is the SKU Product code');
             $table->string('alias', 512)->index()->comment('It using for generate url');
-            $table->unsignedInteger('position')->default(0)->index()->comment('Position the product in list');
+            //$table->unsignedInteger('position')->default(0)->index()->comment('Position the product in list');
             $table->unsignedInteger('views')->default(0)->index()->comment('Count view the product');
             $table->unsignedInteger('rating')->default(5)->index()->comment('Rating the product base on votes');
             $table->unsignedInteger('type')->default(0)->comment('Type the product');
