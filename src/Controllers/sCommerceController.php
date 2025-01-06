@@ -4,6 +4,7 @@ use EvolutionCMS\Models\SiteContent;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -637,6 +638,16 @@ class sCommerceController
                             if (in_array($sortParameterArray[0], $allowed)) {
                                 $table = $sortParameterArray[0];
                                 $sort = $sortParameterArray[1];
+                            }
+                        }
+
+                        if ($table) {
+                            //
+                        } else {
+                            if (!Schema::hasColumn('s_products', $sort)) {
+                                $sort = null;
+                                $order = null;
+                                $table = null;
                             }
                         }
                         break;
