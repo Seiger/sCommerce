@@ -32,11 +32,7 @@ class sCommerce
     protected $currencies;
     protected $controller;
     protected $categoryId;
-
-    public function __construct()
-    {
-        $this->controller = new sCommerceController();
-    }
+    protected ?array $sort = null;
 
     /**
      * The current currency for the session.
@@ -45,6 +41,11 @@ class sCommerce
      * @var string
      */
     protected static string $currentCurrency;
+
+    public function __construct()
+    {
+        $this->controller = new sCommerceController();
+    }
 
     /**
      * Retrieve a paginated list of products based on provided product IDs.
@@ -57,10 +58,10 @@ class sCommerce
      * @param int $perPage The number of products to return per page. Defaults to 1000.
      * @return object The paginated list of products as a Laravel collection.
      */
-    public function getProducts(array $productIds, string $lang = null, int $perPage = 1000, array|string $sort = null): object
+    public function getProducts(array $productIds, string $lang = null, int $perPage = 1000): object
     {
         $lang = !$lang ? evo()->getLocale() : $lang;
-        extract($this->controller->validateSort($sort));
+        $this->sort = empty($this->sort) ? $this->controller->validateSort() : $this->sort;
 
         $query = sProduct::lang($lang)
             ->addSelect(['position' =>
@@ -74,7 +75,9 @@ class sCommerce
             ->whereIn('id', $productIds)
             ->active();
 
-        if (isset($sort) && $sort) {
+        if (!empty($this->sort)) {
+            ['sort' => $sort, 'order' => $order, 'table' => $table] = $this->sort;
+
             if (isset($table) && $table) {
                 switch ($table) {
                     case 'attribute':
@@ -119,7 +122,7 @@ class sCommerce
             }
         }
 
-        return $query->orderByDesc('position')->paginate($perPage);
+        return $query->orderBy('position')->paginate($perPage);
     }
 
     /**
@@ -177,11 +180,11 @@ class sCommerce
      * @param int $dept The depth of sub-categories to include in the query. Default value is 10.
      * @return object The products belonging to the specified category, filtered by language and category ID.
      */
-    public function getCategoryProducts(int $category = null, string $lang = null, int $perPage = 1000, array $sort = null, int $dept = 10): object
+    public function getCategoryProducts(int $category = null, string $lang = null, int $perPage = 1000, int $dept = 10): object
     {
         $category = $this->getCategoryId($category);
         $productIds = $this->controller->productIds($category, $dept);
-        return $this->getProducts($productIds, $lang, $perPage, $sort);
+        return $this->getProducts($productIds, $lang, $perPage);
     }
 
     /**
@@ -342,6 +345,45 @@ class sCommerce
     }
 
     /**
+     * Sets the sorting parameters for retrieving products.
+     *
+     * This method allows you to specify sorting options for product queries.
+     * You can pass either a sorting key and an optional order, or an array
+     * containing detailed sorting parameters.
+     *
+     * @param string|array $key The sorting key (e.g., 'cheap', 'expensive', 'rating')
+     *                          or an associative array with sorting parameters:
+     *                          - 'sort': The sorting key.
+     *                          - 'order': The sorting order ('asc' or 'desc').
+     * @param string|null $order The sorting order ('asc' or 'desc').
+     *                           Defaults to 'asc'. Ignored if $key is an array.
+     *
+     * @return self Returns the current instance for method chaining.
+     *
+     * @example
+     * // Simple sorting by price (low to high)
+     * $service->setSort('cheap');
+     *
+     * // Sorting by a specific attribute in descending order
+     * $service->setSort('attribute.name', 'desc');
+     *
+     * // Advanced sorting with multiple parameters
+     * $service->setSort(['sort' => 'popularity', 'order' => 'desc']);
+     */
+    public function setSort(string|array $key, ?string $order = 'asc'): self
+    {
+        if (is_array($key)) {
+            $validated = $this->controller->validateSort($key);
+        } else {
+            $validated = $this->controller->validateSort(['sort' => $key, 'order' => $order]);
+        }
+
+        extract($validated);
+        $this->sort = compact('sort', 'order', 'table');
+        return $this;
+    }
+
+    /**
      * Retrieves the module URL.
      *
      * @return string The module URL.
@@ -386,7 +428,7 @@ class sCommerce
      */
     protected static function loadCurrentCurrency(): string
     {
-        $currency = $_SESSION['currency'];
+        $currency = $_SESSION['currency'] ?? null;
 
         if (!$currency && Cookie::has('currency')) {
             $currency = Cookie::get('currency');

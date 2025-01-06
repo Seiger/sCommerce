@@ -55,19 +55,6 @@
                     </div>
                 </div>
             @endif
-            @if(sCommerce::config('product.show_field_sku', 1) == 1)
-                <div class="row-col col-lg-3 col-md-6 col-12">
-                    <div class="row form-row">
-                        <div class="col-auto col-title">
-                            <label for="sku">@lang('sCommerce::global.sku')</label>
-                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.sku_help')"></i>
-                        </div>
-                        <div class="col">
-                            <input id="sku" class="form-control" name="sku" value="{{$item->sku ?? ''}}" onblur="documentDirty=true;">
-                        </div>
-                    </div>
-                </div>
-            @endif
             @if(sCommerce::config('product.show_field_price', 1) == 1)
                 <div class="row-col col-lg-3 col-md-6 col-12">
                     <div class="row form-row">
@@ -145,6 +132,36 @@
                         </div>
                         <div class="col">
                             <input id="inventory" class="form-control" name="inventory" value="{{$item->inventory ?? ''}}" onblur="documentDirty=true;">
+                        </div>
+                    </div>
+                </div>
+            @endif
+            @if(sCommerce::config('product.show_field_sku', 1) == 1)
+                <div class="row-col col-lg-3 col-md-6 col-12">
+                    <div class="row form-row">
+                        <div class="col-auto col-title">
+                            <label for="sku">@lang('sCommerce::global.sku')</label>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.sku_help')"></i>
+                        </div>
+                        <div class="col">
+                            <input id="sku" class="form-control" name="sku" value="{{$item->sku ?? ''}}" onblur="documentDirty=true;">
+                        </div>
+                    </div>
+                </div>
+            @endif
+            @if(count(sCommerce::config('product.available_types', [])) > 1)
+                <div class="row-col col-lg-3 col-md-6 col-12">
+                    <div class="row form-row">
+                        <div class="col-auto col-title">
+                            <label for="type">@lang('sCommerce::global.product_type')</label>
+                            {{--<i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.product_type_help')"></i>--}}
+                        </div>
+                        <div class="col">
+                            <select id="type" name="type" class="form-control" onchange="documentDirty=true;">
+                                @foreach(sCommerce::config('product.available_types', []) as $type)
+                                    <option value="{{$type}}" @if(($item->type ?? 0) == $type) selected @endif>{{sProduct::listType()[$type]}}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                 </div>

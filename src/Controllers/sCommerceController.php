@@ -575,22 +575,33 @@ class sCommerceController
     }
 
     /**
-     * Validates and processes sorting parameters from the given input.
+     * Validates and processes sorting parameters.
      *
-     * @param array|string|null $params The sorting parameters, either as an array or a delimited string. If null, will fetch from the request input.
-     * @return array An associative array containing the keys 'sort', 'order', and 'table' with their respective validated values.
+     * This method ensures the sorting parameters are valid and returns a structured array
+     * containing the sort field, order direction, and any related table for advanced sorting.
+     * If no parameters are provided, it attempts to fetch sorting data from the HTTP request.
+     *
+     * @param array|string|null $params Sorting parameters provided as an array or a string.
+     *                                   If null, parameters are taken from request()->input('sort').
+     *                                   Example string format: "price,desc" or "attribute.name".
+     *                                   Example array format: ['sort' => 'price', 'order' => 'desc'].
+     *
+     * @return array|null Returns an array containing:
+     *               - 'sort' (string|null): The field to sort by.
+     *               - 'order' (string|null): The sorting direction ('asc' or 'desc').
+     *               - 'table' (string|null): The related table for advanced sorting, if applicable.
      */
-    public function validateSort(array|string $params = null): array
+    public function validateSort(array|string $params = null): array|null
     {
         $sort = null;
         $order = null;
         $table = null;
-        $allowed = ['attribute'];
-        $params = $params ?? request()->input('sort');
+        $allowed = ['attribute']; // Allowed tables for advanced sorting
+        $params = $params ?? request()->input('sort'); // Default to request input if no parameters provided
 
         if ($params) {
             if (is_scalar($params)) {
-                $params = preg_split('/(,|;|:)/', $params);
+                $params = preg_split('/(,|;|:)/', $params); // Convert string parameters to an array
             }
 
             if (is_array($params)) {
@@ -599,32 +610,26 @@ class sCommerceController
                 $order = strtolower($order) == 'desc' ? 'desc' : 'asc';
 
                 switch ($sortParameter) {
-                    case "cheap" :
-                        // By product price from low to high
-                        $sort = 'price_regular';
+                    case "cheap":
+                        $sort = 'price_regular'; // Sort by product price (low to high)
                         break;
-                    case "expensive" :
-                        // By product price from high to low
-                        $sort = 'price_regular';
+                    case "expensive":
+                        $sort = 'price_regular'; // Sort by product price (high to low)
                         $order = 'desc';
                         break;
-                    case "popularity" :
-                        // By product views
-                        $sort = 'views';
+                    case "popularity":
+                        $sort = 'views'; // Sort by product views (most popular)
                         $order = 'desc';
                         break;
-                    case "rating" :
-                        // By product rating
-                        $sort = 'rating';
+                    case "rating":
+                        $sort = 'rating'; // Sort by product rating (highest first)
                         $order = 'desc';
                         break;
-                    case "position" :
-                        // By product position in category
-                        $sort = 'position';
-                        $order = 'desc';
+                    case "position":
+                        $sort = 'position'; // Default category position sorting
                         break;
-                    default :
-                        // If a sorting table is additionally passed
+                    default:
+                        // Handle advanced sorting with related tables
                         $sortParameterArray = explode('.', $sortParameter);
                         if (count($sortParameterArray) === 1) {
                             $sort = $sortParameterArray[0];
@@ -639,7 +644,11 @@ class sCommerceController
             }
         }
 
-        return compact('sort', 'order', 'table');
+        if ($sort) {
+            return compact('sort', 'order', 'table');
+        }
+
+        return null;
     }
 
     /**

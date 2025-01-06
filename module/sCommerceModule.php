@@ -9,6 +9,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sAttribute;
@@ -196,6 +197,14 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $product = sCommerce::getProduct($requestId);
 
+        if ($product && (int)$product?->type > 0) {
+            if (in_array($product->type, [
+                sProduct::TYPE_GROUP,
+            ])) {
+                $tabs[] = 'modifications';
+            }
+        }
+
         $categoryParentsIds = [0];
         if ($product->categories) {
             foreach ($product->categories as $category) {
@@ -223,6 +232,21 @@ switch ($get) {
             $_SESSION['itemname'] = __('sCommerce::global.title');
         }
         break;
+    case "productForView":
+        $requestId = (int)request()->input('i', 0);
+        $view = request()->input('view');
+        $parameters = json_decode(request()->string('parameters', ''), true) ?: [];
+        $data['success'] = 0;
+
+        if ($requestId && $view) {
+            $product = sCommerce::getProduct($requestId);
+            if ($product) {
+                $data['success'] = 1;
+                $data['view'] = $sCommerceController->view($view, ['item' => $product, 'parameters' => $parameters])->render();
+            }
+        }
+
+        die(json_encode($data));
     case "productSave":
         $filters = ['constructor'];
         $all = request()->all();
@@ -232,7 +256,6 @@ switch ($get) {
         $prodCats = $product->categories->mapWithKeys(function ($value) {return [$value->id => $value->pivot->position];})->all();
 
         $votes = data_is_json($product->votes ?? '', true);
-        $type = $product->type ?: 'simple';
         $cover = sGallery::first('product', $requestId);
 
         if (empty($alias) || str_starts_with($alias, 'new-product')) {
@@ -269,7 +292,6 @@ switch ($get) {
         $product->availability = (int)request()->input('availability', 0);
         $product->sku = request()->input('sku', '');
         $product->alias = $sCommerceController->validateAlias($alias, (int)$product->id);
-        //$product->position = $product->categories()->where('scope', 'like', 'primary%')->first()->pivot->position ?? 0;
         $product->rating = ($rating == 0 ? 5 : $rating);
         if (sCommerce::config('product.inventory_on', 0) == 2) {
             $product->inventory = (int)request()->input('inventory', 0);
@@ -289,7 +311,7 @@ switch ($get) {
         $product->similar = json_encode(request()->input('similar', []));
         $product->tmplvars = json_encode(request()->input('tmplvars', []));
         $product->votes = json_encode($votes);
-        $product->type = $type;
+        $product->type = request()->integer('type');
         $product->save();
 
         $inputCats = (array)request()->input('categories', []);
@@ -354,7 +376,6 @@ switch ($get) {
             $newProduct->availability = $product->availability;
             $newProduct->sku = $product->sku;
             $newProduct->alias = $sCommerceController->validateAlias($product->alias . '-duplicate', 0);
-            //$newProduct->position = $product->position;
             $newProduct->rating = $product->rating;
             $newProduct->inventory = $product->inventory;
             $newProduct->price_regular = $product->price_regular;
@@ -478,6 +499,143 @@ switch ($get) {
         $sCommerceController->setProductsListing();
         $back = '&get=products';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
+    case "modifications":
+        $tabs = ['product', 'modifications'];
+        $iUrl = trim($iUrl) ?: '&i=0';
+        $requestId = request()->integer('i');
+        $product = sCommerce::getProduct($requestId);
+
+        $categoryParentsIds = [0];
+        if ($product->categories) {
+            foreach ($product->categories as $category) {
+                $categoryParentsIds = array_merge($categoryParentsIds, $sCommerceController->categoryParentsIds($category->id));
+            }
+        }
+
+        $listAttributes = sAttribute::lang($sCommerceController->langDefault())
+            ->whereHas('categories', function ($q) use ($categoryParentsIds) {
+                $q->whereIn('category', $categoryParentsIds);
+            })
+            ->whereIn('type', [sAttribute::TYPE_ATTR_SELECT, sAttribute::TYPE_ATTR_COLOR])
+            ->orderBy('position')
+            ->get();
+
+        if ($listAttributes->count()) {
+            $tabs[] = 'prodattributes';
+            $attrValues = [];
+
+            foreach ($product->attrValues as $value) {
+                if ($value->type == sAttribute::TYPE_ATTR_MULTISELECT) {
+                    $attrValues[$value->id][] = $value;
+                } else {
+                    $attrValues[$value->id] = $value;
+                }
+            }
+
+            $listAttributes->mapWithKeys(function ($attribute) use ($attrValues) {
+                if (isset($attrValues[$attribute->id])) {
+                    if (is_array($attrValues[$attribute->id])) {
+                        $value = [];
+                        foreach ($attrValues[$attribute->id] as $attrValue) {
+                            if ($attrValue->type == sAttribute::TYPE_ATTR_MULTISELECT) {
+                                $value[] = intval($attrValue->pivot->valueid);
+                            }
+                        }
+                        $attribute->value = $value;
+                    } else {
+                        $attribute->value = $attrValues[$attribute->id]->pivot->value ?? '';
+                    }
+                } else {
+                    $attribute->value = '';
+                }
+                return $attribute;
+            });
+        }
+
+        //
+        $modificationsQuery = DB::table('s_product_modifications')->select('attributes', 'parameters')->where('product', $product->id)->first();
+        if ($modificationsQuery) {
+            $modificationsIds = json_decode($modificationsQuery->attributes ?? '', true) ?: [];
+            $parameters = json_decode($modificationsQuery->parameters ?? '', true) ?: [];
+            if (is_array($modificationsIds) && count($modificationsIds)) {
+                $modificationsIds = array_flip($modificationsIds);
+                unset($modificationsIds[$product->id]);
+                $modificationsIds = array_flip($modificationsIds);
+                if (count($modificationsIds)) {
+                    $modifications = sCommerce::getProducts($modificationsIds);
+                }
+            } else {
+                $modificationsIds = [0];
+            }
+        }
+
+        //
+
+        $search = Str::of($product->title)
+            ->replaceMatches('/[^\p{L}\p{N}\@\.!#$%&\'*+-\/=?^_`{|}~]/iu', ' ') // allowed symbol in email
+            ->replaceMatches('/(\s){2,}/', '$1') // removing extra spaces
+            ->trim()->explode(' ')
+            ->filter(fn($word) => mb_strlen($word) > 2);
+
+        $select = collect([]);
+        $search->map(fn($word) => $select->push("(CASE WHEN " . sProduct::getGrammar()->wrap('pagetitle') . " LIKE '%{$word}%' THEN 1 ELSE 0 END)"));
+
+        $productIds = sProduct::whereIn('type', [sProduct::TYPE_GROUP])->whereNotIn('product', array_merge($modificationsIds, [$product->id]))
+            ->addSelect('product', DB::Raw('(' . $select->implode(' + ') . ') as points'))
+            ->orderByDesc('points')
+            ->get()->pluck('product')->toArray();
+        $products = sCommerce::getProducts($productIds)?->items();
+        //
+
+        $tabs[] = 'content';
+        $data['product'] = $product;
+        $data['listAttributes'] = $listAttributes;
+        $data['products'] = $products;
+        $data['modifications'] = $modifications ?? collect([]);
+        $data['parameters'] = $parameters ?? collect([]);
+
+        if ($requestId > 0) {
+            $_SESSION['itemaction'] = 'Editing Product';
+            $_SESSION['itemname'] = $product->title;
+        } else {
+            $_SESSION['itemaction'] = 'Creating a Product';
+            $_SESSION['itemname'] = __('sCommerce::global.title');
+        }
+        break;
+    case "modificationsSave":
+        $requestId = request()->integer('i');
+        $product = sCommerce::getProduct($requestId);
+
+        if ($product) {
+            if ($product->type == sProduct::TYPE_GROUP) {
+                $modificationsQuery = DB::table('s_product_modifications')->select('attributes')->where('product', $product->id)->first();
+                if ($modificationsQuery) {
+                    $modificationsIds = json_decode($modificationsQuery->attributes ?? '', true) ?: [0];
+                    if (is_array($modificationsIds) && count($modificationsIds)) {
+                        DB::table('s_product_modifications')->whereIn('product', $modificationsIds)->delete();
+                    }
+                }
+
+                $modifications = request()->input('modifications', []);
+                $parameters = request()->input('parameters', []);
+
+                if (is_array($modifications) && count($modifications)) {
+                    foreach ($modifications as $modification) {
+                        DB::table('s_product_modifications')->insert([
+                            'product' => $modification,
+                            'type' => sProduct::TYPE_GROUP,
+                            'attributes' => json_encode($modifications),
+                            'parameters' => json_encode($parameters),
+                        ]);
+                    }
+                }
+            }
+        }
+
+        $_SESSION['itemaction'] = 'Saving a Product modifications';
+        $_SESSION['itemname'] = $product->title ?? 'No title';
+        $back = str_replace('&i=0', '&i=' . ($product->id ?? 0), (request()->back ?? '&get=modifications'));
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "prodattributes":
         $tabs = ['product', 'prodattributes', 'content'];
         $iUrl = trim($iUrl) ?: '&i=0';
@@ -531,7 +689,7 @@ switch ($get) {
     case "prodattributesSave":
         $filters = ['attribute'];
         $all = request()->all();
-        $requestId = (int)request()->input('i', 0);
+        $requestId = request()->integer('i');
         $product = sCommerce::getProduct($requestId);
 
         if ($product) {
@@ -615,8 +773,8 @@ switch ($get) {
         }
 
         $_SESSION['itemaction'] = 'Saving a Product attributes';
-        $_SESSION['itemname'] = $product->title;
-        $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=prodattributes'));
+        $_SESSION['itemname'] = $product->title ?? 'No title';
+        $back = str_replace('&i=0', '&i=' . ($product->id ?? 0), (request()->back ?? '&get=prodattributes'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "content":
         $tabs = ['product'];

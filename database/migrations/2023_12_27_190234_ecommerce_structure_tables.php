@@ -69,7 +69,6 @@ return new class extends Migration
             $table->unsignedTinyInteger('availability')->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
             $table->string('sku')->index()->comment('It is the SKU Product code');
             $table->string('alias', 512)->index()->comment('It using for generate url');
-            //$table->unsignedInteger('position')->default(0)->index()->comment('Position the product in list');
             $table->unsignedInteger('views')->default(0)->index()->comment('Count view the product');
             $table->unsignedInteger('rating')->default(5)->index()->comment('Rating the product base on votes');
             $table->unsignedInteger('type')->default(0)->comment('Type the product');
@@ -120,6 +119,17 @@ return new class extends Migration
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
             $table->unsignedInteger('valueid')->default(0)->index()->comment('This is Id if the attribute value is given as an element from the data set of values');
             $table->text('value')->comment('It using for value if valueid is null');
+        });
+
+        Schema::create('s_product_modifications', function (Blueprint $table) {
+            $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
+            $table->unsignedInteger('type')->default(0)->index()->comment('Modification type (group, option, variation)');
+            $table->string('sku')->index()->comment('Unique modification code');
+            $table->jsonb('attributes')->default(new Expression('(JSON_ARRAY())'))->comment('JSON object with modification attributes (e.g. size, color)');
+            $table->jsonb('parameters')->default(new Expression('(JSON_ARRAY())'))->comment('JSON object with modification parameters (e.g. size, color)');
+            $table->decimal('price_modifier', 9, 2)->nullable()->comment('Price change (+/-) for modification');
+            $table->integer('inventory')->nullable()->comment('Quantity in stock (NULL if not applicable)');
+            $table->timestamps();
         });
 
         /*

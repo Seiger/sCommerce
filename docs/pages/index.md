@@ -36,6 +36,18 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Order Status Management.
 - [x] Products Catalog.
 - [x] Product position in each Category.
+- [x] Products Types.
+  - [x] Simple Type.
+  - [ ] Grouped Type.
+  - [ ] Bundle Type.
+  - [ ] Variable Type.
+  - [ ] Optional Type.
+  - [ ] Downloadable Type.
+  - [ ] Virtual Type.
+  - [ ] Service Type.
+  - [ ] Subscription Type.
+  - [ ] Preorder Type.
+  - [ ] Custom Type.
 - [x] Products Attributes.
   - [x] Number Attribute.
   - [x] Checkbox Attribute.
@@ -54,14 +66,12 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [ ] Constructor Attribute.
   - [x] Custom Attribute.
 - [x] Dynamic Filters for Product Search.
+- [x] Dynamic Sort Products in Catalog.
 - [x] Duplicate Product.
-- [ ] AI-Powered Product Search.
-- [ ] Flexible Product Bundles.
 - [ ] Promo Code System.
 - [ ] Wishlist and Favorites.
 - [ ] Customer Reviews and Ratings.
-- [ ] Personalized Recommendations.
-- [ ] Automated Email Marketing.
+- [ ] AI-Powered Product Search.
 - [x] Plugin events.
   - [x] sCommerceManagerAddTabEvent.
   - [x] sCommerceFormFieldRender.
@@ -78,7 +88,9 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] **[sLang](https://github.com/Seiger/sLang)** Integration.
 - [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
 - [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.
+- [ ] Personalized Recommendations.
 - [ ] Social Media Integration.
+- [ ] Automated Email Marketing.
 - [ ] Advanced Analytics and Reporting.
 
 ## Minimum requirements

@@ -61,9 +61,17 @@ class sProduct extends Model
     /**
      * Type Product constants
      */
-    const TYPE_SIMPLE = 0;
-    const TYPE_OPTIONAL = 1;
-    const TYPE_VARIABLE = 2;
+    const TYPE_SIMPLE = 0;       // Standard product type without variations. Ideal for straightforward items.
+    const TYPE_GROUP = 1;        // A collection of related products displayed as a group.
+    // const TYPE_BUNDLE = 2;       // A package of multiple products sold together at a discounted price.
+    // const TYPE_VARIABLE = 3;     // Products with variations, such as size or color.
+    // const TYPE_OPTIONAL = 4;     // Additional items that can complement a purchase (e.g., accessories).
+    // const TYPE_DOWNLOADABLE = 5; // Digital products, such as software, eBooks, or media files.
+    // const TYPE_VIRTUAL = 6;      // Non-physical products, including services or licenses.
+    // const TYPE_SERVICE = 7;      // Offerings like installation, consulting, or maintenance.
+    // const TYPE_SUBSCRIPTION = 8; // Products with recurring billing (e.g., memberships or digital content).
+    // const TYPE_PREORDER = 9;     // Products not yet available but open for early purchase.
+    // const TYPE_CUSTOM = 10;      // Personalized or tailor-made products created upon request.
 
     /**
      * Return list of availability codes and labels
