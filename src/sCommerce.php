@@ -78,7 +78,7 @@ class sCommerce
         if (!empty($this->sort)) {
             ['sort' => $sort, 'order' => $order, 'table' => $table] = $this->sort;
 
-            if (isset($table) && $table) {
+            if ($table) {
                 switch ($table) {
                     case 'attribute':
                         $hasLang = Schema::hasColumn('s_attribute_values', $lang);
@@ -89,8 +89,7 @@ class sCommerce
                                     $hasLang
                                         ? "CASE WHEN " . $lang . " IS NOT NULL AND " . $lang . " != '' THEN " . $lang . " ELSE base END as value"
                                         : "base as value"
-                                )
-                                )
+                                ))
                                 ->where('s_attribute_values.avid', function ($q) use ($sort) {
                                     $q->select('valueid')
                                         ->from('s_product_attribute_values')
@@ -180,7 +179,7 @@ class sCommerce
      * @param int $dept The depth of sub-categories to include in the query. Default value is 10.
      * @return object The products belonging to the specified category, filtered by language and category ID.
      */
-    public function getCategoryProducts(int $category = null, string $lang = null, int $perPage = 1000, int $dept = 10): object
+    public function getCategoryProducts(int $perPage = null, int $category = null, string $lang = null, int $dept = 10): object
     {
         $category = $this->getCategoryId($category);
         $productIds = $this->controller->productIds($category, $dept);
