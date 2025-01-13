@@ -1,4 +1,4 @@
-<?php namespace Seiger\sCommerce;
+<?php namespace Seiger\sCommerce\Cart;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;

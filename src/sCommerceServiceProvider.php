@@ -1,7 +1,8 @@
 <?php namespace Seiger\sCommerce;
 
 use EvolutionCMS\ServiceProvider;
-use Seiger\sCommerce\sCart;
+use Seiger\sCommerce\Cart\sCart;
+use Seiger\sCommerce\Checkout\sCheckout;
 
 /**
  * Class sCommerceServiceProvider
@@ -42,13 +43,17 @@ class sCommerceServiceProvider extends ServiceProvider
         $this->app->singleton(sCommerce::class);
         $this->app->alias(sCommerce::class, 'sCommerce');
 
+        // Register the sFilter class as a singleton
+        $this->app->singleton(sFilter::class);
+        $this->app->alias(sFilter::class, 'sFilter');
+
         // Register the sCart class as a singleton
         $this->app->singleton(sCart::class);
         $this->app->alias(sCart::class, 'sCart');
 
-        // Register the sFilter class as a singleton
-        $this->app->singleton(sFilter::class);
-        $this->app->alias(sFilter::class, 'sFilter');
+        // Register the sCheckout class as a singleton
+        $this->app->singleton(sCheckout::class);
+        $this->app->alias(sCheckout::class, 'sCheckout');
     }
 
     /**

@@ -437,7 +437,7 @@ class sCommerce
             $currency = static::config('basic.main_currency', 'USD');
         }
 
-        if (!$_SESSION['currency'] || $_SESSION['currency'] !== $currency) {
+        if (!isset($_SESSION['currency']) || $_SESSION['currency'] !== $currency) {
             $_SESSION['currency'] = $currency;
         }
 

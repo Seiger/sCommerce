@@ -38,7 +38,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] Product position in each Category.
 - [x] Products Types.
   - [x] Simple Type.
-  - [ ] Grouped Type.
+  - [x] Grouped Type.
   - [ ] Bundle Type.
   - [ ] Variable Type.
   - [ ] Optional Type.

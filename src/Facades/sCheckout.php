@@ -3,9 +3,9 @@
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @mixin \Seiger\sCommerce\Cart\sCart
+ * @mixin \Seiger\sCommerce\Checkout\sCheckout
  */
-class sCart extends Facade
+class sCheckout extends Facade
 {
     /**
      * Get the registered name of the component.
@@ -14,6 +14,6 @@ class sCart extends Facade
      */
     protected static function getFacadeAccessor()
     {
-        return 'sCart';
+        return \Seiger\sCommerce\Checkout\sCheckout::class;
     }
 }
