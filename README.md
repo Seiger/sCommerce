@@ -59,13 +59,14 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [ ] Geolocation Attribute.
     - [ ] Constructor Attribute.
     - [x] Custom Attribute.
+- [x] Duplicate Product.
 - [x] Dynamic Filters for Product Search.
 - [x] Dynamic Sort Products in Catalog.
-- [x] Duplicate Product.
-- [ ] Promo Code System.
-- [ ] Wishlist and Favorites.
-- [ ] Customer Reviews and Ratings.
 - [ ] AI-Powered Product Search.
+- [ ] Customer Reviews and Ratings.
+- [ ] Wishlist and Favorites.
+- [x] Checkout.
+- [ ] Promo Code System.
 - [x] Plugin events.
   - [x] sCommerceManagerAddTabEvent.
   - [x] sCommerceFormFieldRender.
@@ -77,6 +78,9 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [x] sCommerceRemovedFromCart.
 - [x] Multi-currency Support (ISO 4217).
 - [ ] Integration with Payment Systems.
+- [x] Integration with Deliveries Methods.
+  - [x] Courier.
+  - [x] Pickup.
 - [ ] Integration with Warehouses.
 - [ ] Integration with Trading Platforms.
 - [x] **[sLang](https://github.com/Seiger/sLang)** Integration.

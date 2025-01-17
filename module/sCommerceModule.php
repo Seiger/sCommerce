@@ -12,9 +12,11 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
+use Seiger\sCommerce\Models\sDeliveryMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sCommerce\Models\sReview;
@@ -36,6 +38,9 @@ $editor = [];
 $tabs = ['products', 'reviews', 'attributes'];
 if (count(sCommerce::config('basic.available_currencies', [])) > 1 && trim(sCommerce::config('basic.main_currency', ''))) {
     $tabs[] = 'currencies';
+}
+if (sCommerce::config('basic.deliveries_on', 1) == 1) {
+    $tabs[] = 'deliveries';
 }
 if (evo()->hasPermission('settings')) {
     $tabs[] = 'settings';
@@ -1322,6 +1327,146 @@ switch ($get) {
         $_SESSION['itemaction'] = 'Saving Currencies';
         session()->flash('success', __('sCommerce::global.settings_save_success'));
         $back = request()->back ?? '&get=currencies';
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    /*
+    |--------------------------------------------------------------------------
+    | Deliveries
+    |--------------------------------------------------------------------------
+    */
+    case "deliveries":
+        $perpage = Cookie::get('scom_deliveries_page_items', 50);
+        $order = request()->input('order', 'position');
+        $direc = request()->input('direc', 'asc');
+
+        $newMethods = [];
+        $allMethods = sDeliveryMethod::all()->pluck('class')->toArray();
+
+        $classMap = require base_path('vendor/composer/autoload_classmap.php');
+        $exdMaps = require base_path('vendor/seiger/scommerce/config/excluded_namespaces.php');
+
+        foreach ($classMap as $className => $path) {
+            foreach ($exdMaps as $exdMap) {
+                if (str_starts_with($className, $exdMap)) {
+                    continue 2;
+                }
+            }
+
+            try {
+                if (class_exists($className)) {
+                    $reflection = new ReflectionClass($className);
+
+                    if ($reflection->implementsInterface(DeliveryMethodInterface::class) && !$reflection->isAbstract()) {
+                        $newMethods[] = $className;
+                    }
+                }
+            } catch (Throwable $e) {
+                continue;
+            }
+        }
+
+        $needMethods = array_diff($newMethods, $allMethods);
+
+        if (!empty($needMethods)) {
+            foreach ($needMethods as $methodClass) {
+                try {
+                    $instance = new $methodClass();
+                    $name = $instance->getName();
+                    $title = ['base' => $instance->getAdminTitle()];
+                    $description = ['base' => ''];
+
+                    sDeliveryMethod::create([
+                        'name' => $name,
+                        'class' => $methodClass,
+                        'active' => false,
+                        'position' => sDeliveryMethod::max('position') + 1,
+                        'title' => json_encode($title, JSON_UNESCAPED_UNICODE),
+                        'description' => json_encode($description, JSON_UNESCAPED_UNICODE),
+                    ]);
+                } catch (Throwable $e) {
+                    \Log::error("Failed to register delivery method: {$methodClass}", ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
+        $query = sDeliveryMethod::query()->orderBy($order, $direc);
+        $items = $query->paginate($perpage);
+
+        $items->getCollection()->transform(function ($method) use ($sCommerceController) {
+            $className = $method->class;
+            if (class_exists($className)) {
+                $instance = new $className();
+                $method->admintitle = ucfirst(str_replace('_', ' ', $method->name));
+                $method->info = '';
+                if (method_exists($instance, 'getAdminTitle')) {
+                    $method->admintitle = $instance->getAdminTitle();
+                }
+                if (method_exists($instance, 'getTitle')) {
+                    $method->info .= "<b>" . $instance->getTitle($sCommerceController->langDefault()) . "</b><br>";
+                }
+                if (method_exists($instance, 'getDescription')) {
+                    $method->info .= $instance->getDescription($sCommerceController->langDefault());
+                }
+                return $method;
+            }
+        });
+
+        $data['items'] = $items;
+        $data['order'] = $order;
+
+        $_SESSION['itemaction'] = 'Viewing a list of deliveries';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        break;
+    case "delivery":
+        $tabs = ['delivery'];
+        $requestId = request()->integer('i');
+        $item = sDeliveryMethod::find($requestId);
+
+        if ($requestId > 0 && $item) {
+            $className = $item->class;
+            if (class_exists($className)) {
+                $instance = new $className();
+                $item->instance = $instance;
+                $item->admintitle = ucfirst(str_replace('_', ' ', $item->name));
+                if (method_exists($instance, 'getAdminTitle')) {
+                    $item->admintitle = $instance->getAdminTitle();
+                }
+            }
+
+            $data['item'] = $item;
+
+            $_SESSION['itemaction'] = 'Editing Delivery';
+            $_SESSION['itemname'] = $item->title;
+        } else {
+            return header('Location: ' . sCommerce::moduleUrl() . (request()->back ?? '&get=deliveries'));
+        }
+        break;
+    case "deliverySave":
+        $requestId = request()->integer('i');
+        $item = sDeliveryMethod::find($requestId);
+
+        if ($requestId > 0 && $item) {
+            $className = $item->class;
+            if (class_exists($className)) {
+                $instance = new $className();
+                $admintitle = ucfirst(str_replace('_', ' ', $item->name));
+                if (method_exists($instance, 'getAdminTitle')) {
+                    $admintitle = $instance->getAdminTitle();
+                }
+
+                $item->active = request()->boolean('active');
+                $item->position = request()->integer('position');
+                $item->currency = request()->input('currency', sCommerce::config('basic.main_currency', 'USD'));
+                $item->cost = request()->float('cost');
+                $item->title = json_encode(request()->input('title', []), JSON_UNESCAPED_UNICODE);
+                $item->description = json_encode(request()->input('description', []), JSON_UNESCAPED_UNICODE);
+                $item->settings = $instance->prepareSettings(request()->all());
+                $item->update();
+            }
+        }
+
+        $_SESSION['itemaction'] = 'Saving Delivery';
+        $_SESSION['itemname'] = $admintitle ?? '';
+        $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=deliveries'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------

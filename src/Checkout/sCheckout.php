@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Validator;
 use Seiger\sCommerce\Facades\sCart;
+use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sDeliveryMethod;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 
@@ -67,7 +68,6 @@ class sCheckout
         ];
     }
 
-
     /**
      * Check if cart is not empty and prepare order data.
      *
@@ -113,6 +113,95 @@ class sCheckout
     }
 
     /**
+     * Retrieve all available delivery methods.
+     *
+     * This method returns a list of all registered delivery methods with their details.
+     * The returned array includes the name, title, description, additional details,
+     * and settings for each delivery method.
+     *
+     * @return array An array of delivery methods, where each method includes:
+     *               - `name` (string): The unique identifier of the delivery method.
+     *               - `title` (string): The localized title of the delivery method.
+     *               - `description` (string): The localized description of the delivery method.
+     *               - `settings` (array): Configuration settings specific to the delivery method.
+     */
+    public function getDeliveries(): array
+    {
+        $methods = [];
+
+        if (sCommerce::config('basic.deliveries_on', 1) == 1) {
+            $reservedKeys = ['name', 'title', 'description'];
+
+            foreach ($this->deliveryMethods as $methodName => $methodInstance) {
+                $settings = $methodInstance->getSettings();
+
+                $conflictingKeys = array_intersect(array_keys($settings), $reservedKeys);
+                if (!empty($conflictingKeys)) {
+                    $className = get_class($methodInstance);
+                    $classPath = (new \ReflectionClass($methodInstance))->getFileName();
+
+                    evo()->logEvent(
+                        0,
+                        2,
+                        "Conflict in delivery method '{$methodName}': reserved keys detected (" . implode(', ', $conflictingKeys) . ").<br>" .
+                        "Class: <code>{$className}</code><br>File: <code>{$classPath}</code>",
+                        'Delivery Method Key Conflict'
+                    );
+                }
+
+                $filteredSettings = array_diff_key($settings, array_flip($reservedKeys));
+
+                $methods[] = array_merge([
+                    'name' => $methodInstance->getName(),
+                    'title' => $methodInstance->getTitle(),
+                    'description' => $methodInstance->getDescription(),
+                ], $filteredSettings);
+            }
+        }
+        return $methods;
+    }
+
+    /**
+     * Retrieve the details of a specific delivery method by its name.
+     *
+     * This method fetches the details of a registered delivery method based on its unique name.
+     * If the delivery method is not found, an exception is thrown.
+     *
+     * Example usage:
+     * ```php
+     * $delivery = $sCheckout->getDelivery('courier');
+     * ```
+     *
+     * @param string $methodName The unique name of the delivery method to retrieve.
+     * @return array An associative array containing the delivery method details:
+     *               - `name` (string): The unique identifier of the delivery method.
+     *               - `title` (string): The localized title of the delivery method.
+     *               - `description` (string): The localized description of the delivery method.
+     *               - `settings` (array): Configuration settings specific to the delivery method.
+     *
+     * @throws \InvalidArgumentException If the delivery method is not found.
+     */
+    public function getDelivery(string $methodName): array
+    {
+        if (sCommerce::config('basic.deliveries_on', 1) !== 1) {
+            return [];
+        }
+
+        $methodInstance = $this->deliveryMethods[$methodName] ?? null;
+
+        if (!$methodInstance) {
+            throw new \InvalidArgumentException("Delivery method '{$methodName}' not found.");
+        }
+
+        return [
+            'name' => $methodInstance->getName(),
+            'title' => $methodInstance->getTitle(),
+            'description' => $methodInstance->getDescription(),
+            'settings' => $methodInstance->getSettings(),
+        ];
+    }
+
+    /**
      * Register a delivery method.
      *
      * @param \Seiger\sCommerce\Interfaces\DeliveryMethodInterface $method
@@ -123,22 +212,12 @@ class sCheckout
         $this->deliveryMethods[$method->getName()] = $method;
     }
 
-    /**
-     * Get all registered delivery methods.
-     *
-     * @return array
-     */
-    public function getDeliveryMethods(): array
-    {
-        return $this->deliveryMethods;
-    }
-
     public function registerPaymentMethod(PaymentMethodInterface $method): void
     {
         $this->paymentMethods[$method->getName()] = $method;
     }
 
-    public function getPaymentMethods(): array
+    public function getPayments(): array
     {
         return $this->paymentMethods;
     }
@@ -209,6 +288,10 @@ class sCheckout
         $methods = sDeliveryMethod::active()->orderBy('position')->pluck('name');
 
         foreach ($methods as $methodName) {
+            if (isset($this->deliveryMethods[$methodName])) {
+                continue;
+            }
+
             $methodInstance = $this->createDeliveryMethodInstance($methodName);
 
             if ($methodInstance instanceof DeliveryMethodInterface) {

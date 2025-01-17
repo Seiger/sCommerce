@@ -129,7 +129,7 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const order = $(this).attr('data-order');
                 let direc = 'asc';
-                let newHref = '{!!$moduleUrl!!}&get=products&order=' + order;
+                let newHref = '{!!sCommerce::moduleUrl()!!}&get={{$get}}&order=' + order;
                 if (urlParams.get('order') == order && urlParams.get('direc') == direc) {
                     direc = 'desc';
                 }

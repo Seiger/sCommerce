@@ -139,21 +139,18 @@ return new class extends Migration
         */
         Schema::create('s_delivery_methods', function (Blueprint $table) {
             $table->id('id');
-            $table->string('title')->comment('Title of the delivery method');
             $table->string('name')->unique()->comment('Unique identifier for the delivery method');
             $table->string('class')->comment('PHP class implementing the delivery method');
             $table->boolean('active')->default(true)->comment('Indicates if the delivery method is active');
             $table->unsignedInteger('position')->default(0)->comment('Sorting order');
-            $table->decimal('cost_fixed', 9, 2)->nullable()->comment('Fixed cost of delivery');
-            $table->decimal('cost_minimum', 9, 2)->nullable()->comment('Minimum delivery cost');
-            $table->text('cost_formula')->nullable()->comment('Formula for dynamic cost calculation');
-            $table->json('regions')->nullable()->comment('Regions where the delivery method is available');
-            $table->json('settings')->nullable()->comment('Additional settings for the delivery method');
+            $table->jsonb('title')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Title of the delivery method');
+            $table->jsonb('description')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Description of the delivery method');
+            $table->decimal('cost', 9, 2)->default(0)->comment('Base cost of delivery');
+            $table->decimal('minimum', 9, 2)->nullable()->comment('Minimum delivery cost');
+            $table->text('formula')->nullable()->comment('Formula for dynamic cost calculation');
+            $table->char('currency', 3)->default('USD')->comment('Currency cost this delivery');
+            $table->jsonb('settings')->default(new Expression('(JSON_ARRAY())'))->comment('Additional settings for the delivery method (e.g. API integrations)');
             $table->string('icon')->nullable()->comment('Icon for the delivery method');
-            $table->string('delivery_time')->nullable()->comment('Expected delivery time');
-            $table->decimal('max_weight', 11, 4)->nullable()->comment('Maximum weight supported by the method');
-            $table->text('description')->nullable()->comment('Description of the delivery method');
-            $table->json('integration_data')->nullable()->comment('Data for API integrations');
             $table->timestamps();
         });
 

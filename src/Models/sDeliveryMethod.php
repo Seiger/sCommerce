@@ -11,10 +11,11 @@ class sDeliveryMethod extends Model
      */
     protected $fillable = [
         'name',
-        'title',
-        'description',
+        'class',
         'active',
         'position',
+        'title',
+        'description',
     ];
 
     /**
