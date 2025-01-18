@@ -3,9 +3,20 @@
 use Illuminate\Support\Facades\Validator;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCommerce;
-use Seiger\sCommerce\Models\sDeliveryMethod;
+use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
+use Seiger\sCommerce\Models\sDeliveryMethod;
+use Seiger\sCommerce\Models\sPaymentMethod;
 
+/**
+ * Class sCheckout
+ *
+ * This class provides functionality for managing the checkout process,
+ * including handling delivery and payment methods, validating user input,
+ * and processing orders.
+ *
+ * @package Seiger\sCommerce\Checkout
+ */
 class sCheckout
 {
     protected array $cartData = [];
@@ -13,10 +24,17 @@ class sCheckout
     protected array $deliveryMethods = [];
     protected array $paymentMethods = [];
 
+    /**
+     * sCheckout constructor.
+     *
+     * Initializes the checkout process, loads available delivery and payment methods,
+     * and retrieves the cart data.
+     */
     public function __construct()
     {
-        $this->loadDeliveryMethods();
         $this->cartData = sCart::getMiniCart();
+        $this->loadDeliveryMethods();
+        $this->loadPaymentMethods();
     }
 
     /**
@@ -69,9 +87,12 @@ class sCheckout
     }
 
     /**
-     * Check if cart is not empty and prepare order data.
+     * Initialize the checkout process.
      *
-     * @return array|RedirectResponse
+     * Prepares order data for the user, including cart items, delivery, and payment preferences.
+     * Redirects if the cart is empty.
+     *
+     * @return array The prepared order data.
      */
     public function initCheckout(): array
     {
@@ -193,44 +214,119 @@ class sCheckout
             throw new \InvalidArgumentException("Delivery method '{$methodName}' not found.");
         }
 
-        return [
+        $reservedKeys = ['name', 'title', 'description'];
+        $settings = $methodInstance->getSettings();
+        $filteredSettings = array_diff_key($settings, array_flip($reservedKeys));
+
+        return array_merge([
             'name' => $methodInstance->getName(),
             'title' => $methodInstance->getTitle(),
             'description' => $methodInstance->getDescription(),
-            'settings' => $methodInstance->getSettings(),
-        ];
+        ], $filteredSettings);
     }
 
     /**
-     * Register a delivery method.
+     * Retrieve all available payment methods.
      *
-     * @param \Seiger\sCommerce\Interfaces\DeliveryMethodInterface $method
-     * @return void
+     * This method returns a list of all registered payment methods with their details.
+     * The returned array includes the name, title, description, additional details,
+     * and settings for each payment method.
+     *
+     * @return array An array of payment methods, where each method includes:
+     *               - `name` (string): The unique identifier of the payment method.
+     *               - `title` (string): The localized title of the payment method.
+     *               - `description` (string): The localized description of the payment method.
+     *               - `settings` (array): Configuration settings specific to the payment method.
      */
-    public function registerDeliveryMethod(DeliveryMethodInterface $method): void
-    {
-        $this->deliveryMethods[$method->getName()] = $method;
-    }
-
-    public function registerPaymentMethod(PaymentMethodInterface $method): void
-    {
-        $this->paymentMethods[$method->getName()] = $method;
-    }
-
     public function getPayments(): array
     {
-        return $this->paymentMethods;
+        $methods = [];
+
+        if (sCommerce::config('basic.payments_on', 1) == 1) {
+            $reservedKeys = ['name', 'title', 'description'];
+
+            foreach ($this->paymentMethods as $methodName => $methodInstance) {
+                $settings = $methodInstance->getSettings();
+
+                $conflictingKeys = array_intersect(array_keys($settings), $reservedKeys);
+                if (!empty($conflictingKeys)) {
+                    $className = get_class($methodInstance);
+                    $classPath = (new \ReflectionClass($methodInstance))->getFileName();
+
+                    evo()->logEvent(
+                        0,
+                        2,
+                        "Conflict in payment method '{$methodName}': reserved keys detected (" . implode(', ', $conflictingKeys) . ").<br>" .
+                        "Class: <code>{$className}</code><br>File: <code>{$classPath}</code>",
+                        'Payment Method Key Conflict'
+                    );
+                }
+
+                $filteredSettings = array_diff_key($settings, array_flip($reservedKeys));
+
+                $methods[] = array_merge([
+                    'key' => $methodInstance->getIdentifier(),
+                    'name' => $methodInstance->getName(),
+                    'title' => $methodInstance->getTitle(),
+                    'description' => $methodInstance->getDescription(),
+                ], $filteredSettings);
+            }
+        }
+        return $methods;
     }
 
     /**
-     * Sets the order data with the provided input.
+     * Retrieve the details of a specific payment method by its name.
      *
-     * This method merges the provided input data into the existing order data.
-     * It validates the incoming data based on the defined validation rules.
+     * This method fetches the details of a registered payment method based on its unique name.
+     * If the payment method is not found, an exception is thrown.
      *
-     * @param array $data The data to update the order with.
+     * Example usage:
+     * ```php
+     * $payment = $sCheckout->getPayment('cash');
+     * ```
+     *
+     * @param string $methodName The unique name of the payment method to retrieve.
+     * @return array An associative array containing the payment method details:
+     *               - `name` (string): The unique identifier of the payment method.
+     *               - `title` (string): The localized title of the payment method.
+     *               - `description` (string): The localized description of the payment method.
+     *               - `settings` (array): Configuration settings specific to the payment method.
+     *
+     * @throws \InvalidArgumentException If the payment method is not found.
+     */
+    public function getPayment(string $methodName): array
+    {
+        if (sCommerce::config('basic.payments_on', 1) !== 1) {
+            return [];
+        }
+
+        $methodInstance = $this->paymentMethods[$methodName] ?? null;
+
+        if (!$methodInstance) {
+            throw new \InvalidArgumentException("Payment method '{$methodName}' not found.");
+        }
+
+        $reservedKeys = ['name', 'title', 'description'];
+        $settings = $methodInstance->getSettings();
+        $filteredSettings = array_diff_key($settings, array_flip($reservedKeys));
+
+        return array_merge([
+            'key' => $methodInstance->getIdentifier(),
+            'name' => $methodInstance->getName(),
+            'title' => $methodInstance->getTitle(),
+            'description' => $methodInstance->getDescription(),
+        ], $filteredSettings);
+    }
+
+    /**
+     * Validate and set order data.
+     *
+     * Merges validated user input into existing order data.
+     *
+     * @param array $data User input data to validate and merge.
      * @return array The updated order data.
-     * @throws \Illuminate\Validation\ValidationException If the provided data is invalid.
+     * @throws \Illuminate\Validation\ValidationException If validation fails.
      */
     public function setOrderData(array $data): array
     {
@@ -263,6 +359,15 @@ class sCheckout
         return array_merge(['success' => true], $this->orderData);
     }
 
+    /**
+     * Process the order.
+     *
+     * Handles the delivery and payment processing based on the provided order data.
+     *
+     * @param array $orderData The order data to process.
+     * @return bool True if the payment is successful, false otherwise.
+     * @throws \Exception If an invalid delivery or payment method is provided.
+     */
     public function processOrder(array $orderData): bool
     {
         $paymentMethod = $this->paymentMethods[$orderData['payment_method']] ?? null;
@@ -279,46 +384,78 @@ class sCheckout
     }
 
     /**
+     * Register a delivery method.
+     *
+     * Adds a delivery method instance to the list of available methods.
+     *
+     * @param \Seiger\sCommerce\Interfaces\DeliveryMethodInterface $method The delivery method instance.
+     */
+    public function registerDeliveryMethod(DeliveryMethodInterface $method): void
+    {
+        $this->deliveryMethods[$method->getName()] = $method;
+    }
+
+    /**
      * Load delivery methods from the database.
      *
-     * @return void
+     * Dynamically loads delivery method classes and registers them if they implement
+     * the `DeliveryMethodInterface`.
      */
     protected function loadDeliveryMethods(): void
     {
-        $methods = sDeliveryMethod::active()->orderBy('position')->pluck('name');
+        $methods = sDeliveryMethod::active()->orderBy('position')->get();
 
-        foreach ($methods as $methodName) {
-            if (isset($this->deliveryMethods[$methodName])) {
+        foreach ($methods as $method) {
+            if (isset($this->deliveryMethods[$method->name])) {
                 continue;
             }
 
-            $methodInstance = $this->createDeliveryMethodInstance($methodName);
+            if (class_exists($method->class)) {
+                $className = $method->class;
+                $instance = new $className();
 
-            if ($methodInstance instanceof DeliveryMethodInterface) {
-                $this->registerDeliveryMethod($methodInstance);
+                if ($instance instanceof DeliveryMethodInterface) {
+                    $this->registerDeliveryMethod($instance);
+                }
             }
         }
     }
 
     /**
-     * Dynamically create a delivery method instance by its class name from the database.
+     * Register a payment method.
      *
-     * @param string $methodName
-     * @return \Seiger\sCommerce\Interfaces\DeliveryMethodInterface|null
+     * Adds a payment method instance to the list of available methods.
+     *
+     * @param \Seiger\sCommerce\Interfaces\PaymentMethodInterface $method The payment method instance.
      */
-    protected function createDeliveryMethodInstance(string $methodName): ?DeliveryMethodInterface
+    public function registerPaymentMethod(PaymentMethodInterface $method): void
     {
-        $methodData = sDeliveryMethod::where('name', $methodName)->active()->first();
+        $this->paymentMethods[$method->getIdentifier()] = $method;
+    }
 
-        if ($methodData && class_exists($methodData->class)) {
-            $className = $methodData->class;
-            $instance = new $className();
+    /**
+     * Load payment methods from the database.
+     *
+     * Dynamically loads payment method classes and registers them if they implement
+     * the `PaymentMethodInterface`.
+     */
+    protected function loadPaymentMethods(): void
+    {
+        $methods = sPaymentMethod::active()->orderBy('position')->get();
 
-            if ($instance instanceof DeliveryMethodInterface) {
-                return $instance;
+        foreach ($methods as $method) {
+            if (isset($this->paymentMethods[$method->name . $method->identifier])) {
+                continue;
+            }
+
+            if (class_exists($method->class)) {
+                $className = $method->class;
+                $instance = new $className($method->identifier);
+
+                if ($instance instanceof PaymentMethodInterface) {
+                    $this->registerPaymentMethod($instance);
+                }
             }
         }
-
-        return null;
     }
 }

@@ -6,13 +6,7 @@
                 <span class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.method_type')</span>
             </th>
             <th class="sorting @if($order == 'name') sorted @endif" data-order="name">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.delivery_name') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'cost') sorted @endif" data-order="cost">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.base_cost') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-            </th>
-            <th class="sorting @if($order == 'currency') sorted @endif" data-order="currency">
-                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.currency') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.payment_name') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
             <th class="sorting @if($order == 'position') sorted @endif" data-order="position">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.position') <i class="fas fa-sort" style="color: #036efe;"></i></button>
@@ -26,11 +20,9 @@
         <tbody>
         @foreach($items as $item)
             @if($item)
-                <tr style="height: 42px;" id="delivery-{{$item->id}}">
+                <tr style="height: 42px;" id="payment-{{$item->id}}">
                     <td>{!!$item->type!!}</td>
                     <td>{{$item->title}} @if(trim($item->description))<i class="fa fa-question-circle" data-tooltip="{!!$item->description!!}"></i>@endif</td>
-                    <td>{{$item->cost}}</td>
-                    <td>{{$item->currency}}</td>
                     <td>{{$item->position}}</td>
                     <td>
                         @if($item->active)
@@ -41,7 +33,7 @@
                     </td>
                     <td style="text-align:center;">
                         <div class="btn-group">
-                            <a href="{!!sCommerce::moduleUrl()!!}&get=delivery&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}" class="btn btn-outline-success">
+                            <a href="{!!sCommerce::moduleUrl()!!}&get=payment&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}" class="btn btn-outline-success">
                                 <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
                             </a>
                         </div>
@@ -68,16 +60,16 @@
             </button>
             <ul class="dropdown__menu">
                 <li class="dropdown__menu-item">
-                    <a class="dropdown__menu-link" data-items="50" href="{!!sCommerce::moduleUrl()!!}&get=deliveries">50</a>
+                    <a class="dropdown__menu-link" data-items="50" href="{!!sCommerce::moduleUrl()!!}&get=payments">50</a>
                 </li>
                 <li class="dropdown__menu-item">
-                    <a class="dropdown__menu-link" data-items="100" href="{!!sCommerce::moduleUrl()!!}&get=deliveries">100</a>
+                    <a class="dropdown__menu-link" data-items="100" href="{!!sCommerce::moduleUrl()!!}&get=payments">100</a>
                 </li>
                 <li class="dropdown__menu-item">
-                    <a class="dropdown__menu-link" data-items="150" href="{!!sCommerce::moduleUrl()!!}&get=deliveries">150</a>
+                    <a class="dropdown__menu-link" data-items="150" href="{!!sCommerce::moduleUrl()!!}&get=payments">150</a>
                 </li>
                 <li class="dropdown__menu-item">
-                    <a class="dropdown__menu-link" data-items="200" href="{!!sCommerce::moduleUrl()!!}&get=deliveries">200</a>
+                    <a class="dropdown__menu-link" data-items="200" href="{!!sCommerce::moduleUrl()!!}&get=payments">200</a>
                 </li>
             </ul>
         </div>
@@ -85,6 +77,6 @@
 </div>
 @push('scripts.top')
     <script>
-        const cookieName = "scom_deliveries_page_items";
+        const cookieName = "scom_payments_page_items";
     </script>
 @endpush

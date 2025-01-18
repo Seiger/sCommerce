@@ -1,6 +1,6 @@
 <?php
 /**
- * E-commerce management module
+ * E-commerce management module sCommerce
  */
 
 use Carbon\Carbon;
@@ -13,10 +13,12 @@ use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
+use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sDeliveryMethod;
+use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sCommerce\Models\sReview;
@@ -41,6 +43,9 @@ if (count(sCommerce::config('basic.available_currencies', [])) > 1 && trim(sComm
 }
 if (sCommerce::config('basic.deliveries_on', 1) == 1) {
     $tabs[] = 'deliveries';
+}
+if (sCommerce::config('basic.payments_on', 1) == 1) {
+    $tabs[] = 'payments';
 }
 if (evo()->hasPermission('settings')) {
     $tabs[] = 'settings';
@@ -1395,16 +1400,17 @@ switch ($get) {
             $className = $method->class;
             if (class_exists($className)) {
                 $instance = new $className();
-                $method->admintitle = ucfirst(str_replace('_', ' ', $method->name));
-                $method->info = '';
-                if (method_exists($instance, 'getAdminTitle')) {
-                    $method->admintitle = $instance->getAdminTitle();
+                $method->type = ucfirst(str_replace('_', ' ', $method->name));
+                $method->title = '';
+                $method->description = '';
+                if (method_exists($instance, 'getType')) {
+                    $method->type = $instance->getType();
                 }
                 if (method_exists($instance, 'getTitle')) {
-                    $method->info .= "<b>" . $instance->getTitle($sCommerceController->langDefault()) . "</b><br>";
+                    $method->title = $instance->getTitle($sCommerceController->langDefault());
                 }
                 if (method_exists($instance, 'getDescription')) {
-                    $method->info .= $instance->getDescription($sCommerceController->langDefault());
+                    $method->description = $instance->getDescription($sCommerceController->langDefault());
                 }
                 return $method;
             }
@@ -1426,9 +1432,9 @@ switch ($get) {
             if (class_exists($className)) {
                 $instance = new $className();
                 $item->instance = $instance;
-                $item->admintitle = ucfirst(str_replace('_', ' ', $item->name));
-                if (method_exists($instance, 'getAdminTitle')) {
-                    $item->admintitle = $instance->getAdminTitle();
+                $item->type = ucfirst(str_replace('_', ' ', $item->name));
+                if (method_exists($instance, 'getType')) {
+                    $item->type = $instance->getType();
                 }
             }
 
@@ -1467,6 +1473,139 @@ switch ($get) {
         $_SESSION['itemaction'] = 'Saving Delivery';
         $_SESSION['itemname'] = $admintitle ?? '';
         $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=deliveries'));
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    /*
+    |--------------------------------------------------------------------------
+    | Payments
+    |--------------------------------------------------------------------------
+    */
+    case "payments":
+        $perpage = Cookie::get('scom_payments_page_items', 50);
+        $order = request()->input('order', 'position');
+        $direc = request()->input('direc', 'asc');
+
+        $newMethods = [];
+        $allMethods = sPaymentMethod::all()->pluck('class')->toArray();
+
+        $classMap = require base_path('vendor/composer/autoload_classmap.php');
+        $exdMaps = require base_path('vendor/seiger/scommerce/config/excluded_namespaces.php');
+
+        foreach ($classMap as $className => $path) {
+            foreach ($exdMaps as $exdMap) {
+                if (str_starts_with($className, $exdMap)) {
+                    continue 2;
+                }
+            }
+
+            try {
+                if (class_exists($className)) {
+                    $reflection = new ReflectionClass($className);
+
+                    if ($reflection->implementsInterface(PaymentMethodInterface::class) && !$reflection->isAbstract()) {
+                        $newMethods[] = $className;
+                    }
+                }
+            } catch (Throwable $e) {
+                dump($e->getMessage());
+                continue;
+            }
+        }
+
+        $needMethods = array_diff($newMethods, $allMethods);
+
+        if (!empty($needMethods)) {
+            foreach ($needMethods as $methodClass) {
+                try {
+                    $instance = new $methodClass();
+                    $name = $instance->getName();
+                    $identifier = $instance->getIdentifier();
+                    $title = ['base' => ucfirst(str_replace('_', ' ', $instance->getName()))];
+                    $description = ['base' => ''];
+
+                    sPaymentMethod::create([
+                        'name' => $name,
+                        'class' => $methodClass,
+                        'identifier' => $identifier,
+                        'active' => false,
+                        'position' => sPaymentMethod::max('position') + 1,
+                        'title' => json_encode($title, JSON_UNESCAPED_UNICODE),
+                        'description' => json_encode($description, JSON_UNESCAPED_UNICODE),
+                    ]);
+                } catch (Throwable $e) {
+                    \Log::error("Failed to register payment method: {$methodClass}", ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
+        $query = sPaymentMethod::query()->orderBy($order, $direc);
+        $items = $query->paginate($perpage);
+
+        $items->getCollection()->transform(function ($method) use ($sCommerceController) {
+            $className = $method->class;
+            if (class_exists($className)) {
+                $instance = new $className($method->identifier);
+                $method->type = $instance->getType();
+                $method->title = $instance->getTitle($sCommerceController->langDefault());
+                $method->description = $instance->getDescription($sCommerceController->langDefault());
+                return $method;
+            }
+        });
+
+        $data['items'] = $items;
+        $data['order'] = $order;
+
+        $_SESSION['itemaction'] = 'Viewing a list of payments';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        break;
+    case "payment":
+        $tabs = ['payment'];
+        $requestId = request()->integer('i');
+        $item = sPaymentMethod::find($requestId);
+
+        if ($requestId > 0 && $item) {
+            $className = $item->class;
+            if (class_exists($className)) {
+                $instance = new $className($item->identifier);
+                $item->instance = $instance;
+                $item->type = ucfirst(str_replace('_', ' ', $item->name));
+                if (method_exists($instance, 'getType')) {
+                    $item->type = $instance->getType();
+                }
+            }
+
+            $data['item'] = $item;
+
+            $_SESSION['itemaction'] = 'Editing Payment';
+            $_SESSION['itemname'] = $item->title;
+        } else {
+            return header('Location: ' . sCommerce::moduleUrl() . (request()->back ?? '&get=payments'));
+        }
+        break;
+    case "paymentSave":
+        $requestId = request()->integer('i');
+        $item = sPaymentMethod::find($requestId);
+
+        if ($requestId > 0 && $item) {
+            $className = $item->class;
+            if (class_exists($className)) {
+                $instance = new $className();
+                $admintitle = ucfirst(str_replace('_', ' ', $item->name));
+                if (method_exists($instance, 'getAdminTitle')) {
+                    $admintitle = $instance->getAdminTitle();
+                }
+
+                $item->active = request()->boolean('active');
+                $item->position = request()->integer('position');
+                $item->title = json_encode(request()->input('title', []), JSON_UNESCAPED_UNICODE);
+                $item->description = json_encode(request()->input('description', []), JSON_UNESCAPED_UNICODE);
+                $item->settings = $instance->prepareSettings(request()->all());
+                $item->update();
+            }
+        }
+
+        $_SESSION['itemaction'] = 'Saving Payment';
+        $_SESSION['itemname'] = $admintitle ?? '';
+        $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=payments'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------

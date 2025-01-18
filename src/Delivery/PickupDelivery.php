@@ -1,25 +1,24 @@
 <?php namespace Seiger\sCommerce\Delivery;
 
+use Seiger\sCommerce\Delivery\BaseDeliveryMethod;
 use Seiger\sCommerce\Models\sDeliveryMethod;
-use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 
-class PickupDelivery implements DeliveryMethodInterface
+/**
+ * Class PickupDelivery
+ *
+ * This class implements the "Pickup" delivery method. It extends the `BaseDeliveryMethod` and provides
+ * specific configurations and behavior for self-pickup delivery, such as configurable warehouse locations.
+ *
+ * @package Seiger\sCommerce\Delivery
+ */
+class PickupDelivery extends BaseDeliveryMethod
 {
-    protected sDeliveryMethod $method;
-    protected array $settings = [];
-
-    public function __construct()
-    {
-        $this->method = sDeliveryMethod::where('name', 'pickup')->first() ?? new sDeliveryMethod([
-            'name' => 'pickup',
-            'class' => static::class,
-        ]);
-    }
-
     /**
      * Get the unique name of the delivery method.
      *
-     * @return string
+     * The name is used as an identifier for this delivery method throughout the system.
+     *
+     * @return string The unique name of the delivery method.
      */
     public function getName(): string
     {
@@ -29,14 +28,12 @@ class PickupDelivery implements DeliveryMethodInterface
     /**
      * Get the admin display title for the PickupDelivery method.
      *
-     * This method retrieves the localized title for the "Pickup" delivery method.
-     * If the localized string is not found or contains an invalid format,
-     * a default title "Pickup" is used. The final title includes formatting
-     * for admin display.
+     * Retrieves the localized title for the delivery method to be displayed in the admin panel.
+     * If the title is not found or contains an invalid format, a default title is used.
      *
-     * @return string The formatted title to display in the admin panel.
+     * @return string The formatted title for admin display.
      */
-    public function getAdminTitle(): string
+    public function getType(): string
     {
         $title = __('sCommerce::global.pickup');
         $title = str_contains($title, '::') ? 'Pickup' : $title;
@@ -44,46 +41,12 @@ class PickupDelivery implements DeliveryMethodInterface
     }
 
     /**
-     * Get the title for the specified or current language.
-     *
-     * @param string|null $lang The language code (e.g., 'en', 'uk'). If null, use the app's current language.
-     * @return string
-     */
-    public function getTitle(?string $lang = null): string
-    {
-        return $this->getLocalizedString($this->method?->title ?? '', $lang);
-    }
-
-    /**
-     * Get the description for the specified or current language.
-     *
-     * @param string|null $lang The language code (e.g., 'en', 'uk'). If null, use the app's current language.
-     * @return string
-     */
-    public function getDescription(?string $lang = null): string
-    {
-        return $this->getLocalizedString($this->method->description ?? '', $lang);
-    }
-
-    /**
-     * Retrieve the settings of the delivery method.
-     *
-     * The settings are stored in the database as a JSON string and represent configurable options
-     * for the delivery method, such as warehouses, addresses, or delivery limits.
-     *
-     * @return array An associative array of settings for the delivery method.
-     */
-    public function getSettings(): array
-    {
-        $settings = json_decode($this->method->settings ?? '', true);
-        return is_array($settings) ? $settings : [];
-    }
-
-    /**
      * Calculate the cost of delivery based on the order data.
      *
-     * @param array $orderData
-     * @return float
+     * The pickup delivery method has no additional cost, so this method always returns 0.
+     *
+     * @param array $orderData The order data, including user and address information.
+     * @return float The calculated delivery cost, which is always 0 for pickup.
      */
     public function calculateCost(array $orderData): float
     {
@@ -92,6 +55,8 @@ class PickupDelivery implements DeliveryMethodInterface
 
     /**
      * Define the fields configuration for the delivery method.
+     *
+     * Specifies the configurable fields for the "Pickup" delivery method, such as warehouse locations.
      *
      * @return array Configuration of fields grouped by sections or tabs.
      */
@@ -123,8 +88,8 @@ class PickupDelivery implements DeliveryMethodInterface
     /**
      * Prepare the settings data for storage.
      *
-     * This method validates the input data against the defined field rules
-     * and prepares the settings array in a JSON-compatible format for storage.
+     * Validates and formats the settings data provided by the admin panel.
+     * Converts the settings into a JSON-compatible format for database storage.
      *
      * @param array $data The input data to validate and prepare.
      * @return string A JSON string of the validated and prepared settings data.
@@ -132,9 +97,8 @@ class PickupDelivery implements DeliveryMethodInterface
      */
     public function prepareSettings(array $data): string
     {
-        $fieldNames = $this->extractFieldNames();
-        $reservedKeys = ['name', 'title', 'description'];
         $preparedData = [];
+        $fieldNames =  $this->extractFieldNames($this->defineFields());
 
         foreach ($fieldNames as $fieldName) {
             $key = preg_split('/\]\[|\[|\]/', rtrim($fieldName, ']'))[0];
@@ -148,59 +112,5 @@ class PickupDelivery implements DeliveryMethodInterface
         }
 
         return json_encode($preparedData, JSON_UNESCAPED_UNICODE);
-    }
-
-    /**
-     * Extract localized string based on the specified or current language.
-     *
-     * @param string $json
-     * @param string|null $lang
-     * @return string
-     */
-    private function getLocalizedString(string $json, ?string $lang = null): string
-    {
-        $lang = $lang ?? evo()->getLocale();
-        $data = json_decode($json, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
-            return '';
-        }
-
-        return $data[$lang] ?? ($data['en'] ?? reset($data));
-    }
-
-    /**
-     * Recursively extract all field names from the defineFields configuration.
-     *
-     * @return array An array of field names.
-     */
-    private function extractFieldNames(): array
-    {
-        $fields = $this->defineFields();
-        return $this->extractNamesFromFields($fields);
-    }
-
-    /**
-     * Recursively extract field names from a nested fields configuration.
-     *
-     * @param array $fields The fields configuration array.
-     * @return array An array of field names.
-     */
-    private function extractNamesFromFields(array $fields): array
-    {
-        $names = [];
-
-        foreach ($fields as $key => $field) {
-            if (isset($field['name'])) {
-                $names[] = $field['name'];
-            }
-
-            // Recursively check nested fields
-            if (isset($field['fields']) && is_array($field['fields'])) {
-                $names = array_merge($names, $this->extractNamesFromFields($field['fields']));
-            }
-        }
-
-        return $names;
     }
 }

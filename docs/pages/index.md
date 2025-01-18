@@ -83,7 +83,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [x] sCommerceAddedToCart.
   - [x] sCommerceRemovedFromCart.
 - [x] Multi-currency Support (ISO 4217).
-- [ ] Integration with Payment Systems.
+- [x] Integration with Payment Systems.
+  - [x] Cash.
 - [x] Integration with Deliveries Methods.
   - [x] Courier.
   - [x] Pickup.

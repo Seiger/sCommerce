@@ -107,4 +107,14 @@
         <input type="hidden" id="basic__deliveries_on" name="basic__deliveries_on" value="{{sCommerce::config('basic.deliveries_on', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
+<div class="row form-row">
+    <div class="col-auto">
+        <label for="basic__payments_on">@lang('sCommerce::global.payments')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.payments_on_help')"></i>
+    </div>
+    <div class="col">
+        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__payments_on);" @if(sCommerce::config('basic.payments_on', 1) == 1) checked @endif>
+        <input type="hidden" id="basic__payments_on" name="basic__payments_on" value="{{sCommerce::config('basic.payments_on', 1)}}" onchange="documentDirty=true;">
+    </div>
+</div>
 <div class="split my-3"></div>

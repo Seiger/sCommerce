@@ -141,7 +141,7 @@ return new class extends Migration
             $table->id('id');
             $table->string('name')->unique()->comment('Unique identifier for the delivery method');
             $table->string('class')->comment('PHP class implementing the delivery method');
-            $table->boolean('active')->default(true)->comment('Indicates if the delivery method is active');
+            $table->boolean('active')->default(false)->comment('Indicates if the delivery method is active');
             $table->unsignedInteger('position')->default(0)->comment('Sorting order');
             $table->jsonb('title')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Title of the delivery method');
             $table->jsonb('description')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Description of the delivery method');
@@ -151,6 +151,20 @@ return new class extends Migration
             $table->char('currency', 3)->default('USD')->comment('Currency cost this delivery');
             $table->jsonb('settings')->default(new Expression('(JSON_ARRAY())'))->comment('Additional settings for the delivery method (e.g. API integrations)');
             $table->string('icon')->nullable()->comment('Icon for the delivery method');
+            $table->timestamps();
+        });
+
+        Schema::create('s_payment_methods', function (Blueprint $table) {
+            $table->id('id');
+            $table->string('name')->index()->comment('Unique identifier for the payment method');
+            $table->string('class')->index()->comment('PHP class implementing the payment method');
+            $table->string('identifier')->index()->default('')->comment('Unique identifier for each method');
+            $table->boolean('active')->default(false)->comment('Indicates if the payment method is active');
+            $table->unsignedInteger('position')->default(0)->comment('Sorting order');
+            $table->jsonb('title')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Title of the payment method');
+            $table->jsonb('description')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Description of the payment method');
+            $table->jsonb('settings')->default(new Expression('(JSON_ARRAY())'))->comment('Additional settings for the payment method (e.g. API integrations)');
+            $table->string('icon')->nullable()->comment('Icon for the payment method');
             $table->timestamps();
         });
 
@@ -206,6 +220,7 @@ return new class extends Migration
         | The order's tables structure
         |--------------------------------------------------------------------------
         */
+        Schema::dropIfExists('s_payment_methods');
         Schema::dropIfExists('s_delivery_methods');
 
         /*
