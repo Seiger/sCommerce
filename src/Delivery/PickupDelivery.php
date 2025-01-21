@@ -41,6 +41,27 @@ class PickupDelivery extends BaseDeliveryMethod
     }
 
     /**
+     * Get validation rules for the delivery method.
+     *
+     * This method defines specific validation rules for fields related to the current delivery method.
+     * The rules ensure that all required fields are filled and properly formatted.
+     *
+     * @return array An associative array of validation rules, where the key is the field name,
+     *               and the value is the validation rule.
+     *
+     * Example Output:
+     * [
+     *     'delivery.address' => 'string|max:255',
+     * ]
+     */
+    public function getValidationRules(): array
+    {
+        return [
+            'delivery.pickup' => 'string|max:255',
+        ];
+    }
+
+    /**
      * Calculate the cost of delivery based on the order data.
      *
      * The pickup delivery method has no additional cost, so this method always returns 0.

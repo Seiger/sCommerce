@@ -52,6 +52,17 @@ interface DeliveryMethodInterface
     public function getDescription(?string $lang = null): string;
 
     /**
+     * Get validation rules for the delivery method.
+     *
+     * This method defines specific validation rules for fields related to the current delivery method.
+     * The rules ensure that all required fields are filled and properly formatted.
+     *
+     * @return array An associative array of validation rules, where the key is the field name,
+     *               and the value is the validation rule.
+     */
+    public function getValidationRules(): array;
+
+    /**
      * Calculate the cost of the delivery method based on the provided data.
      *
      * This method calculates the cost of delivery based on order-related data

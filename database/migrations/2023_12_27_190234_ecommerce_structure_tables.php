@@ -168,6 +168,24 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        Schema::create('s_orders', function (Blueprint $table) {
+            $table->id('id');
+            $table->unsignedBigInteger('user_id')->default(0)->index()->comment('User ID (if authorized)');
+            $table->jsonb('user_info')->default(new Expression('(JSON_ARRAY())'))->comment('User information (JSON)');
+            $table->jsonb('delivery_info')->default(new Expression('(JSON_ARRAY())'))->comment('Shipping information (JSON)');
+            $table->jsonb('payment_info')->default(new Expression('(JSON_ARRAY())'))->comment('Payment information (JSON)');
+            $table->jsonb('products')->default(new Expression('(JSON_ARRAY())'))->comment('Product list (JSON)');
+            $table->decimal('cost', 9, 2)->default(0)->comment('Total order amount');
+            $table->char('currency', 3)->default('USD')->comment('Currency cost this order');
+            $table->unsignedInteger('status')->default(1)->comment('Order status (1: new)');
+            $table->boolean('do_not_call')->default(false)->comment('"Do not call back" option');
+            $table->text('comment')->nullable()->comment('Comment on the order');
+            $table->string('lang', 10)->index()->default('base');
+            $table->jsonb('admin_notes')->default(new Expression('(JSON_ARRAY())'))->comment('Hidden comments (available only in admin panel)');
+            $table->string('identifier')->unique()->comment('Unique order key (required by some payment systems)');
+            $table->timestamps();
+        });
+
         /*
         |--------------------------------------------------------------------------
         | The review's tables structure
@@ -220,6 +238,7 @@ return new class extends Migration
         | The order's tables structure
         |--------------------------------------------------------------------------
         */
+        Schema::dropIfExists('s_orders');
         Schema::dropIfExists('s_payment_methods');
         Schema::dropIfExists('s_delivery_methods');
 

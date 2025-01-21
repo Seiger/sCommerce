@@ -46,6 +46,9 @@
             <th class="sorting @if($order == 'name') sorted @endif" data-order="name">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('global.user') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
+            <th class="sorting @if($order == 'created_at') sorted @endif" data-order="created_at">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('global.publish_date') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
             <th class="sorting @if($order == 'published') sorted @endif" data-order="published">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.visibility') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
@@ -68,6 +71,7 @@
                 </td>
                 <td>{{$item->rating}}</td>
                 <td>{{$item->name}}</td>
+                <td>{{$item->created_at ?? ''}}</td>
                 <td>
                     @if($item->published)
                         <span class="badge badge-success">@lang('global.page_data_published')</span>

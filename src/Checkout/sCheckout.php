@@ -1,11 +1,14 @@
 <?php namespace Seiger\sCommerce\Checkout;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 use Seiger\sCommerce\Models\sDeliveryMethod;
+use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 
 /**
@@ -19,7 +22,6 @@ use Seiger\sCommerce\Models\sPaymentMethod;
  */
 class sCheckout
 {
-    protected array $cartData = [];
     protected array $orderData = [];
     protected array $deliveryMethods = [];
     protected array $paymentMethods = [];
@@ -32,46 +34,42 @@ class sCheckout
      */
     public function __construct()
     {
-        $this->cartData = sCart::getMiniCart();
+        $this->orderData = $this->loadOrderData();
         $this->loadDeliveryMethods();
         $this->loadPaymentMethods();
     }
 
     /**
-     * Retrieve the validation rules for the checkout process.
+     * Generate validation rules for the checkout process.
      *
-     * This method returns an array of validation rules that define the structure
-     * and requirements for the data submitted during the checkout process.
-     * These rules ensure that the data conforms to the expected format and
-     * constraints.
+     * This method dynamically generates validation rules for the checkout process
+     * based on the provided order data. It includes base validation rules for user,
+     * delivery, and payment fields and integrates additional rules from the selected
+     * delivery method.
      *
-     * Example:
-     * ```php
-     * $rules = sCheckout::getValidationRules();
-     * ```
+     * @param array $data The input data for the checkout process.
+     *                    Example: ['delivery' => ['method' => 'courier', ...], ...].
+     * @return array An associative array of validation rules, where the key is the
+     *               field name, and the value is the validation rule.
      *
-     * @return array An associative array of validation rules, where keys represent
-     *               the fields to be validated, and values are the respective
-     *               validation rules.
+     * @throws \InvalidArgumentException If the selected delivery method is invalid.
      *
      * Example Output:
      * [
-     *      'user.name' => 'required|string|max:255',
-     *      'user.email' => 'required|email|max:255',
-     *      'user.phone' => 'required|string|max:20',
-     *      'user.address.country' => 'sometimes|string|max:255',
-     *      'user.address.state' => 'sometimes|string|max:255',
-     *      'user.address.city' => 'sometimes|string|max:255',
-     *      'user.address.street' => 'sometimes|string|max:255',
-     *      'user.address.zip' => 'sometimes|string|max:10',
-     *      'delivery.method' => 'required|string|in:pickup,delivery',
-     *      'payment.method' => 'required|string|in:card,cash,online',
-     *      'additional.notes' => 'nullable|string|max:1000',
+     *     'user.name' => 'required|string|max:255',
+     *     'user.email' => 'required|email|max:255',
+     *     'delivery.method' => 'required|string|in:pickup,courier',
+     *     'delivery.address.city' => 'required|string|max:255',
+     *     'delivery.address.street' => 'required|string|max:255',
+     *     ...
      * ]
      */
-    public static function getValidationRules(): array
+    public function getValidationRules(array $data): array
     {
-        return [
+        $deliveryMethods = array_keys($this->deliveryMethods);
+        $paymentMethods = array_keys($this->paymentMethods);
+
+        $rules = [
             'user.name' => 'required|string|max:255',
             'user.email' => 'required|email|max:255',
             'user.phone' => 'required|string|max:20',
@@ -80,10 +78,18 @@ class sCheckout
             'user.address.city' => 'sometimes|string|max:255',
             'user.address.street' => 'sometimes|string|max:255',
             'user.address.zip' => 'sometimes|string|max:10',
-            'delivery.method' => 'required|string|in:pickup,delivery',
-            'payment.method' => 'required|string|in:card,cash,online',
-            'additional.notes' => 'nullable|string|max:1000',
+            'delivery.method' => 'required|string|in:' . implode(',', $deliveryMethods),
+            'payment.method' => 'required|string|in:' . implode(',', $paymentMethods),
+            'comment' => 'nullable|string|max:1000',
+            'do_not_call' => 'nullable|boolean',
         ];
+
+        if (!empty($data['delivery']['method']) && isset($this->deliveryMethods[$data['delivery']['method']])) {
+            $deliveryMethod = $this->deliveryMethods[$data['delivery']['method']];
+            $rules = array_merge($rules, $deliveryMethod->getValidationRules());
+        }
+
+        return $rules;
     }
 
     /**
@@ -96,7 +102,9 @@ class sCheckout
      */
     public function initCheckout(): array
     {
-        if (count($this->cartData['items']) === 0) {
+        $cartData = sCart::getMiniCart();
+
+        if (count($cartData['items']) === 0) {
             return evo()->sendRedirect(back()->getTargetUrl());
         }
 
@@ -120,15 +128,16 @@ class sCheckout
 
         $this->orderData = [
             'user' => $userData,
-            'products' => $this->cartData['items'],
-            'total_cost' => $this->cartData['totalSum'],
-            'payment_method' => null,
-            'delivery_method' => null,
+            'products' => $cartData['items'],
+            'cost' => $cartData['totalSum'],
+            'currency' => sCommerce::currentCurrency(),
             'preferences' => [
                 'language' => $user['language'] ?? evo()->getLocale(),
                 'currency' => $user['currency'] ?? sCommerce::currentCurrency(),
             ],
         ];
+
+        $_SESSION['sCheckout'] = $this->orderData;
 
         return $this->orderData;
     }
@@ -332,7 +341,7 @@ class sCheckout
     {
         $flattenedData = \Illuminate\Support\Arr::dot($data);
 
-        $rules = $this->getValidationRules();
+        $rules = $this->getValidationRules($data);
         $filteredRules = array_intersect_key($rules, $flattenedData);
 
         $validator = Validator::make($data, $filteredRules);
@@ -351,36 +360,84 @@ class sCheckout
         }
 
         $validatedData = $validator->validated();
+        $resultData = [];
 
         foreach ($validatedData as $key => $value) {
-            \Illuminate\Support\Arr::set($this->orderData, $key, $value);
+            \Illuminate\Support\Arr::set($resultData, $key, $value);
         }
+
+        $this->orderData = array_replace_recursive($this->orderData, $resultData);
+
+        if (sCommerce::config('basic.deliveries_on', 1) == 1) {
+            if (!empty($validatedData['delivery']['method']) && isset($this->deliveryMethods[$this->orderData['delivery']['method']])) {
+                $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method']];
+                $this->orderData['delivery']['cost'] = $deliveryMethod->calculateCost($this->orderData);
+            }
+        }
+
+        $_SESSION['sCheckout'] = $this->orderData;
 
         return array_merge(['success' => true], $this->orderData);
     }
 
     /**
-     * Process the order.
+     * Process the order and return the result.
      *
-     * Handles the delivery and payment processing based on the provided order data.
+     * This method saves the order data, logs the result, and handles errors gracefully.
+     * It ensures a consistent response structure for the frontend.
      *
-     * @param array $orderData The order data to process.
-     * @return bool True if the payment is successful, false otherwise.
-     * @throws \Exception If an invalid delivery or payment method is provided.
+     * @return array The processed order data or error details.
      */
-    public function processOrder(array $orderData): bool
+    public function processOrder(): array
     {
-        $paymentMethod = $this->paymentMethods[$orderData['payment_method']] ?? null;
-        $deliveryMethod = $this->deliveryMethods[$orderData['delivery_method']] ?? null;
+        try {
+            if (empty($this->orderData['products'])) {
+                throw new \Exception("Invalid products in Order.");
+            }
 
-        if (!$paymentMethod || !$deliveryMethod) {
-            throw new \Exception("Invalid payment or delivery method");
+            if (sCommerce::config('basic.deliveries_on', 1) == 1) {
+                $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method']] ?? null;
+
+                if (!$deliveryMethod) {
+                    throw new \Exception("Invalid delivery method.");
+                }
+
+                $this->orderData['cost'] += $this->orderData['delivery']['cost'] ?? 0;
+            }
+
+            if (sCommerce::config('basic.payments_on', 1) == 1) {
+                $paymentMethod = $this->paymentMethods[$this->orderData['payment']['method']] ?? null;
+
+                if (!$paymentMethod) {
+                    throw new \Exception("Invalid payment method.");
+                }
+            }
+
+            $_SESSION['sCheckout'] = $this->orderData;
+
+            $order = $this->saveOrder();
+
+            evo()->logEvent(0, 1, "Замовлення #{$order->id} успішно створено.", 'sCommerce: Order Created');
+            Log::info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
+
+            unset($_SESSION['sCheckout'], $_SESSION['sCart']);
+            $this->orderData = [];
+
+            return [
+                'success' => true,
+                'message' => __('sCommerce::order.success'),
+                'order' => $order,
+            ];
+        } catch (\Exception $e) {
+            evo()->logEvent(0, 3, $e->getMessage(), 'sCommerce: Order Processing Failed');
+            Log::error("Order processing failed: {$e->getMessage()}", ['order_data' => $this->orderData, 'error' => $e->getTraceAsString()]);
+
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+            ];
         }
-
-        $deliveryCost = $deliveryMethod->calculateCost($orderData);
-        $orderData['total_cost'] += $deliveryCost;
-
-        return $paymentMethod->processPayment($orderData);
     }
 
     /**
@@ -393,6 +450,28 @@ class sCheckout
     public function registerDeliveryMethod(DeliveryMethodInterface $method): void
     {
         $this->deliveryMethods[$method->getName()] = $method;
+    }
+
+    /**
+     * Register a payment method.
+     *
+     * Adds a payment method instance to the list of available methods.
+     *
+     * @param \Seiger\sCommerce\Interfaces\PaymentMethodInterface $method The payment method instance.
+     */
+    public function registerPaymentMethod(PaymentMethodInterface $method): void
+    {
+        $this->paymentMethods[$method->getIdentifier()] = $method;
+    }
+
+    /**
+     * Load order data from the session or database.
+     *
+     * @return array The order data.
+     */
+    protected function loadOrderData(): array
+    {
+        return $_SESSION['sCheckout'] ?? [];
     }
 
     /**
@@ -422,18 +501,6 @@ class sCheckout
     }
 
     /**
-     * Register a payment method.
-     *
-     * Adds a payment method instance to the list of available methods.
-     *
-     * @param \Seiger\sCommerce\Interfaces\PaymentMethodInterface $method The payment method instance.
-     */
-    public function registerPaymentMethod(PaymentMethodInterface $method): void
-    {
-        $this->paymentMethods[$method->getIdentifier()] = $method;
-    }
-
-    /**
      * Load payment methods from the database.
      *
      * Dynamically loads payment method classes and registers them if they implement
@@ -457,5 +524,50 @@ class sCheckout
                 }
             }
         }
+    }
+
+    /**
+     * Save the order to the database and return the order model.
+     *
+     * This method processes the order data stored in `$this->orderData` and saves it as a new record
+     * in the `s_orders` table. It ensures the `identifier` is unique to avoid conflicts.
+     *
+     * @return \Seiger\sCommerce\Models\sOrder The newly created order model.
+     */
+    protected function saveOrder(): sOrder
+    {
+        do {
+            $identifier = Str::random(rand(32, 64));
+        } while (sOrder::where('identifier', $identifier)->exists());
+
+        $order = new sOrder();
+        $order->user_id = $this->orderData['user']['id'] ?? 0;
+        $order->user_info = json_encode(($this->orderData['user'] ?? []), JSON_UNESCAPED_UNICODE);
+        $order->delivery_info = json_encode(($this->orderData['delivery'] ?? []), JSON_UNESCAPED_UNICODE);
+        $order->payment_info = json_encode(($this->orderData['payment'] ?? []), JSON_UNESCAPED_UNICODE);
+        $order->products = json_encode(($this->orderData['products'] ?? []), JSON_UNESCAPED_UNICODE);
+        $order->cost = $this->orderData['cost'];
+        $order->currency = $this->orderData['currency'] ?? sCommerce::currentCurrency();
+        $order->status = sOrder::ORDER_STATUS_NEW;
+        $order->do_not_call = intval($this->orderData['do_not_call'] ?? 0);
+        $order->comment = $this->orderData['comment'] ?? '';
+        $order->lang = evo()->getLocale();
+        $order->identifier = $identifier;
+        $order->save();
+
+        return $order;
+    }
+
+    protected function notifyUser(int $orderId): void
+    {
+        /*$email = $this->orderData['user']['email'] ?? null;
+
+        if ($email) {
+            evo()->sendMail(
+                $email,
+                'Ваше замовлення підтверджено',
+                "Ваше замовлення #{$orderId} успішно створено. Загальна сума: {$this->orderData['total_cost']} грн."
+            );
+        }*/
     }
 }

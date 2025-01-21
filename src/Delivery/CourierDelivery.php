@@ -41,6 +41,45 @@ class CourierDelivery extends BaseDeliveryMethod
     }
 
     /**
+     * Get validation rules for the delivery method.
+     *
+     * This method defines specific validation rules for fields related to the current delivery method.
+     * The rules ensure that all required fields are filled and properly formatted.
+     *
+     * @return array An associative array of validation rules, where the key is the field name,
+     *               and the value is the validation rule.
+     *
+     * Example Output:
+     * [
+     *     'delivery.courier.city' => 'string|max:255',
+     *     'delivery.courier.street' => 'string|max:255',
+     *     'delivery.courier.build' => 'string|max:10',
+     *     'delivery.courier.room' => 'integer|max:10',
+     *     'delivery.courier.datetime' => 'string|max:255',
+     *     'delivery.courier.date' => 'date_format:Y-m-d H:i',
+     *     'delivery.courier.time' => 'date_format:Y-m-d H:i',
+     *     'delivery.courier.first_name' => 'string|max:255',
+     *     'delivery.courier.middle_name' => 'string|max:255',
+     *     'delivery.courier.last_name' => 'string|max:255',
+     * ]
+     */
+    public function getValidationRules(): array
+    {
+        return [
+            'delivery.courier.city' => 'string|max:255',
+            'delivery.courier.street' => 'string|max:255',
+            'delivery.courier.build' => 'string|max:10',
+            'delivery.courier.room' => 'integer|max:100',
+            'delivery.courier.datetime' => 'string|max:255',
+            'delivery.courier.date' => 'string|max:255',
+            'delivery.courier.time' => 'date_format:Y-m-d H:i',
+            'delivery.courier.first_name' => 'string|max:255',
+            'delivery.courier.middle_name' => 'string|max:255',
+            'delivery.courier.last_name' => 'string|max:255',
+        ];
+    }
+
+    /**
      * Calculate the cost of delivery based on the order data.
      *
      * Calculates the total cost by adding a base cost and an extra cost depending on the city.
@@ -48,15 +87,15 @@ class CourierDelivery extends BaseDeliveryMethod
      * @param array $orderData The order data, including user and address information.
      * @return float The calculated delivery cost.
      */
-    public function calculateCost(array $orderData): float
+    public function calculateCost(array $order): float
     {
-        $baseCost = $this->settings['base_cost'] ?? 70;
+        $baseCost = floatval($this->method->cost ?? 0);
         $distanceCost = 0;
+        $city = $order['delivery']['courier']['city'] ?? $order['user']['address']['city'] ?? '';
 
-        if (isset($orderData['user']['address']['city'])) {
-            $city = strtolower(trim($orderData['user']['address']['city']));
-
-            $citySettings = collect($this->settings['cities'] ?? [])->firstWhere('city', strtolower($city));
+        if (!empty($city)) {
+            $city = strtolower(trim($city));
+            $citySettings = collect($this->getSettings()['cities'] ?? [])->firstWhere('city', strtolower($city));
             $distanceCost = $citySettings['extra_cost'] ?? 0;
         }
 

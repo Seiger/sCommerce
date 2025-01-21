@@ -18,4 +18,8 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         sCheckout::setOrderData(request()->all()),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
     ))->name('setOrderData');
+    Route::post('process-order', fn() => tap(
+        sCheckout::processOrder(),
+        fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
+    ))->name('processOrder');
 });

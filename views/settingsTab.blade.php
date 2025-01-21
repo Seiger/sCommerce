@@ -98,9 +98,9 @@
     <div class="split my-3"></div>
     @include('sCommerce::partials.settingsBaseConfiguration')
     @include('sCommerce::partials.settingsCurrencyPriceConfiguration')
-    @include('sCommerce::partials.settingsCartConfiguration')
     @include('sCommerce::partials.settingsProductConfiguration')
     @include('sCommerce::partials.settingsProductsConfiguration')
+    @include('sCommerce::partials.settingsCartConfiguration')
     <span id="parentName" class="hidden"></span>
     <input type="hidden" name="parent" value="0"/>
 </form>
