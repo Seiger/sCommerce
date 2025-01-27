@@ -2,7 +2,9 @@
 
 use EvolutionCMS\Facades\UrlProcessor;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
@@ -50,76 +52,85 @@ class sFilter
      */
     public function byCategory(int $category = null, string $lang = null, int $dept = 10): object
     {
-        $lang = $lang ?? evo()->getLocale();
-        $productIds = $this->controller->productIds($category, $dept);
+        $cacheKey = 'filters_' . md5($category . '_' . $lang . '_' . $dept);
+        return Cache::remember($cacheKey, 3600, function () use ($category, $lang, $dept) {
+            $lang = $lang ?? evo()->getLocale();
+            $productIds = $this->controller->productIds($category, $dept);
 
-        $values = DB::table('s_product_attribute_values as pav')
-            ->select('attribute', 'value', 'valueid')
-            ->addSelect(['count' => function ($query) use ($productIds) {
-                $query->from('s_product_attribute_values as pac')
-                    ->selectRaw('count(product) as count')
-                    ->whereColumn('pac.value', 'pav.value')
-                    ->whereIn('pac.product', $productIds);
-            }])
-            ->distinct()
-            ->whereIn('product', $productIds)
-            ->get();
+            if (empty($productIds)) {
+                return collect();
+            }
 
-        $filters = sAttribute::lang($lang)
-            ->where('asfilter', 1)
-            ->whereIn('id', function($query) use ($productIds) {
-                $query->select('attribute')
-                    ->from('s_product_attribute_values')
-                    ->whereIn('product', $productIds);
-            })->orderBy('position')
-            ->get()
-            ->map(function($item) use ($values, $productIds) {
-                switch ($item->type) {
-                    //case sAttribute::TYPE_ATTR_NUMBER:
-                    case sAttribute::TYPE_ATTR_CHECKBOX:
-                        $value = new sAttributeValue();
-                        $value->link = $item?->alias ?? '' . '=' . 1;
-                        $value->value = 1;
-                        $value->label = $item->pagetitle;
-                        $value->count = intval($values->where('value', 1)->where('attribute', $item->id)->first()?->count ?? 0);
-                        $value->checked = intval(isset($this->filters[$item?->alias]) && in_array(1, $this->filters[$item?->alias]));
-                        $item->values = collect([$value]);
-                        break;
-                    case sAttribute::TYPE_ATTR_SELECT:
-                    case sAttribute::TYPE_ATTR_COLOR:
-                        $item->values = $item->values->map(function ($value) use ($item, $values) {
-                            $value->link = ($item?->alias ?? '') . '=' . ($value?->alias ?? '');
-                            $value->value = $value?->alias ?? '';
-                            $value->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
-                            $value->count = intval($values->where('valueid', $value->avid)->where('attribute', $item->id)->first()?->count ?? 0);
-                            $value->checked = intval(isset($this->filters[$item?->alias]) && in_array($value?->alias, $this->filters[$item?->alias]));
-                            return $value;
-                        });
-                        break;
-                    case sAttribute::TYPE_ATTR_PRICE_RANGE:
-                        $minMax = DB::table('s_products')
-                            ->selectRaw('min(price_regular) as min_regular, max(price_regular) as max_regular, min(price_special) as min_special, max(price_special) as max_special')
-                            ->whereIn('id', $productIds)
-                            ->get()?->first();
-                        $min_regular = $minMax?->min_regular ?? 0;
-                        $min_special = $minMax?->min_special ?? 0;
-                        $max_regular = $minMax?->max_regular ?? 0;
-                        $max_special = $minMax?->max_special ?? 0;
-                        $min = ($min_special > 0 && $min_special < $min_regular) ? $min_special : $min_regular;
-                        $max = ($max_special > 0 && $max_special > $max_regular) ? $max_special : $max_regular;
-                        $value = (object)[];
-                        $value->link = $item?->alias ?? '' . '=' . 1;
-                        $value->min = $min;
-                        $value->max = $max;
-                        $value->min_value = min($min, intval($this->filters[$item?->alias][0] ?? $min));
-                        $value->max_value = max($max, intval($this->filters[$item?->alias][1] ?? $max));
-                        $item->values = collect([$value]);
-                        break;
-                }
-                return $item;
-            });
+            $values = DB::table('s_product_attribute_values as pav')
+                ->select('pav.attribute', 'pav.value', 'pav.valueid', DB::raw('COUNT(DISTINCT ' . DB::getTablePrefix() . 'pac.product) as count'))
+                ->leftJoin('s_product_attribute_values as pac', function ($join) use ($productIds) {
+                    $join->on('pac.value', '=', 'pav.value')->on('pac.attribute', '=', 'pav.attribute')->whereIn('pac.product', $productIds);
+                })
+                ->join('s_attributes as sa', function ($join) {
+                    $join->on('pav.attribute', '=', 'sa.id')->where('sa.asfilter', '=', 1);
+                })
+                ->whereIn('pav.product', $productIds)
+                ->groupBy('pav.attribute', 'pav.value', 'pav.valueid')
+                ->get();
 
-        return $filters;
+            $filters = sAttribute::with(['values'])
+                ->lang($lang)
+                ->where('asfilter', 1)
+                ->whereIn('id', function ($query) use ($productIds) {
+                    $query->select('attribute')
+                        ->from('s_product_attribute_values')
+                        ->whereIn('product', $productIds);
+                })
+                ->orderBy('position')
+                ->get()
+                ->map(function($item) use ($values, $productIds) {
+                    switch ($item->type) {
+                        //case sAttribute::TYPE_ATTR_NUMBER:
+                        case sAttribute::TYPE_ATTR_CHECKBOX:
+                            $value = new sAttributeValue();
+                            $value->link = $item?->alias ?? '' . '=' . 1;
+                            $value->value = 1;
+                            $value->label = $item->pagetitle;
+                            $value->count = intval($values->where('value', 1)->where('attribute', $item->id)->first()?->count ?? 0);
+                            $value->checked = intval(isset($this->filters[$item?->alias]) && in_array(1, $this->filters[$item?->alias]));
+                            $item->values = collect([$value]);
+                            break;
+                        case sAttribute::TYPE_ATTR_SELECT:
+                        case sAttribute::TYPE_ATTR_COLOR:
+                            $item->values = $item->values->map(function ($value) use ($item, $values) {
+                                $value->link = ($item?->alias ?? '') . '=' . ($value?->alias ?? '');
+                                $value->value = $value?->alias ?? '';
+                                $value->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
+                                $value->count = intval($values->where('valueid', $value->avid)->where('attribute', $item->id)->first()?->count ?? 0);
+                                $value->checked = intval(isset($this->filters[$item?->alias]) && in_array($value?->alias, $this->filters[$item?->alias]));
+                                return $value;
+                            });
+                            break;
+                        case sAttribute::TYPE_ATTR_PRICE_RANGE:
+                            $minMax = DB::table('s_products')
+                                ->selectRaw('min(price_regular) as min_regular, max(price_regular) as max_regular, min(price_special) as min_special, max(price_special) as max_special')
+                                ->whereIn('id', $productIds)
+                                ->first();
+                            $min_regular = $minMax?->min_regular ?? 0;
+                            $min_special = $minMax?->min_special ?? 0;
+                            $max_regular = $minMax?->max_regular ?? 0;
+                            $max_special = $minMax?->max_special ?? 0;
+                            $min = ($min_special > 0 && $min_special < $min_regular) ? $min_special : $min_regular;
+                            $max = ($max_special > 0 && $max_special > $max_regular) ? $max_special : $max_regular;
+                            $value = (object)[];
+                            $value->link = $item?->alias ?? '' . '=' . 1;
+                            $value->min = $min;
+                            $value->max = $max;
+                            $value->min_value = min($min, intval($this->filters[$item?->alias][0] ?? $min));
+                            $value->max_value = max($max, intval($this->filters[$item?->alias][1] ?? $max));
+                            $item->values = collect([$value]);
+                            break;
+                    }
+                    return $item;
+                });
+
+            return $filters;
+        });
     }
 
     /**

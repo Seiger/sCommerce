@@ -89,7 +89,7 @@
                 </thead>
                 <tbody>
                     @foreach($products as $product)
-                        @include('sCommerce::partials.modificationProductRow', ['item' => $product, 'add' => true, 'parameters' => $parameters]))
+                        @include('sCommerce::partials.modificationProductRow', ['item' => $product, 'add' => true, 'parameters' => $parameters])
                     @endforeach
                 </tbody>
             </table>

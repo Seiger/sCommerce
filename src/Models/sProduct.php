@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use ReflectionClass;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sGallery\sGallery;
 
 /**
  * Class sProduct
@@ -50,6 +51,8 @@ class sProduct extends Model
     protected $casts = [
         'inventory' => 'integer',
     ];
+
+    protected $fillable = ['uuid'];
 
     /**
      * Availability constants
@@ -436,6 +439,8 @@ class sProduct extends Model
     {
         if (!empty($this->cover) && is_file(MODX_BASE_PATH . $this->cover)) {
             $coverSrc = MODX_SITE_URL . $this->cover;
+        }  elseif (!empty($this->cover) && sGallery::hasLink($this->cover)) {
+            $coverSrc = $this->cover;
         } else {
             $coverSrc = MODX_SITE_URL . 'assets/images/noimage.png';
         }

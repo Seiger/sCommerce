@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 class sProductTranslate extends Model
 {
     protected $primaryKey = 'tid';
-    protected $fillable = ['lang'];
+    protected $fillable = ['product', 'lang'];
 
     public function product()
     {

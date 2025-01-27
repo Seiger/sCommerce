@@ -76,6 +76,7 @@ switch ($get) {
         $perpage = Cookie::get('scom_products_page_items', 50);
         $cat = request()->input('cat', 0);
         $allCats = DB::table('s_product_category')->groupBy('category')->get()->pluck('category')->toArray();
+        $allCats = array_merge([sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))], $allCats);
         $cat = in_array($cat, $allCats) ? $cat : 0;
 
         if ($cat > 0) {
@@ -317,10 +318,10 @@ switch ($get) {
         $product->length = $sCommerceController->validateNumber(request()->input('length', 0));
         $product->volume = $sCommerceController->validateNumber(request()->input('volume', 0));
         $product->cover = str_replace(MODX_SITE_URL, '', $cover->src ?? '/assets/site/noimage.png');
-        $product->relevants = json_encode(request()->input('relevants', []));
-        $product->similar = json_encode(request()->input('similar', []));
-        $product->tmplvars = json_encode(request()->input('tmplvars', []));
-        $product->votes = json_encode($votes);
+        $product->relevants = json_encode(request()->input('relevants', []), JSON_UNESCAPED_UNICODE);
+        $product->similar = json_encode(request()->input('similar', []), JSON_UNESCAPED_UNICODE);
+        $product->tmplvars = json_encode(request()->input('tmplvars', []), JSON_UNESCAPED_UNICODE);
+        $product->votes = json_encode($votes, JSON_UNESCAPED_UNICODE);
         $product->type = request()->integer('type');
         $product->save();
 
@@ -563,9 +564,10 @@ switch ($get) {
         }
 
         //
-        $modificationsQuery = DB::table('s_product_modifications')->select('attributes', 'parameters')->where('product', $product->id)->first();
+        $modificationsQuery = DB::table('s_product_modifications')->select('mods', 'parameters')->where('product', $product->id)->first();
+        $modificationsIds = [$product->id];
         if ($modificationsQuery) {
-            $modificationsIds = json_decode($modificationsQuery->attributes ?? '', true) ?: [];
+            $modificationsIds = json_decode($modificationsQuery->mods ?? '', true) ?: [];
             $parameters = json_decode($modificationsQuery->parameters ?? '', true) ?: [];
             if (is_array($modificationsIds) && count($modificationsIds)) {
                 $modificationsIds = array_flip($modificationsIds);
@@ -574,8 +576,6 @@ switch ($get) {
                 if (count($modificationsIds)) {
                     $modifications = sCommerce::getProducts($modificationsIds);
                 }
-            } else {
-                $modificationsIds = [0];
             }
         }
 
@@ -602,7 +602,7 @@ switch ($get) {
         $data['listAttributes'] = $listAttributes;
         $data['products'] = $products;
         $data['modifications'] = $modifications ?? collect([]);
-        $data['parameters'] = $parameters ?? collect([]);
+        $data['parameters'] = $parameters ?? [];
 
         if ($requestId > 0) {
             $_SESSION['itemaction'] = 'Editing Product';
@@ -618,9 +618,9 @@ switch ($get) {
 
         if ($product) {
             if ($product->type == sProduct::TYPE_GROUP) {
-                $modificationsQuery = DB::table('s_product_modifications')->select('attributes')->where('product', $product->id)->first();
+                $modificationsQuery = DB::table('s_product_modifications')->select('mods')->where('product', $product->id)->first();
                 if ($modificationsQuery) {
-                    $modificationsIds = json_decode($modificationsQuery->attributes ?? '', true) ?: [0];
+                    $modificationsIds = json_decode($modificationsQuery->mods ?? '', true) ?: [0];
                     if (is_array($modificationsIds) && count($modificationsIds)) {
                         DB::table('s_product_modifications')->whereIn('product', $modificationsIds)->delete();
                     }
@@ -634,8 +634,8 @@ switch ($get) {
                         DB::table('s_product_modifications')->insert([
                             'product' => $modification,
                             'type' => sProduct::TYPE_GROUP,
-                            'attributes' => json_encode($modifications),
-                            'parameters' => json_encode($parameters),
+                            'mods' => json_encode($modifications, JSON_UNESCAPED_UNICODE),
+                            'parameters' => json_encode($parameters, JSON_UNESCAPED_UNICODE),
                         ]);
                     }
                 }
@@ -647,10 +647,21 @@ switch ($get) {
         $back = str_replace('&i=0', '&i=' . ($product->id ?? 0), (request()->back ?? '&get=modifications'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "prodattributes":
-        $tabs = ['product', 'prodattributes', 'content'];
+        $tabs = ['product'];
         $iUrl = trim($iUrl) ?: '&i=0';
         $requestId = (int)request()->input('i', 0);
         $product = sCommerce::getProduct($requestId);
+
+        if ($product && (int)$product?->type > 0) {
+            if (in_array($product->type, [
+                sProduct::TYPE_GROUP,
+            ])) {
+                $tabs[] = 'modifications';
+            }
+        }
+
+        $tabs[] = 'prodattributes';
+        $tabs[] = 'content';
 
         $categoryParentsIds = [0];
         if ($product->categories) {
@@ -765,14 +776,17 @@ switch ($get) {
                                                 $vals[$k] = trim($v);
                                             }
                                         }
-                                        if (count($vals)) {
-                                            $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($vals)]);
-                                        }
+                                    } elseif (is_string($value) && trim($value)) {
+                                        $vals['base'] = trim($value);
+                                    }
+
+                                    if (isset($vals) && count($vals)) {
+                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($vals, JSON_UNESCAPED_UNICODE)]);
                                     }
                                     break;
                                 case sAttribute::TYPE_ATTR_CUSTOM : // 15
                                     if (is_array($value) && count($value)) {
-                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($value)]);
+                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($value, JSON_UNESCAPED_UNICODE)]);
                                     }
                                     break;
                             }
@@ -859,6 +873,15 @@ switch ($get) {
         }
 
         $product = sCommerce::getProduct($content->product ?? 0);
+
+        if ($product && (int)$product?->type > 0) {
+            if (in_array($product->type, [
+                sProduct::TYPE_GROUP,
+            ])) {
+                $tabs[] = 'modifications';
+            }
+        }
+
         $categoryParentsIds = [0];
         if ($product->categories) {
             foreach ($product->categories as $category) {
@@ -921,8 +944,8 @@ switch ($get) {
         $content->longtitle = request()->input('longtitle', '');
         $content->introtext = request()->input('introtext', '');
         $content->content = $contentField;
-        $content->builder = json_encode(array_values(request()->input('builder', [])));
-        $content->constructor = json_encode(request()->input('constructor', []));
+        $content->builder = json_encode(array_values(request()->input('builder', [])), JSON_UNESCAPED_UNICODE);
+        $content->constructor = json_encode(request()->input('constructor', []), JSON_UNESCAPED_UNICODE);
         if (($content->product ?? 0) == 0) {
             if (!$product->id) {
                 $product->alias = $sCommerceController->validateAlias(trim($content->pagetitle) ?: 'new-product', $requestId);

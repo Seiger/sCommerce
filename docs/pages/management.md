@@ -44,6 +44,8 @@ both forward and reverse.
 If your store has more attributes than you choose to display on the page, other attributes
 will automatically move to another page and pagination will appear at the bottom.
 
+
+
 ## Settings
 
 On the Settings tab, you manage all the settings of your store. Note that this tab
@@ -56,6 +58,26 @@ additional functionality of the store.
 You can also hide or show certain fields in a product or order, as well
 rename certain fields so that the store manager has a clearer idea of which
 functionality a particular field has.
+
+## Currencies
+
+The Currencies tab provides tools for managing the exchange rates between currencies
+used in your store. Unlike other tabs, the list of available currencies is not configured
+directly here but is instead registered on the Settings tab. This allows administrators
+to define which currencies are available for use in the store while maintaining flexibility
+in managing their exchange rates.
+
+All exchange rate values are stored in a configuration file located at
+`core/custom/config/seiger/settings/sCommerceCurrencies.php`. The data is saved in the form
+of an array, ensuring quick access and easy modification when needed. This approach allows
+the system to maintain consistency while simplifying integration with other modules or
+custom functionalities.
+
+The tab is designed to help administrators easily update exchange rates relative to the
+store's base currency. This ensures that all prices displayed to customers are accurate
+and consistent, even when dealing with multiple currencies. While automation of exchange
+rate updates may be integrated in the future, the current design prioritizes manual
+control for precision and reliability.
 
 ## Custom tab
 

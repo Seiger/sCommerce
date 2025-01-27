@@ -2,8 +2,8 @@
     "name": "seiger/scommerce",
     "license": "GPL-3.0",
     "type": "EvolutionCMS-Module",
-    "description": "Evocms package E-commerce Tools for Evolution CMS.",
-    "keywords": ["evocms", "evolution-cms", "e-commerce", "shop", "catalog"],
+    "description": "E-commerce tools package for Evolution CMS.",
+    "keywords": ["evocms", "evolution-cms", "e-commerce", "ecommerce", "shop", "catalog", "online-store", "ecommerce-tools"],
     "authors": [
         {
             "name": "Serhii Korneliuk",
@@ -11,8 +11,8 @@
         }
     ],
     "require": {
-        "php": "^8.1",
-        "seiger/sgallery": "*"
+        "php": "^8.2",
+        "seiger/sgallery": "^1.3"
     },
     "autoload": {
         "psr-4": {
@@ -30,6 +30,8 @@
         }
     },
     "scripts": {
-        "post-autoload-dump": []
+        "post-autoload-dump": [
+            "@php artisan cache:clear"
+        ]
     }
 }
