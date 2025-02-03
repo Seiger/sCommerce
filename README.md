@@ -95,7 +95,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 ## Minimum requirements
 
 - Evolution CMS 3.2.0
-- PHP 8.1.0
+- PHP 8.2.0
 - Composer 2.2.0
 - PostgreSQL 10.23.0
 - MySQL 8.0.3

@@ -76,48 +76,50 @@ class sCommerce
             ->active();
 
         if (!empty($this->sort)) {
-            ['sort' => $sort, 'order' => $order, 'table' => $table] = $this->sort;
+            foreach ($this->sort as $sortParam) {
+                ['sort' => $sort, 'order' => $order, 'table' => $table] = $sortParam;
 
-            if ($table) {
-                switch ($table) {
-                    case 'attribute':
-                        $hasLang = Schema::hasColumn('s_attribute_values', $lang);
+                if ($table) {
+                    switch ($table) {
+                        case 'attribute':
+                            $hasLang = Schema::hasColumn('s_attribute_values', $lang);
 
-                        $query->addSelect(['sort' =>
-                            DB::table('s_attribute_values')
-                                ->select(DB::raw(
-                                    $hasLang
-                                        ? "CASE WHEN " . $lang . " IS NOT NULL AND " . $lang . " != '' THEN " . $lang . " ELSE base END as value"
-                                        : "base as value"
-                                ))
-                                ->where('s_attribute_values.avid', function ($q) use ($sort) {
-                                    $q->select('valueid')
-                                        ->from('s_product_attribute_values')
+                            $query->addSelect(['sort' =>
+                                DB::table('s_attribute_values')
+                                    ->select(DB::raw(
+                                        $hasLang
+                                            ? "CASE WHEN " . $lang . " IS NOT NULL AND " . $lang . " != '' THEN " . $lang . " ELSE base END as value"
+                                            : "base as value"
+                                    ))
+                                    ->where('s_attribute_values.avid', function ($q) use ($sort) {
+                                        $q->select('valueid')
+                                            ->from('s_product_attribute_values')
+                                            ->where('s_product_attribute_values.attribute', function ($q) use ($sort) {
+                                                $q->select('id')
+                                                    ->from('s_attributes')
+                                                    ->where('s_attributes.alias', $sort);
+                                            })
+                                            ->whereColumn('s_product_attribute_values.product', 's_products.id')
+                                            ->limit(1);
+                                    })
+                                    ->union(DB::table('s_product_attribute_values')
+                                        ->select('value')
                                         ->where('s_product_attribute_values.attribute', function ($q) use ($sort) {
                                             $q->select('id')
                                                 ->from('s_attributes')
                                                 ->where('s_attributes.alias', $sort);
                                         })
                                         ->whereColumn('s_product_attribute_values.product', 's_products.id')
-                                        ->limit(1);
-                                })
-                                ->union(DB::table('s_product_attribute_values')
-                                    ->select('value')
-                                    ->where('s_product_attribute_values.attribute', function ($q) use ($sort) {
-                                        $q->select('id')
-                                            ->from('s_attributes')
-                                            ->where('s_attributes.alias', $sort);
-                                    })
-                                    ->whereColumn('s_product_attribute_values.product', 's_products.id')
+                                        ->limit(1)
+                                    )
                                     ->limit(1)
-                                )
-                                ->limit(1)
-                        ]);
-                        $query->orderBy('sort', $order);
-                        break;
+                            ]);
+                            $query->orderBy('sort', $order);
+                            break;
+                    }
+                } else {
+                    $query->orderBy($sort, $order);
                 }
-            } else {
-                $query->orderBy($sort, $order);
             }
         }
 
@@ -372,13 +374,23 @@ class sCommerce
     public function setSort(string|array $key, ?string $order = 'asc'): self
     {
         if (is_array($key)) {
-            $validated = $this->controller->validateSort($key);
+            if (isset($key[0]) && is_array($key[0])) {
+                $validatedSorts = [];
+                foreach ($key as $sortItem) {
+                    $validated = $this->controller->validateSort($sortItem);
+                    if ($validated) {
+                        $validatedSorts[] = $validated;
+                    }
+                }
+                $this->sort = $validatedSorts;
+            } else {
+                $validated = $this->controller->validateSort($key);
+                $this->sort = $validated ? [$validated] : [];
+            }
         } else {
             $validated = $this->controller->validateSort(['sort' => $key, 'order' => $order]);
+            $this->sort = $validated ? [$validated] : [];
         }
-
-        extract($validated);
-        $this->sort = compact('sort', 'order', 'table');
         return $this;
     }
 
