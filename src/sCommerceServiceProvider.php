@@ -126,7 +126,7 @@ class sCommerceServiceProvider extends ServiceProvider
             dirname(__DIR__) . '/config/sCommerceAlias.php' => config_path('app/aliases/sCommerce.php', true),
             dirname(__DIR__) . '/config/sCommerceSettings.php' => config_path('seiger/settings/sCommerce.php', true),
             dirname(__DIR__) . '/config/sCommerceCurrenciesSettings.php' => config_path('seiger/settings/sCommerceCurrencies.php', true),
-            dirname(__DIR__) . '/images/noimage.png' => public_path('assets/images/noimage.png'),
+            dirname(__DIR__) . '/images/noimage.png' => public_path('assets/site/noimage.png'),
             dirname(__DIR__) . '/images/scommerce.ico' => public_path('assets/site/scommerce.ico'),
             dirname(__DIR__) . '/images/seigerit-blue.svg' => public_path('assets/site/seigerit-blue.svg'),
             dirname(__DIR__) . '/views/s_commerce_product.blade.php' => public_path('views/s_commerce_product.blade.php'),

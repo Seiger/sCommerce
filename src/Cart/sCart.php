@@ -142,7 +142,7 @@ class sCart
             }
         }
 
-        $cart['totalSum'] = $totalSum;
+        $cart['totalSum'] = round($totalSum, 2);
         $cart['totalSumFormatted'] = sCommerce::convertPrice($totalSum);
         $cart['items'] = $items;
 
