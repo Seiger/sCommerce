@@ -32,6 +32,16 @@ class sFilter
     protected $filtersIds = [];
 
     /**
+     * @var int
+     */
+    protected $currentCategory;
+
+    /**
+     * @var int
+     */
+    protected $currentDept;
+
+    /**
      * sFilter constructor.
      */
     public function __construct()
@@ -46,43 +56,54 @@ class sFilter
      * and their corresponding values for the products within the specified category.
      *
      * @param int|null $category The ID of the category for which filters are retrieved.
-     *                            If null, all categories are considered.
-     * @param string|null $lang   The language locale for the filters.
-     *                            Defaults to the application's current locale.
-     * @param int $dept           The depth level for category traversal.
-     *                            Determines how deep the category hierarchy should be explored.
-     *                            Defaults to 10.
+     * @param string|null $lang  The language locale for the filters.
+     * @param int $dept          The depth level for category traversal.
      *
      * @return object|Collection A collection of filters for the specified category.
-     *                            Each filter includes attribute details and value counts.
      */
     public function byCategory(int $category = null, string $lang = null, int $dept = 10): object
     {
+        // Cache key remains the same
         $cacheKey = 'filters_' . sha1($category . '_' . $lang . '_' . $dept);
+
         return Cache::remember($cacheKey, 3600, function () use ($category, $lang, $dept) {
             $lang = $lang ?? evo()->getLocale();
+            $this->currentCategory = $category;
+            $this->currentDept = $dept;
             $productIds = $this->controller->productIds($category, $dept);
 
+            // If no products found, return empty collection (hides PRICE_RANGE as well)
             if (empty($productIds)) {
                 return collect();
             }
 
+            // Retrieve (attribute, value, valueid, count) info from DB
             $values = DB::table('s_product_attribute_values as pav')
-                ->select('pav.attribute', 'pav.value', 'pav.valueid', DB::raw('COUNT(DISTINCT ' . DB::getTablePrefix() . 'pac.product) as count'))
+                ->select(
+                    'pav.attribute',
+                    'pav.value',
+                    'pav.valueid',
+                    DB::raw('COUNT(DISTINCT ' . DB::getTablePrefix() . 'pac.product) as count')
+                )
                 ->leftJoin('s_product_attribute_values as pac', function ($join) use ($productIds) {
-                    $join->on('pac.value', '=', 'pav.value')->on('pac.attribute', '=', 'pav.attribute')->whereIn('pac.product', $productIds);
+                    $join->on('pac.value', '=', 'pav.value')
+                        ->on('pac.attribute', '=', 'pav.attribute')
+                        ->whereIn('pac.product', $productIds);
                 })
                 ->join('s_attributes as sa', function ($join) {
-                    $join->on('pav.attribute', '=', 'sa.id')->where('sa.asfilter', '=', 1);
+                    $join->on('pav.attribute', '=', 'sa.id')
+                        ->where('sa.asfilter', '=', 1);
                 })
                 ->whereIn('pav.product', $productIds)
                 ->groupBy('pav.attribute', 'pav.value', 'pav.valueid')
                 ->get();
 
+            // Retrieve attributes that are marked as filters (asfilter=1)
+            // and include PRICE_RANGE even if it doesn't appear in the products
             $filters = sAttribute::with(['values'])
                 ->lang($lang)
                 ->where('asfilter', 1)
-                ->where(function($q) use ($productIds) {
+                ->where(function ($q) use ($productIds) {
                     $q->whereIn('id', function ($sub) use ($productIds) {
                         $sub->select('attribute')
                             ->from('s_product_attribute_values')
@@ -91,49 +112,25 @@ class sFilter
                 })
                 ->orderBy('position')
                 ->get()
-                ->map(function($item) use ($values, $productIds) {
+                ->map(function ($item) use ($values, $productIds) {
+                    // Ensure $item->values is a collection
+                    if (!$item->values) {
+                        $item->values = collect();
+                    }
+
                     switch ($item->type) {
-                        //case sAttribute::TYPE_ATTR_NUMBER:
                         case sAttribute::TYPE_ATTR_CHECKBOX:
-                            $value = new sAttributeValue();
-                            $value->link = $item?->alias ?? '' . '=' . 1;
-                            $value->value = 1;
-                            $value->label = $item->pagetitle;
-                            $value->count = intval($values->where('value', 1)->where('attribute', $item->id)->first()?->count ?? 0);
-                            $value->checked = intval(isset($this->filters[$item?->alias]) && in_array(1, $this->filters[$item?->alias]));
-                            $item->values = collect([$value]);
+                            $item = $this->buildCheckboxFilter($item, $values);
                             break;
                         case sAttribute::TYPE_ATTR_SELECT:
                         case sAttribute::TYPE_ATTR_COLOR:
-                            $item->values = $item->values->map(function ($value) use ($item, $values) {
-                                $value->link = ($item?->alias ?? '') . '=' . ($value?->alias ?? '');
-                                $value->value = $value?->alias ?? '';
-                                $value->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
-                                $value->count = intval($values->where('valueid', $value->avid)->where('attribute', $item->id)->first()?->count ?? 0);
-                                $value->checked = intval(isset($this->filters[$item?->alias]) && in_array($value?->alias, $this->filters[$item?->alias]));
-                                return $value;
-                            });
+                            $item = $this->buildSelectFilter($item, $values);
                             break;
                         case sAttribute::TYPE_ATTR_PRICE_RANGE:
-                            $minMax = DB::table('s_products')
-                                ->selectRaw('min(price_regular) as min_regular, max(price_regular) as max_regular, min(price_special) as min_special, max(price_special) as max_special')
-                                ->whereIn('id', $productIds)
-                                ->first();
-                            $min_regular = $minMax?->min_regular ?? 0;
-                            $min_special = $minMax?->min_special ?? 0;
-                            $max_regular = $minMax?->max_regular ?? 0;
-                            $max_special = $minMax?->max_special ?? 0;
-                            $min = ($min_special > 0 && $min_special < $min_regular) ? $min_special : $min_regular;
-                            $max = ($max_special > 0 && $max_special > $max_regular) ? $max_special : $max_regular;
-                            $value = (object)[];
-                            $value->link = $item?->alias ?? '' . '=' . 1;
-                            $value->min = $min;
-                            $value->max = $max;
-                            $value->min_value = min($min, intval($this->filters[$item?->alias][0] ?? $min));
-                            $value->max_value = max($max, intval($this->filters[$item?->alias][1] ?? $max));
-                            $item->values = collect([$value]);
+                            $item = $this->buildPriceRangeFilter($item);
                             break;
                     }
+
                     return $item;
                 });
 
@@ -152,24 +149,33 @@ class sFilter
         $path = $this->processPath();
 
         if ($path && $path['path'] && $path['category']) {
-            $dirtyFilters = $this->extractFilters($path);
-            if (is_array($dirtyFilters) && count($dirtyFilters)) {
-                extract($this->validateFiltersStructure($path, $dirtyFilters));
+            $requestedFilters = $this->extractFilters($path);
+
+            // If there are requested filters, validate them
+            if (is_array($requestedFilters) && count($requestedFilters)) {
+                $result = $this->validateFiltersStructure($path, $requestedFilters);
+                $filters = $result['filters'];
+                $filtersIds = $result['filtersIds'] ?? [];
+
+                if (count($filters)) {
+                    // Construct the filter string
+                    $sFilters = implode(';', array_map(function ($filterName, $filterValues) {
+                        return $filterName . '=' . implode(',', $filterValues);
+                    }, array_keys($filters), array_values($filters)));
+
+                    // Compare current path vs. expected path
+                    if ($path['currentPath'] !== $path['path'] . '/' . $sFilters) {
+                        return 0;
+                    }
+
+                    // Store validated filters
+                    $this->filters = $filters;
+                    $this->filtersIds = $filtersIds;
+
+                    evo()->setPlaceholder('sFilters', $sFilters);
+                    evo()->setPlaceholder('sFiltersArray', $filters);
+                }
             }
-        }
-
-        if (isset($filters) && is_array($filters) && count($filters)) {
-            $sFilters = implode(';', array_map(function ($filterName, $filterValues) {
-                return $filterName . '=' . implode(',', $filterValues);
-            }, array_keys($filters), array_values($filters)));
-
-            if ($path['currentPath'] !== $path['path'] . '/' . $sFilters) {
-                return 0;
-            }
-
-            $this->filters = $filters;
-            $this->filtersIds = $filtersIds;
-            evo()->setPlaceholder('sFilters', $sFilters);
         }
 
         return (int)$path['category'];
@@ -182,7 +188,7 @@ class sFilter
      */
     public function getValidatedFilters(): array
     {
-        if (count($this->filters) == 0) {
+        if (count($this->filters) === 0) {
             $this->validateFilters();
         }
         return $this->filters;
@@ -195,14 +201,216 @@ class sFilter
      */
     public function getValidatedFiltersIds(): array
     {
-        if (count($this->filtersIds) == 0) {
+        if (count($this->filtersIds) === 0) {
             $this->validateFilters();
         }
         return $this->filtersIds;
     }
 
     /**
-     * Processes and validates path from the URL.
+     * Returns product IDs that pass all validated filters,
+     * optionally ignoring a given subset of filters (like price).
+     *
+     * @param array $ignoreFilterAliases e.g. ['price_range'] to ignore price filters.
+     * @return array
+     */
+    protected function filteredProductIds(array $ignoreFilterAliases = []): array
+    {
+        // Get all validated filters (already set in $this->filters after validateFilters())
+        $filters = $this->filters;
+
+        // Remove filters that we want to ignore
+        foreach ($ignoreFilterAliases as $alias) {
+            unset($filters[$alias]);
+        }
+
+        // If no filters remain, we can just return the raw productIds from the category
+        // (or from the controller if you have a method that returns everything).
+        if (empty($filters)) {
+            // By default, just return the full list from the original category/dept logic
+            // (You might store $this->productIds somewhere or recalc them)
+            return $this->controller->productIds($this->currentCategory, $this->currentDept);
+        }
+
+        // Otherwise, build a query that selects products that satisfy all filters
+        // This depends on your DB structure. Pseudocode below:
+        // We'll do a simple approach: intersect product IDs for each filter.
+
+        $filteredProductIds = null;
+
+        foreach ($filters as $filterAlias => $values) {
+            // Find the attribute by alias
+            $attribute = sAttribute::where('alias', $filterAlias)->first();
+            if (!$attribute) {
+                continue; // or skip
+            }
+
+            // Build a set of product IDs that match the given attribute and values
+            $query = DB::table('s_product_attribute_values')
+                ->select('product')
+                ->where('attribute', $attribute->id);
+
+            if ($attribute->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
+                // skip here if ignoring or handle differently
+                // but normally we skip because this is the ignoreFilter
+            } else {
+                // for select / checkbox / color: check the alias or value
+                $valueIds = sAttributeValue::whereIn('alias', $values)
+                    ->where('attribute', $attribute->id)
+                    ->pluck('avid')
+                    ->all();
+
+                if (!empty($valueIds)) {
+                    $query->whereIn('valueid', $valueIds);
+                } else {
+                    // or if attribute is checkbox -> value = 1, etc.
+                    // adjust logic accordingly
+                }
+            }
+
+            $subProductIds = $query->pluck('product')->all();
+
+            // Intersect with existing $filteredProductIds
+            if (is_null($filteredProductIds)) {
+                $filteredProductIds = $subProductIds;
+            } else {
+                // intersect
+                $filteredProductIds = array_intersect($filteredProductIds, $subProductIds);
+            }
+
+            // If at any point we get an empty set, we can break early
+            if (empty($filteredProductIds)) {
+                return [];
+            }
+        }
+
+        return $filteredProductIds ?: [];
+    }
+
+    /**
+     * Builds a checkbox filter for the given attribute.
+     *
+     * @param sAttribute $item   The attribute model.
+     * @param Collection $values Collection of attribute values with counts.
+     * @return sAttribute
+     */
+    protected function buildCheckboxFilter(sAttribute $item, Collection $values): sAttribute
+    {
+        $valueObj = new sAttributeValue();
+        $valueObj->link = ($item->alias ?? '') . '=1';
+        $valueObj->value = 1;
+        $valueObj->label = $item->pagetitle;
+        $valueObj->count = (int)$values
+            ->where('value', 1)
+            ->where('attribute', $item->id)
+            ->first()?->count ?? 0;
+        $valueObj->checked = (int)(isset($this->filters[$item->alias]) && in_array(1, $this->filters[$item->alias]));
+
+        $item->values = collect([$valueObj]);
+
+        return $item;
+    }
+
+    /**
+     * Builds a select or color filter for the given attribute.
+     *
+     * @param sAttribute $item   The attribute model.
+     * @param Collection $values Collection of attribute values with counts.
+     * @return sAttribute
+     */
+    protected function buildSelectFilter(sAttribute $item, Collection $values): sAttribute
+    {
+        $item->values = $item->values->map(function ($val) use ($item, $values) {
+            $val->link = ($item->alias ?? '') . '=' . ($val->alias ?? '');
+            $val->value = $val->alias ?? '';
+            $val->label = $val->{evo()->getLocale()} ?? $val->base ?? '';
+            $val->count = (int)$values
+                ->where('valueid', $val->avid)
+                ->where('attribute', $item->id)
+                ->first()?->count ?? 0;
+            $val->checked = (int)(isset($this->filters[$item->alias]) && in_array($val->alias, $this->filters[$item->alias]));
+            return $val;
+        });
+
+        return $item;
+    }
+
+    /**
+     * Builds a price range filter for the given attribute,
+     * with dynamic min/max based on other filters.
+     *
+     * @param sAttribute $item       The attribute model (price_range).
+     * @return sAttribute
+     */
+    protected function buildPriceRangeFilter(sAttribute $item): sAttribute
+    {
+        // Get product IDs ignoring the price filter itself
+        $category = $this->currentCategory ? $this->currentCategory : evo()->documentIdentifier;
+        $dept = $this->currentDept ? $this->currentDept : 10;
+        $categories = array_merge([$category], $this->controller->listAllActiveSubCategories($category, $dept));
+        $nonPriceProductIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->pluck('product')->toArray();
+
+        // If empty, means no products left after other filters
+        if (empty($nonPriceProductIds)) {
+            // We can set min=max=0 or do something else
+            $value = (object) [
+                'link' => ($item->alias ?? ''),
+                'min' => 0,
+                'max' => 0,
+                'min_value' => 0,
+                'max_value' => 0
+            ];
+            $item->values = collect([$value]);
+            return $item;
+        }
+
+        // Calculate min/max for these non-price-filtered products
+        $minMax = DB::table('s_products')
+            ->selectRaw('
+                MIN(price_regular) as min_regular,
+                MAX(price_regular) as max_regular,
+                MIN(price_special) as min_special,
+                MAX(price_special) as max_special
+            ')
+            ->whereIn('id', $nonPriceProductIds)
+            ->first();
+
+        $min_regular = $minMax?->min_regular ?? 0;
+        $min_special = $minMax?->min_special ?? 0;
+        $max_regular = $minMax?->max_regular ?? 0;
+        $max_special = $minMax?->max_special ?? 0;
+
+        $fullMin = (($min_special > 0 && $min_special < $min_regular) ? $min_special : $min_regular) - 1;
+        $fullMax = (($max_special > 0 && $max_special > $max_regular) ? $max_special : $max_regular) + 1;
+
+        // Figure out user-chosen filter range if any
+        $userMin = $fullMin;
+        $userMax = $fullMax;
+
+        if (isset($this->filters[$item->alias][0])) {
+            $userMin = (int)$this->filters[$item->alias][0];
+        }
+        if (isset($this->filters[$item->alias][1])) {
+            $userMax = (int)$this->filters[$item->alias][1];
+        }
+
+        // Build final object
+        $value = (object)[];
+        $value->link = ($item->alias ?? '');
+        $value->min = $fullMin; // always full range
+        $value->max = $fullMax; // always full range
+
+        // clamp
+        $value->min_value = max($fullMin, $userMin);
+        $value->max_value = min($fullMax, $userMax);
+
+        // Set item->values
+        $item->values = collect([$value]);
+        return $item;
+    }
+
+    /**
+     * Processes and validates the path from the URL.
      *
      * @return array
      */
@@ -217,7 +425,6 @@ class sFilter
 
         foreach ($routes as $route => $id) {
             $normalizedRoute = rtrim($route, '/');
-
             if (str_starts_with($currentPath, $normalizedRoute)) {
                 $routeLength = strlen($normalizedRoute);
                 if ($routeLength > $maxMatchLength) {
@@ -234,7 +441,7 @@ class sFilter
     /**
      * Extracts filters from the given URL path.
      *
-     * @param string $path The known path to the category (e.g., 'catalog/bicycles').
+     * @param array $path The known path to the category (e.g., 'catalog/bicycles').
      * @return array An associative array of filters where keys are filter names and values are their respective values.
      */
     protected function extractFilters(array $path): array
@@ -246,11 +453,10 @@ class sFilter
         }
 
         $filterPairs = explode(';', $filtersPart);
-
         $filters = [];
+
         foreach ($filterPairs as $filterPair) {
             [$key, $value] = array_pad(explode('=', $filterPair, 2), 2, null);
-
             if ($key && $value) {
                 $filters[$key] = explode(',', $value);
             }
@@ -262,55 +468,73 @@ class sFilter
     /**
      * Validates the structure and values of the filters.
      *
-     * @param array $dirtyFilters
+     * @param array $path
+     * @param array $requestedFilters
      * @return array
      */
-    protected function validateFiltersStructure(array $path, array $dirtyFilters): array
+    protected function validateFiltersStructure(array $path, array $requestedFilters): array
     {
         $filters = [];
         $filtersIds = [];
 
-        if (count($dirtyFilters)) {
+        if (count($requestedFilters)) {
+            // Get the parent categories for the current category
             $categoryParentsIds = $this->controller->categoryParentsIds((int)$path['category']);
+
+            // Retrieve attributes that belong to these categories and are marked as filters
             $attributes = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {
                 $q->whereIn('category', $categoryParentsIds);
             })->where('asfilter', 1)->get();
 
-            foreach ($dirtyFilters as $filterName => $filterValues) {
+            foreach ($requestedFilters as $filterName => $filterValues) {
                 $attribute = $attributes->where('alias', $filterName)->first();
-                if ($attribute) {
-                    $newValues = [];
-                    $newValuesIds = [];
-                    $values = $attribute->values;
-                    foreach ($filterValues as $filterValue) {
-                        $value = $values->where('alias', $filterValue)->first();
-                        if ($value) {
-                            $newValues[] = $value?->alias;
-                            $newValuesIds[] = (int)$value?->avid ?? 0;
+                if (!$attribute) {
+                    continue;
+                }
+
+                $newValues = [];
+                $newValuesIds = [];
+                $values = $attribute->values;
+
+                foreach ($filterValues as $filterValue) {
+                    if ($attribute->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
+                        $val = (int)filter_var($filterValue, FILTER_VALIDATE_INT, [
+                            'options' => ['min_range' => 0, 'max_range' => 999999999]
+                        ]);
+                        $newValues[] = $val;
+                        $newValuesIds[] = $val;
+                    } else {
+                        // For other types, find the matching sAttributeValue by alias
+                        $foundValue = $values->where('alias', $filterValue)->first();
+                        if ($foundValue) {
+                            $newValues[] = $foundValue->alias;
+                            $newValuesIds[] = (int)$foundValue->avid;
                         } else {
-                            if ($attribute?->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
-                                $value = (int)filter_var($filterValue, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 999999999]]);
-                                $newValues[] = $value;
-                                $newValuesIds[] = $value;
-                            } else {
-                                return [];
-                            }
+                            continue;
                         }
                     }
+                }
 
-                    if ($attribute?->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
-                        $filters[$attribute?->alias] = [$newValues[0] ?? 0, $newValues[1] ?? 999999999];
-                        $filtersIds['priceRange'] = [$newValuesIds[0] ?? 0, $newValuesIds[1] ?? 999999999];
-                    } else {
-                        $filters[$attribute?->alias] = $newValues;
-                        $filtersIds[$attribute?->id] = $newValuesIds;
-                    }
+                if ($attribute->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
+                    // For price range, expect 2 values [min, max]
+                    $filters[$attribute->alias] = [
+                        $newValues[0] ?? 0,
+                        $newValues[1] ?? 999999999
+                    ];
+                    $filtersIds['priceRange'] = [
+                        $newValuesIds[0] ?? 0,
+                        $newValuesIds[1] ?? 999999999
+                    ];
                 } else {
-                    return [];
+                    $filters[$attribute->alias] = $newValues;
+                    $filtersIds[$attribute->id] = $newValuesIds;
                 }
             }
         }
 
-        return compact('filters', 'filtersIds');
+        return [
+            'filters' => $filters,
+            'filtersIds' => $filtersIds
+        ];
     }
 }
