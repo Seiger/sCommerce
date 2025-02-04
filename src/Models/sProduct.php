@@ -357,6 +357,11 @@ class sProduct extends Model
                     $attribute->value = $value?->alias ?? '';
                     $attribute->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
                     break;
+                case sAttribute::TYPE_ATTR_TEXT:
+                    $value = json_decode($attribute->pivot->value ?? '', true);
+                    $attribute->value = $value[evo()->getLocale()] ?? $value['base'];
+                    $attribute->label = $value[evo()->getLocale()] ?? $value['base'];
+                    break;
                 case sAttribute::TYPE_ATTR_COLOR:
                     $avid = intval($attribute->pivot->valueid ?? 0);
                     $value = $attribute->values()->whereAvid($avid)->first();
@@ -416,7 +421,7 @@ class sProduct extends Model
                 $base_url = UrlProcessor::makeUrl($category);
                 break;
             case "category" :
-                $category = (int)$this->getCategoryAttribute(trim($key) ? $key : null) ?: sCommerce::config('basic.catalog_root' . $key, evo()->getConfig('site_start', 1));
+                $category = (int)$this->getCategoryAttribute(trim($key ?? '') ? $key : null) ?: sCommerce::config('basic.catalog_root' . $key, evo()->getConfig('site_start', 1));
                 $base_url = UrlProcessor::makeUrl($category);
                 break;
             default :
@@ -469,7 +474,8 @@ class sProduct extends Model
      */
     public function priceTo($currency): string
     {
-        return sCommerce::convertPrice($this->price_regular, $this->currency, $currency);
+        $price = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_special : $this->price_regular ?? 0;
+        return sCommerce::convertPrice($price, $this->currency, $currency);
     }
 
     /**
@@ -481,7 +487,8 @@ class sProduct extends Model
      */
     public function priceToNumber($currency): float
     {
-        return sCommerce::convertPriceNumber($this->price_regular, $this->currency, $currency);
+        $price = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_special : $this->price_regular ?? 0;
+        return sCommerce::convertPriceNumber($price, $this->currency, $currency);
     }
 
     /**
@@ -518,5 +525,43 @@ class sProduct extends Model
     public function specialPriceToNumber($currency): float
     {
         return sCommerce::convertPriceNumber($this->price_special, $this->currency, $currency);
+    }
+
+    /**
+     * Gets the old price attribute of the sProduct.
+     * Formats the price based on configuration values.
+     *
+     * @return string The formatted price of the product.
+     *
+     * @throws ErrorException if configuration values are not set.
+     */
+    public function getOldPriceAttribute(): string
+    {
+        return $this->oldPriceTo(sCommerce::currentCurrency());
+    }
+
+    /**
+     * Convert the old price to the specified currency and format it as a string.
+     *
+     * @param string $currency The target currency.
+     * @return string The formatted price.
+     */
+    public function oldPriceTo($currency): string
+    {
+        $oldPrice = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_regular : $this->price_special ?? 0;
+        return sCommerce::convertPrice($oldPrice, $this->currency, $currency);
+    }
+
+    /**
+     * Convert the product old price to a number in a specified currency.
+     *
+     * @param string $currency The desired currency to convert to.
+     *
+     * @return float The converted price in the specified currency.
+     */
+    public function oldPriceToNumber($currency): float
+    {
+        $oldPrice = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_regular : $this->price_special ?? 0;
+        return sCommerce::convertPriceNumber($oldPrice, $this->currency, $currency);
     }
 }

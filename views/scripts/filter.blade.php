@@ -7,6 +7,13 @@
                     dataFilter = e.target.closest('[data-sFilter]').getAttribute('data-sFilter');
                     generateFilterUrl(e, dataFilter);
                     break;
+                case Boolean(e.target.closest('[data-sRange]')?.hasAttribute("data-sRange")):
+                    dataRange = e.target.closest('[data-sRange]').getAttribute('data-sRange');
+                    rangeBlocks = e.target.closest('[data-sRange]').querySelectorAll('input[type=\"number\"]');
+                    rangeValues = Array.from(rangeBlocks).map(input => parseInt(input.value));
+                    dataRange = dataRange + '=' + Math.min(...rangeValues) + ',' + Math.max(...rangeValues);
+                    generateFilterUrl(e, dataRange, 'range');
+                    break;
             }
         }
     });
@@ -31,27 +38,36 @@
                     let valueArray = values.split(',');
 
                     if (valueArray.includes(filterValue)) {
+                        // If the current value already exists, then delete it
                         valueArray = valueArray.filter(v => v !== filterValue);
-                    } else if (type !== 'radio' && filterKey !== 'price') {
+                    } else if (type === 'checkbox') {
+                        // If type 'checkbox' => add new value
                         valueArray.push(filterValue);
-                    } else {
+                    } else if (type === 'radio' || type === 'range') {
+                        // If type 'radio' or 'range' => replace completely
                         valueArray = [filterValue];
+                    } else {
+                        valueArray.push(filterValue);
                     }
 
+                    // Remove duplicates and convert back to key=val format
                     return valueArray.length > 0 ? `${key}=${[...new Set(valueArray)].join(',')}` : null;
                 }
                 return existingFilter;
             }).filter(Boolean);
 
+            // If no such key is found, add a new one
             if (searchFilter) {
                 existingFilters.push(dataFilter);
             }
 
+            // Form a new URL
             const newPath = existingFilters.length > 0
                 ? `${_path.replace(_filterMatch, '')}/${existingFilters.join(';')}/`
                 : `${_path.replace(_filterMatch, '')}/`;
             currentUrl.pathname = newPath.replace('//', '/');
         } else {
+            // If there were no filters before this
             currentUrl.pathname = `${_path}/${dataFilter}/`.replace('//', '/');
         }
 

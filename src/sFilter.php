@@ -8,31 +8,37 @@ use Illuminate\Support\Facades\Schema;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
-use Seiger\sCommerce\Models\sProduct;
 
+/**
+ * Class sFilter
+ *
+ * Handles filtering of products based on attributes, including price range filtering.
+ */
 class sFilter
 {
+    /**
+     * @var sCommerceController Instance of the sCommerceController.
+     */
     protected $controller;
 
     /**
-     * Stores validated filters for reuse.
-     *
-     * @var array
+     * @var array Stores validated filters for reuse.
      */
     protected $filters = [];
 
     /**
-     * Stores validated filters for reuse Ids only.
-     *
-     * @var array
+     * @var array Stores validated filter IDs for reuse.
      */
     protected $filtersIds = [];
 
+    /**
+     * sFilter constructor.
+     */
     public function __construct()
     {
         $this->controller = new sCommerceController();
     }
-    
+
     /**
      * Retrieves filters associated with a specific category.
      *
@@ -52,7 +58,7 @@ class sFilter
      */
     public function byCategory(int $category = null, string $lang = null, int $dept = 10): object
     {
-        $cacheKey = 'filters_' . md5($category . '_' . $lang . '_' . $dept);
+        $cacheKey = 'filters_' . sha1($category . '_' . $lang . '_' . $dept);
         return Cache::remember($cacheKey, 3600, function () use ($category, $lang, $dept) {
             $lang = $lang ?? evo()->getLocale();
             $productIds = $this->controller->productIds($category, $dept);
@@ -76,10 +82,12 @@ class sFilter
             $filters = sAttribute::with(['values'])
                 ->lang($lang)
                 ->where('asfilter', 1)
-                ->whereIn('id', function ($query) use ($productIds) {
-                    $query->select('attribute')
-                        ->from('s_product_attribute_values')
-                        ->whereIn('product', $productIds);
+                ->where(function($q) use ($productIds) {
+                    $q->whereIn('id', function ($sub) use ($productIds) {
+                        $sub->select('attribute')
+                            ->from('s_product_attribute_values')
+                            ->whereIn('product', $productIds);
+                    })->orWhere('type', sAttribute::TYPE_ATTR_PRICE_RANGE);
                 })
                 ->orderBy('position')
                 ->get()

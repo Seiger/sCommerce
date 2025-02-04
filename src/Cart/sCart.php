@@ -18,7 +18,7 @@ class sCart
         'sku',
         'inventory',
         'price',
-        'specialPrice'
+        'oldPrice'
     ];
 
     public function __construct()
@@ -137,8 +137,7 @@ class sCart
         foreach ($products as $product) {
             foreach ($this->cartData[$product->id] as $optionId => $quantity) {
                 $items[] = array_merge($this->getProductFields($product), compact('quantity'));
-                $price = $product->price_special > 0 ? $product->price_special : $product->price_regular;
-                $price = sCommerce::convertPriceNumber($price, $product->currency, sCommerce::currentCurrency());
+                $price = sCommerce::convertPriceNumber($product->price, $product->currency, sCommerce::currentCurrency());
                 $totalSum += $price * $quantity;
             }
         }
