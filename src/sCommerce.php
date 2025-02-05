@@ -297,6 +297,7 @@ class sCommerce
      */
     public function convertPriceNumber($price, $currencyFrom, $currencyTo): float
     {
+        $price = preg_replace('/[^\d\.]+/', '', $price);
         $rate = config('seiger.settings.sCommerceCurrencies.' . $currencyFrom . '_' . $currencyTo, 1);
         return floatval($price) * $rate;
     }

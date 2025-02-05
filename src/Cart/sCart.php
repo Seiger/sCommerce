@@ -59,7 +59,7 @@ class sCart
         }
 
         if (!isset($this->cartData[$productId][$optionId])) {
-            $this->cartData[$productId][$optionId] = 0;
+            $this->cartData[$productId][$optionId] = $quantity;
         }
 
         if (sCommerce::config('product.inventory_on', 0)) {
@@ -76,7 +76,7 @@ class sCart
             }
         }
 
-        $quantity = ($quantity == 1 ? 1 : $quantity);
+        $quantity = ($quantity == 1 ? $this->cartData[$productId][$optionId] : $quantity);
         $this->cartData[$productId][$optionId] = $quantity;
         $this->saveCartData();
 
