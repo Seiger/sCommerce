@@ -9,6 +9,11 @@
                     trigger = 'buy';
                     addToCart(e, productId, quantity, trigger);
                     break;
+                case Boolean(e.target.closest('[data-sFastBuy]')?.hasAttribute("data-sFastBuy")):
+                    productId = parseInt(e.target.closest('[data-sFastBuy]').getAttribute('data-sFastBuy'));
+                    inputs = e.target.closest('[data-sFastBuy]').parentNode.querySelectorAll('input');
+                    quickOrder(e, productId, inputs);
+                    break;
                 case Boolean(e.target.closest('[data-sRemove]')?.hasAttribute("data-sRemove")):
                     productId = parseInt(e.target.closest('[data-sRemove]').getAttribute('data-sRemove'));
                     removeFromCart(e, productId);
@@ -46,6 +51,35 @@
             return response.json();
         }).then((data) => {
             document.dispatchEvent(new CustomEvent('sCommerceAddedToCart', {detail: data}));
+            e.target.disabled = false;
+        }).catch(function(error) {
+            if (error === 'SyntaxError: Unexpected token < in JSON at position 0') {
+                console.error('Request failed SyntaxError: The response must contain a JSON string.');
+            } else {
+                console.error('Request failed', error, '.');
+            }
+            e.target.disabled = false;
+        });
+    }
+    function quickOrder(e, productId, inputs) {
+        e.preventDefault();
+        e.target.disabled = true;
+
+        let form = new FormData();
+        form.append('productId', productId);
+        inputs.forEach((input) => {
+            form.append(input.name, input.value);
+        });
+
+        fetch('{{route('sCommerce.quickOrder')}}', {
+            method: "post",
+            cache: "no-store",
+            headers: {"X-Requested-With": "XMLHttpRequest"},
+            body: form
+        }).then((response) => {
+            return response.json();
+        }).then((data) => {
+            document.dispatchEvent(new CustomEvent('sCommerceAddedQuickOrder', {detail: data}));
             e.target.disabled = false;
         }).catch(function(error) {
             if (error === 'SyntaxError: Unexpected token < in JSON at position 0') {

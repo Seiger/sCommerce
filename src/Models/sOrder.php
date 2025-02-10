@@ -49,8 +49,8 @@ class sOrder extends Model
     const PAYMENT_STATUS_CANCELED = 9; // Оплату скасовано
     const PAYMENT_STATUS_REJECTED = 10; // Оплату відхилено
     const PAYMENT_STATUS_AUTHORIZED = 11; // Авторизовано (очікує списання)
-    const PAYMENT_STATUS_EXPIRED = 12; // Термін дії платежу минув
-    const PAYMENT_STATUS_PENDING_VERIFICATION = 13; // Очікує верифікації
+    const PAYMENT_STATUS_PENDING_VERIFICATION = 12; // Очікує верифікації
+    const PAYMENT_STATUS_EXPIRED = 13; // Термін дії платежу минув
 
     /**
      * Cast attributes to specific types.

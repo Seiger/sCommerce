@@ -178,6 +178,7 @@ return new class extends Migration
             $table->decimal('cost', 9, 2)->default(0)->comment('Total order amount');
             $table->char('currency', 3)->default('USD')->comment('Currency cost this order');
             $table->unsignedInteger('status')->default(1)->comment('Order status (1: new)');
+            $table->boolean('is_quick')->default(false)->comment('Flag indicating if the order is a quick purchase');
             $table->boolean('do_not_call')->default(false)->comment('"Do not call back" option');
             $table->text('comment')->nullable()->comment('Comment on the order');
             $table->string('lang', 10)->index()->default('base');

@@ -66,6 +66,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Customer Reviews and Ratings.
 - [ ] Wishlist and Favorites.
 - [x] Checkout.
+- [x] One Click Checkout.
 - [ ] Promo Code System.
 - [x] Plugin events.
   - [x] sCommerceManagerAddTabEvent.

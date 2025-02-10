@@ -417,7 +417,7 @@ class sCheckout
 
             $order = $this->saveOrder();
 
-            evo()->logEvent(0, 1, "Замовлення #{$order->id} успішно створено.", 'sCommerce: Order Created');
+            evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", 'sCommerce: Order Created');
             Log::info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
             unset($_SESSION['sCheckout'], $_SESSION['sCart']);
@@ -438,6 +438,136 @@ class sCheckout
                 'error_code' => $e->getCode(),
             ];
         }
+    }
+
+    /**
+     * Process the quick order.
+     *
+     * This method validates the input data, creates a new order for a quick purchase,
+     * and saves it in the database. If product is 0, it will fetch products from the cart.
+     *
+     * @param array $data The data from the request, including product_id, quantity, user_phone, and/or user_email.
+     * @return array An array containing the result of the operation with success status and a message.
+     */
+    public static function quickOrder(array $data)
+    {
+        $validator = Validator::make($data, [
+            'product' => 'nullable|integer|exists:products,id,' . ((int)$data['productId'] == 0 ? '0' : null),
+            'quantity' => 'nullable|integer|min:1',
+            'phone' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+        ]);
+
+        if (empty($data['phone']) && empty($data['email'])) {
+            return [
+                'success' => false,
+                'message' => 'Either phone number or email is required.',
+            ];
+        }
+
+        if ($validator->fails()) {
+            return [
+                'success' => false,
+                'message' => 'Invalid data provided.',
+                'errors' => $validator->errors(),
+            ];
+        }
+
+        $userId = evo()->getLoginUserID('web') ?: evo()->getLoginUserID('mgr'); // Checking if the user is authorized
+        $user = evo()->getUserInfo($userId ?: 0) ?: [];
+        $user = array_merge($user, evo()->getUserSettings());
+
+        $userData = [
+            'id' => $user['id'] ?? 0,
+            'name' => $user['fullname'] ?? '',
+            'email' => $user['email'] ?? ($data['email'] ?? ''),
+            'phone' => $user['phone'] ?? ($data['phone'] ?? ''),
+            'address' => [
+                'country' => $user['country'] ?? '',
+                'state' => $user['state'] ?? '',
+                'city' => $user['city'] ?? '',
+                'street' => $user['street'] ?? '',
+                'zip' => $user['zip'] ?? '',
+            ],
+        ];
+
+        if (empty($data['productId']) || $data['productId'] == 0) {
+            $cartData = sCart::getMiniCart();
+            if (empty($cartData['items'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Cart is empty. Cannot create a quick order.',
+                ];
+            }
+
+            $productsData = $cartData['items'];
+            $cost = $cartData['totalSum'];
+        } else {
+            $product = sCommerce::getProduct($data['productId']);
+            if (!$product) {
+                return [
+                    'success' => false,
+                    'message' => 'Product not found.',
+                ];
+            }
+
+            $quantity = isset($data['quantity']) && $data['quantity'] > 0 ? (int) $data['quantity'] : 1;
+            $price = sCommerce::convertPriceNumber($product->price, $product->currency, sCommerce::currentCurrency());
+            $cost = $price * $quantity;
+
+            $productsData = [
+                [
+                    'id' => $product->id,
+                    'title' => $product->title,
+                    'link' => $product->link,
+                    'coverSrc' => $product->coverSrc,
+                    'category' => $product->category,
+                    'sku' => $product->sku,
+                    'inventory' => $product->inventory,
+                    'price' => $product->price,
+                    'oldPrice' => $product->oldPrice,
+                    'quantity' => $quantity,
+                ]
+            ];
+        }
+
+        do {
+            $identifier = Str::random(rand(32, 64));
+        } while (sOrder::where('identifier', $identifier)->exists());
+
+        $adminNotes = [
+            [
+                'comment' => "Quick order created by user " . implode(' ', [trim($userData['name']), trim($userData['phone']), trim($userData['email'])]) . '.',
+                'timestamp' => now(),
+                'user_id' => (int)$userData['id'],
+            ]
+        ];
+
+        $order = new sOrder();
+        $order->user_id = (int)$userData['id'];
+        $order->identifier = $identifier;
+        $order->user_info = json_encode($userData, JSON_UNESCAPED_UNICODE);
+        $order->products = json_encode($productsData, JSON_UNESCAPED_UNICODE);
+        $order->cost = $cost;
+        $order->currency = sCommerce::currentCurrency();
+        $order->is_quick = true;
+        $order->admin_notes = json_encode([
+            'purchase_link' => back()->getTargetUrl(),
+        ], JSON_UNESCAPED_UNICODE);
+        $order->save();
+
+        if ($data['productId'] == 0) {
+            unset($_SESSION['sCheckout'], $_SESSION['sCart']);
+        }
+
+        evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", 'sCommerce: Order By Click Created');
+        Log::info("Order By Click #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
+
+        return [
+            'success' => true,
+            'message' => __('sCommerce::order.success'),
+            'order' => $order,
+        ];
     }
 
     /**

@@ -22,4 +22,8 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         sCheckout::processOrder(),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
     ))->name('processOrder');
+    Route::post('quick-order', fn() => tap(
+        sCheckout::quickOrder(request()->all()),
+        fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
+    ))->name('quickOrder');
 });
