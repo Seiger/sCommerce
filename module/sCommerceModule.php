@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
@@ -18,6 +19,7 @@ use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sDeliveryMethod;
+use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
@@ -36,8 +38,12 @@ Paginator::defaultView('sCommerce::partials.pagination');
 $get = request()->get ?? (sCommerce::config('basic.orders_on', 1) == 1 ? "orders" : "products");
 $iUrl = (int)request()->input('i', 0) > 0 ? '&i=' . (int)request()->input('i', 0) : '';
 $editor = [];
+$tabs = [];
 
-$tabs = ['products', 'reviews', 'attributes'];
+if (sCommerce::config('basic.orders_on', 1) == 1) {
+    $tabs[] = 'orders';
+}
+$tabs = array_merge($tabs, ['products', 'reviews', 'attributes']);
 if (count(sCommerce::config('basic.available_currencies', [])) > 1 && trim(sCommerce::config('basic.main_currency', ''))) {
     $tabs[] = 'currencies';
 }
@@ -66,6 +72,86 @@ switch ($get) {
             }
         }
     case "orders":
+        $perpage = Cookie::get('scom_orders_page_items', 50);
+        $dbStatuses = array_flip(sOrder::select('status')->distinct()->pluck('status')->toArray());
+        $status = request()->input('status', 0);
+        $status = isset($dbStatuses[$status]) ? $status : 0;
+        $order = request()->input('order', 'id');
+        $direc = request()->input('direc', 'desc');
+
+        $query = sOrder::query()->select('*');
+        $query->selectRaw('JSON_UNQUOTE(JSON_EXTRACT(user_info, "$.name")) as client');
+        $query->orderBy($order, $direc);
+
+        $unprocessedes = [
+            sOrder::ORDER_STATUS_NEW,
+            sOrder::ORDER_STATUS_FAILED,
+        ];
+        $workings = [
+            sOrder::ORDER_STATUS_PROCESSING,
+            sOrder::ORDER_STATUS_CONFIRMED,
+            sOrder::ORDER_STATUS_PACKING,
+            sOrder::ORDER_STATUS_READY_FOR_SHIPMENT,
+            sOrder::ORDER_STATUS_SHIPPED,
+            sOrder::ORDER_STATUS_DELIVERED,
+            sOrder::ORDER_STATUS_ON_HOLD,
+            sOrder::ORDER_STATUS_RETURN_REQUESTED,
+        ];
+        $completeds = [
+            sOrder::ORDER_STATUS_DELETED,
+            sOrder::ORDER_STATUS_COMPLETED,
+            sOrder::ORDER_STATUS_CANCELED,
+            sOrder::ORDER_STATUS_RETURNED,
+        ];
+
+        $data['items'] = $query->paginate($perpage);
+        $data['unprocessedes'] = $unprocessedes;
+        $data['workings'] = $workings;
+        $data['completeds'] = $completeds;
+        $data['status'] = $status;
+        $data['statuses'] = array_intersect_key(sOrder::listOrderStatuses(), $dbStatuses);
+        $data['total'] = sOrder::count();
+        $data['unprocessed'] = sOrder::whereIn('status', $unprocessedes)->count();
+        $data['working'] = sOrder::whereIn('status', $workings)->count();
+        $data['completed'] = sOrder::whereIn('status', $completeds)->count();
+        $_SESSION['itemaction'] = 'Viewing a list of orders';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        break;
+    case "order":
+        $tabs = ['order'];
+        $iUrl = trim($iUrl) ?: '&i=0';
+        $requestId = (int)request()->input('i', 0);
+        $item = sOrder::find($requestId);
+
+        $unprocessedes = [
+            sOrder::ORDER_STATUS_NEW,
+            sOrder::ORDER_STATUS_FAILED,
+        ];
+        $workings = [
+            sOrder::ORDER_STATUS_PROCESSING,
+            sOrder::ORDER_STATUS_CONFIRMED,
+            sOrder::ORDER_STATUS_PACKING,
+            sOrder::ORDER_STATUS_READY_FOR_SHIPMENT,
+            sOrder::ORDER_STATUS_SHIPPED,
+            sOrder::ORDER_STATUS_DELIVERED,
+            sOrder::ORDER_STATUS_ON_HOLD,
+            sOrder::ORDER_STATUS_RETURN_REQUESTED,
+        ];
+        $completeds = [
+            sOrder::ORDER_STATUS_DELETED,
+            sOrder::ORDER_STATUS_COMPLETED,
+            sOrder::ORDER_STATUS_CANCELED,
+            sOrder::ORDER_STATUS_RETURNED,
+        ];
+
+        $data['item'] = $item;
+        $data['unprocessedes'] = $unprocessedes;
+        $data['workings'] = $workings;
+        $data['completeds'] = $completeds;
+        $data['payment'] = isset($item->payment_info['method']) && trim($item->payment_info['method']) ? sCheckout::getPayment($item->payment_info['method']) : false;
+        $data['delivery'] = isset($item->delivery_info['method']) && trim($item->delivery_info['method']) ? sCheckout::getDelivery($item->delivery_info['method']) : false;
+        $_SESSION['itemaction'] = 'Editing a Order of #' . $item->id;
+        $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
     /*
     |--------------------------------------------------------------------------

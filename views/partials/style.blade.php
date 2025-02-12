@@ -17,6 +17,11 @@
     .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok-info{color:#fff;background-color:#5bc0de;border-color:#5bc0de;}
     .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok-blue{color:#fff;background-color:#0275d8;border-color:#0275d8;}
     .badge.bg-seigerit{background-color:#0057b8 !important;color:#ffd700;font-size:85%;}
+    .badge.bg-active{background-color:var(--brand-green, #009891) !important;color:#fff;font-size:90%;}
+    .badge.bg-disactive{background-color:var(--brand-pink, #EF4B67) !important;color:#fff;font-size:90%;}
+    .badge.bg-progress{background-color:var(--brand-orange, #fd7e14) !important;color:#fff;font-size:90%;}
+    .badge.bg-pending{background-color:var(--brand-red, #d9534f) !important;color:#fff;font-size:90%;}
+    .badge.bg-paid{background-color:var(--brand-green, #28a745) !important;color:#fff;font-size:90%;}
     .badge.bg-super{vertical-align:super;font-size:60% !important;}
     .builder .row{display:flex;flex-wrap:wrap;margin-left:-.25rem;margin-right:-.25rem;cursor:default}
     .builder .col-4, .builder .col-8, .builder .col-12, .builder .col, .builder .col-auto{position:relative;width:100%;min-height:0;padding-left:.25rem;padding-right:.25rem}
@@ -54,6 +59,7 @@
     .scom-all{color:var(--text-text-base, #0D0D0D);font-size:16px;font-weight:700;line-height:120%;}
     .scom-active{color:var(--brand-green, #009891);}
     .scom-disactive{color:var(--brand-pink, #EF4B67);}
+    .scom-progress{color:var(--brand-orange, #fd7e14);}
     .form-control.scom-input{height:42px;font-weight:400;line-height:120%;padding:16px 12px;}
     .scom-btn-container{display:flex;flex-flow:row wrap;justify-content:space-between;gap:5px;}
     .scom-btn-container .btn:last-child {margin-right: auto;}

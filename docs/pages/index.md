@@ -32,8 +32,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
 
 ## Features
 
-- [ ] Order Management.
-- [ ] Order Status Management.
+- [x] Order Management.
+- [x] Order Status Management.
 - [x] Products Catalog.
 - [x] Product position in each Category.
 - [x] Products Types.

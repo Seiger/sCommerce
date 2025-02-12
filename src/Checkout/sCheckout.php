@@ -480,8 +480,8 @@ class sCheckout
         $userData = [
             'id' => $user['id'] ?? 0,
             'name' => $user['fullname'] ?? '',
-            'email' => $user['email'] ?? ($data['email'] ?? ''),
-            'phone' => $user['phone'] ?? ($data['phone'] ?? ''),
+            'email' => $data['email'] ?? ($user['email'] ?? ''),
+            'phone' => $data['phone'] ?? ($user['phone'] ?? ''),
             'address' => [
                 'country' => $user['country'] ?? '',
                 'state' => $user['state'] ?? '',
@@ -538,22 +538,30 @@ class sCheckout
         $adminNotes = [
             [
                 'comment' => "Quick order created by user " . implode(' ', [trim($userData['name']), trim($userData['phone']), trim($userData['email'])]) . '.',
-                'timestamp' => now(),
+                'timestamp' => now()->toDateTimeString(),
                 'user_id' => (int)$userData['id'],
+            ]
+        ];
+
+        $history = [
+            [
+                'status' => sOrder::ORDER_STATUS_NEW,
+                'timestamp' => now()->toDateTimeString(),
+                'user_id' => 0,
             ]
         ];
 
         $order = new sOrder();
         $order->user_id = (int)$userData['id'];
         $order->identifier = $identifier;
-        $order->user_info = json_encode($userData, JSON_UNESCAPED_UNICODE);
-        $order->products = json_encode($productsData, JSON_UNESCAPED_UNICODE);
+        $order->user_info = $userData;
+        $order->products = $productsData;
         $order->cost = $cost;
         $order->currency = sCommerce::currentCurrency();
+        $order->lang = evo()->getLocale();
         $order->is_quick = true;
-        $order->admin_notes = json_encode([
-            'purchase_link' => back()->getTargetUrl(),
-        ], JSON_UNESCAPED_UNICODE);
+        $order->admin_notes = $adminNotes;
+        $order->history = $history;
         $order->save();
 
         if ($data['productId'] == 0) {
@@ -670,19 +678,28 @@ class sCheckout
             $identifier = Str::random(rand(32, 64));
         } while (sOrder::where('identifier', $identifier)->exists());
 
+        $history = [
+            [
+                'status' => sOrder::ORDER_STATUS_NEW,
+                'timestamp' => now()->toDateTimeString(),
+                'user_id' => 0,
+            ]
+        ];
+
         $order = new sOrder();
         $order->user_id = $this->orderData['user']['id'] ?? 0;
-        $order->user_info = json_encode(($this->orderData['user'] ?? []), JSON_UNESCAPED_UNICODE);
-        $order->delivery_info = json_encode(($this->orderData['delivery'] ?? []), JSON_UNESCAPED_UNICODE);
-        $order->payment_info = json_encode(($this->orderData['payment'] ?? []), JSON_UNESCAPED_UNICODE);
-        $order->products = json_encode(($this->orderData['products'] ?? []), JSON_UNESCAPED_UNICODE);
-        $order->cost = $this->orderData['cost'];
+        $order->user_info = $this->orderData['user'] ?? [];
+        $order->delivery_info = $this->orderData['delivery'] ?? [];
+        $order->payment_info = $this->orderData['payment'] ?? [];
+        $order->products = $this->orderData['products'] ?? [];
+        $order->cost = $this->orderData['cost'] ?? 0;
         $order->currency = $this->orderData['currency'] ?? sCommerce::currentCurrency();
         $order->status = sOrder::ORDER_STATUS_NEW;
         $order->do_not_call = intval($this->orderData['do_not_call'] ?? 0);
         $order->comment = $this->orderData['comment'] ?? '';
         $order->lang = evo()->getLocale();
         $order->identifier = $identifier;
+        $order->history = $history;
         $order->save();
 
         return $order;

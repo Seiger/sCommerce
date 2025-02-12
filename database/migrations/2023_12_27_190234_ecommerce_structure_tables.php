@@ -177,12 +177,14 @@ return new class extends Migration
             $table->jsonb('products')->default(new Expression('(JSON_ARRAY())'))->comment('Product list (JSON)');
             $table->decimal('cost', 9, 2)->default(0)->comment('Total order amount');
             $table->char('currency', 3)->default('USD')->comment('Currency cost this order');
+            $table->unsignedInteger('payment_status')->default(0)->comment('Payment status (0: pending, 1: completed, 2: failed, etc.)');
             $table->unsignedInteger('status')->default(1)->comment('Order status (1: new)');
             $table->boolean('is_quick')->default(false)->comment('Flag indicating if the order is a quick purchase');
             $table->boolean('do_not_call')->default(false)->comment('"Do not call back" option');
             $table->text('comment')->nullable()->comment('Comment on the order');
             $table->string('lang', 10)->index()->default('base');
             $table->jsonb('admin_notes')->default(new Expression('(JSON_ARRAY())'))->comment('Hidden comments (available only in admin panel)');
+            $table->jsonb('history')->default(new Expression('(JSON_ARRAY())'))->comment('History of changes');
             $table->string('identifier')->unique()->comment('Unique order key (required by some payment systems)');
             $table->timestamps();
         });

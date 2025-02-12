@@ -63,6 +63,7 @@ class sOrder extends Model
         'payment_info' => 'array',
         'products' => 'array',
         'admin_notes' => 'array',
+        'history' => 'array',
         'do_not_call' => 'boolean',
     ];
 
