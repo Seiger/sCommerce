@@ -75,6 +75,10 @@ class sCommerce
             ->whereIn('id', $productIds)
             ->active();
 
+        if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
+            $query->search();
+        }
+
         if (!empty($this->sort)) {
             foreach ($this->sort as $sortParam) {
                 ['sort' => $sort, 'order' => $order, 'table' => $table] = $sortParam;
@@ -181,7 +185,7 @@ class sCommerce
      * @param int $dept The depth of sub-categories to include in the query. Default value is 10.
      * @return object The products belonging to the specified category, filtered by language and category ID.
      */
-    public function getCategoryProducts(int $perPage = 1000, int $category = null, string $lang = null, int $dept = 10): object
+    public function getCategoryProducts(int $perPage = 1000, ?int $category = null, ?string $lang = null, int $dept = 10): object
     {
         $category = $this->getCategoryId($category);
         $productIds = $this->controller->productIds($category, $dept);

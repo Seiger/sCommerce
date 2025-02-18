@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
+use Seiger\sCommerce\Models\sProduct;
 
 /**
  * Class sFilter
@@ -42,6 +43,24 @@ class sFilter
     protected $currentDept;
 
     /**
+     * Indicates whether validateFilters() was already performed for this request.
+     *
+     * @var bool
+     */
+    protected static bool $isValidated = false;
+
+    /**
+     * Stores the validated filters across multiple sFilter instances for the duration of one request.
+     *
+     * @var array
+     */
+    protected static array $cachedResult = [
+        'filters' => [],
+        'filtersIds' => [],
+        'category' => 0,
+    ];
+
+    /**
      * sFilter constructor.
      */
     public function __construct()
@@ -63,79 +82,82 @@ class sFilter
      */
     public function byCategory(int $category = null, string $lang = null, int $dept = 10): object
     {
-        // Cache key remains the same
-        $cacheKey = 'filters_' . sha1($category . '_' . $lang . '_' . $dept);
+        if (empty($category)) {
+            $category = static::$isValidated ? (int)static::$cachedResult['category'] : evo()->documentIdentifier;
 
-        return Cache::remember($cacheKey, 3600, function () use ($category, $lang, $dept) {
-            $lang = $lang ?? evo()->getLocale();
-            $this->currentCategory = $category;
-            $this->currentDept = $dept;
-            $productIds = $this->controller->productIds($category, $dept);
-
-            // If no products found, return empty collection (hides PRICE_RANGE as well)
-            if (empty($productIds)) {
-                return collect();
+            if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
+                $category = sCommerce::config('basic.catalog_root', $category);
             }
+        }
 
-            // Retrieve (attribute, value, valueid, count) info from DB
-            $values = DB::table('s_product_attribute_values as pav')
-                ->select(
-                    'pav.attribute',
-                    'pav.value',
-                    'pav.valueid',
-                    DB::raw('COUNT(DISTINCT ' . DB::getTablePrefix() . 'pac.product) as count')
-                )
-                ->leftJoin('s_product_attribute_values as pac', function ($join) use ($productIds) {
-                    $join->on('pac.value', '=', 'pav.value')
-                        ->on('pac.attribute', '=', 'pav.attribute')
-                        ->whereIn('pac.product', $productIds);
-                })
-                ->join('s_attributes as sa', function ($join) {
-                    $join->on('pav.attribute', '=', 'sa.id')
-                        ->where('sa.asfilter', '=', 1);
-                })
-                ->whereIn('pav.product', $productIds)
-                ->groupBy('pav.attribute', 'pav.value', 'pav.valueid')
-                ->get();
+        $lang = $lang ?? evo()->getLocale();
+        $this->currentDept = $dept;
+        $productIds = $this->controller->productIds($category, $dept);
 
-            // Retrieve attributes that are marked as filters (asfilter=1)
-            // and include PRICE_RANGE even if it doesn't appear in the products
-            $filters = sAttribute::with(['values'])
-                ->lang($lang)
-                ->where('asfilter', 1)
-                ->where(function ($q) use ($productIds) {
-                    $q->whereIn('id', function ($sub) use ($productIds) {
-                        $sub->select('attribute')
-                            ->from('s_product_attribute_values')
-                            ->whereIn('product', $productIds);
-                    })->orWhere('type', sAttribute::TYPE_ATTR_PRICE_RANGE);
-                })
-                ->orderBy('position')
-                ->get()
-                ->map(function ($item) use ($values, $productIds) {
-                    // Ensure $item->values is a collection
-                    if (!$item->values) {
-                        $item->values = collect();
-                    }
+        // If no products found, return empty collection (hides PRICE_RANGE as well)
+        if (empty($productIds)) {
+            return collect();
+        }
 
-                    switch ($item->type) {
-                        case sAttribute::TYPE_ATTR_CHECKBOX:
-                            $item = $this->buildCheckboxFilter($item, $values);
-                            break;
-                        case sAttribute::TYPE_ATTR_SELECT:
-                        case sAttribute::TYPE_ATTR_COLOR:
-                            $item = $this->buildSelectFilter($item, $values);
-                            break;
-                        case sAttribute::TYPE_ATTR_PRICE_RANGE:
-                            $item = $this->buildPriceRangeFilter($item);
-                            break;
-                    }
+        $categoryParentsIds = $this->controller->categoryParentsIds($category);
 
-                    return $item;
-                });
+        // Retrieve (attribute, value, valueid, count) info from DB
+        $values = DB::table('s_product_attribute_values as pav')
+            ->select(
+                'pav.attribute',
+                'pav.value',
+                'pav.valueid',
+                DB::raw('COUNT(DISTINCT ' . DB::getTablePrefix() . 'pac.product) as count')
+            )->leftJoin('s_product_attribute_values as pac', function ($join) use ($productIds) {
+                $join->on('pac.value', '=', 'pav.value')
+                    ->on('pac.attribute', '=', 'pav.attribute')
+                    ->whereIn('pac.product', $productIds);
+            })->join('s_attributes as sa', function ($join) {
+                $join->on('pav.attribute', '=', 'sa.id')
+                    ->where('sa.asfilter', '=', 1);
+            })->whereIn('pav.product', $productIds)
+            ->groupBy('pav.attribute', 'pav.value', 'pav.valueid')
+            ->get();
 
-            return $filters;
-        });
+        // Retrieve attributes that are marked as filters (asfilter=1)
+        // and attributes that belong to these categories
+        // and include PRICE_RANGE even if it doesn't appear in the products
+        $filters = sAttribute::with(['values'])
+            ->lang($lang)
+            ->whereHas('categories', function ($q) use ($categoryParentsIds) {
+                $q->whereIn('category', $categoryParentsIds);
+            })->where('asfilter', 1)
+            ->where(function ($q) use ($productIds) {
+                $q->whereIn('id', function ($sub) use ($productIds) {
+                    $sub->select('attribute')
+                        ->from('s_product_attribute_values')
+                        ->whereIn('product', $productIds);
+                })->orWhere('type', sAttribute::TYPE_ATTR_PRICE_RANGE);
+            })->orderBy('position')
+            ->get()
+            ->map(function ($item) use ($values, $productIds, $category) {
+                // Ensure $item->values is a collection
+                if (!$item->values) {
+                    $item->values = collect();
+                }
+
+                switch ($item->type) {
+                    case sAttribute::TYPE_ATTR_CHECKBOX:
+                        $item = $this->buildCheckboxFilter($item, $values);
+                        break;
+                    case sAttribute::TYPE_ATTR_SELECT:
+                    case sAttribute::TYPE_ATTR_COLOR:
+                        $item = $this->buildSelectFilter($item, $values);
+                        break;
+                    case sAttribute::TYPE_ATTR_PRICE_RANGE:
+                        $item = $this->buildPriceRangeFilter($item, $category);
+                        break;
+                }
+
+                return $item;
+            });
+
+        return $filters;
     }
 
     /**
@@ -146,8 +168,15 @@ class sFilter
      */
     public function validateFilters(): int
     {
+        if (static::$isValidated) {
+            $this->filters = static::$cachedResult['filters'];
+            $this->filtersIds = static::$cachedResult['filtersIds'];
+            return (int)static::$cachedResult['category'];
+        }
+
         $path = $this->processPath();
 
+        $categoryId = 0;
         if ($path && $path['path'] && $path['category']) {
             $requestedFilters = $this->extractFilters($path);
 
@@ -165,6 +194,10 @@ class sFilter
 
                     // Compare current path vs. expected path
                     if ($path['currentPath'] !== $path['path'] . '/' . $sFilters) {
+                        static::$isValidated = true;
+                        static::$cachedResult['filters'] = [];
+                        static::$cachedResult['filtersIds'] = [];
+                        static::$cachedResult['category'] = 0;
                         return 0;
                     }
 
@@ -174,11 +207,20 @@ class sFilter
 
                     evo()->setPlaceholder('sFilters', $sFilters);
                     evo()->setPlaceholder('sFiltersArray', $filters);
+
+                    $categoryId = (int)$path['category'];
                 }
+            }  else {
+                $categoryId = (int)$path['category'];
             }
         }
 
-        return (int)$path['category'];
+        static::$isValidated = true;
+        static::$cachedResult['filters'] = $this->filters;
+        static::$cachedResult['filtersIds'] = $this->filtersIds;
+        static::$cachedResult['category'] = $categoryId;
+
+        return $categoryId;
     }
 
     /**
@@ -229,7 +271,8 @@ class sFilter
         if (empty($filters)) {
             // By default, just return the full list from the original category/dept logic
             // (You might store $this->productIds somewhere or recalc them)
-            return $this->controller->productIds($this->currentCategory, $this->currentDept);
+            $category = static::$isValidated ? (int)static::$cachedResult['category'] : evo()->documentIdentifier;
+            return $this->controller->productIds($category, $this->currentDept);
         }
 
         // Otherwise, build a query that selects products that satisfy all filters
@@ -342,13 +385,16 @@ class sFilter
      * @param sAttribute $item       The attribute model (price_range).
      * @return sAttribute
      */
-    protected function buildPriceRangeFilter(sAttribute $item): sAttribute
+    protected function buildPriceRangeFilter(sAttribute $item, $category): sAttribute
     {
         // Get product IDs ignoring the price filter itself
-        $category = $this->currentCategory ? $this->currentCategory : evo()->documentIdentifier;
         $dept = $this->currentDept ? $this->currentDept : 10;
         $categories = array_merge([$category], $this->controller->listAllActiveSubCategories($category, $dept));
         $nonPriceProductIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->pluck('product')->toArray();
+
+        if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
+            $nonPriceProductIds = array_intersect($nonPriceProductIds, sProduct::search()->pluck('id')->toArray());
+        }
 
         // If empty, means no products left after other filters
         if (empty($nonPriceProductIds)) {
@@ -479,7 +525,13 @@ class sFilter
 
         if (count($requestedFilters)) {
             // Get the parent categories for the current category
-            $categoryParentsIds = $this->controller->categoryParentsIds((int)$path['category']);
+            $category = static::$isValidated ? (int)static::$cachedResult['category'] : (int)$path['category'];
+
+            if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
+                $category = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
+            }
+
+            $categoryParentsIds = $this->controller->categoryParentsIds($category);
 
             // Retrieve attributes that belong to these categories and are marked as filters
             $attributes = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {

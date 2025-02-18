@@ -17,6 +17,15 @@ use Seiger\sCommerce\Models\sProduct;
 
 class sCommerceController
 {
+    /**
+     * Used as a static cache for product IDs.
+     * Key format example: 'category_dept_correctingIds_filter'
+     * to incorporate all relevant conditions.
+     *
+     * @var array
+     */
+    protected static array $staticProductIdsCache = [];
+
     protected $data = [];
     protected $categories = [];
     protected $productIds = [];
@@ -341,38 +350,47 @@ class sCommerceController
      *
      * @return array An array of product IDs related to the specified category and its subcategories.
      */
-    public function productIds(int $category = null, int $dept = 10)
+    public function productIds(int $category = null, int $dept = 10): array
     {
         $category = $category ? $category : evo()->documentIdentifier;
+        $filters = sFilter::getValidatedFiltersIds() ?? [];
+        $filtersKey = md5(json_encode($filters));
+        $cacheKey = implode('_', [$category, $dept, $filtersKey]);
 
-        if (!isset($this->productIds[$category]) || !is_array($this->productIds[$category])) {
-            $categories = array_merge([$category], $this->listAllActiveSubCategories($category, $dept));
-            $filters = sFilter::getValidatedFiltersIds();
-
-            $query = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories);
-
-            if (is_array($filters) && count($filters)) {
-                foreach ($filters as $filter => $values) {
-                    $query->whereIn('product', function ($q) use ($filter, $values) {
-                        if ($filter == 'priceRange') {
-                            $q->select(['id'])
-                                ->from('s_products')
-                                ->whereBetween('price_regular', $values)
-                                ->orWhereBetween('price_special', $values);
-                        } else {
-                            $q->select(['product'])
-                                ->from('s_product_attribute_values')
-                                ->where('attribute', $filter)
-                                ->whereIn('value', $values);
-                        }
-                    });
-                }
-            }
-
-            $this->productIds[$category] = $query->get()->pluck('product')->toArray();
+        if (isset(self::$staticProductIdsCache[$cacheKey])) {
+            return self::$staticProductIdsCache[$cacheKey];
         }
 
-        return $this->productIds[$category];
+        $categories = array_merge([$category], $this->listAllActiveSubCategories($category, $dept));
+
+        $query = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories);
+
+        if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
+            $correctingProductIds = sProduct::search()->pluck('id')->toArray();
+            $query->whereIn('product', $correctingProductIds);
+        }
+
+        if (is_array($filters) && count($filters)) {
+            foreach ($filters as $filter => $values) {
+                $query->whereIn('product', function ($q) use ($filter, $values) {
+                    if ($filter == 'priceRange') {
+                        $q->select(['id'])
+                            ->from('s_products')
+                            ->whereBetween('price_regular', $values)
+                            ->orWhereBetween('price_special', $values);
+                    } else {
+                        $q->select(['product'])
+                            ->from('s_product_attribute_values')
+                            ->where('attribute', $filter)
+                            ->whereIn('value', $values);
+                    }
+                });
+            }
+        }
+
+        $foundIds = $query->get()->pluck('product')->toArray();
+        self::$staticProductIdsCache[$cacheKey] = $foundIds;
+        return $foundIds;
     }
 
     /**
