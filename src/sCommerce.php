@@ -318,7 +318,7 @@ class sCommerce
         if (!$productsListing) {
             $sCommerceController = new sCommerceController();
             $sCommerceController->setProductsListing();
-            $productsListing = Cache::get('productsListing');
+            $productsListing = Cache::get('productsListing' . evo()->getConfig('site_key', ''));
         }
 
         return $productsListing ?? [];

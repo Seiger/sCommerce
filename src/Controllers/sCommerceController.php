@@ -39,7 +39,7 @@ class sCommerceController
     {
         $productsListing = [];
         $categories = [];
-        $products = sProduct::select('id', 'alias')->active()->get();
+        $products = sProduct::active()->get();
         if ($products) {
             $scopes = DB::table('s_product_category')->where('scope', 'LIKE', 'primary%')->get();
             foreach ($scopes as $scope) {
@@ -54,7 +54,7 @@ class sCommerceController
                 }
             }
         }
-        evo()->clearCache('full');
+        //evo()->clearCache('full');
         foreach ($productsListing as $key => $array) {
             Cache::forever('productsListing' . $key, $array);
         }
