@@ -163,6 +163,7 @@ return new class extends Migration
             $table->unsignedInteger('position')->default(0)->comment('Sorting order');
             $table->jsonb('title')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Title of the payment method');
             $table->jsonb('description')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Description of the payment method');
+            $table->jsonb('сredentials')->default(new Expression('(JSON_ARRAY())'))->comment('Stores credentials for the payment method (e.g., API keys, merchant ID, secret keys)');
             $table->jsonb('settings')->default(new Expression('(JSON_ARRAY())'))->comment('Additional settings for the payment method (e.g. API integrations)');
             $table->string('icon')->nullable()->comment('Icon for the payment method');
             $table->timestamps();

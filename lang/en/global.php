@@ -64,6 +64,7 @@
     "content" => "Content",
     "courier" => "Courier",
     "created" => "Created",
+    "credentials" => "Credentials",
     "currencies" => "Currencies",
     "currencies_help" => "List of available store currencies and their relationship to each other",
     "currencies_icon" => "fa fa-coins",

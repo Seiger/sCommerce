@@ -36,6 +36,26 @@
         </div>
     </div>
     <div class="split my-3"></div>
+    @foreach($item->instance->defineCredentials() as $group)
+        <h4><b>{{$group['label'] ?? ''}}</b></h4>
+        @if(count($group['fields'] ?? []))
+            @foreach($group['fields'] as $key => $field)
+                <div class="row-col col-12">
+                    <div class="row form-row">
+                        @php($field['key'] = $key)
+                        @include('sCommerce::partials.' . ($field['type'] ?? '') . 'Field', ['field' => $field])
+                    </div>
+                    @if(($field['type'] ?? '') == 'dynamic')
+                        <div class="row form-row">
+                            <span class="btn btn-success" onclick="add{{$field['key']}}()">{{trim($field['button_label'] ?? '') ?:  __('global.add')}}</span>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        @endif
+        <div class="split my-3"></div>
+    @endforeach
+    <h4><b>@lang('global.description')</b></h4>
     <div class="row-col col-12">
         <div class="row form-row">
             <div class="col-auto col-title">
@@ -67,7 +87,7 @@
         </div>
     </div>
     <div class="split my-3"></div>
-    @foreach($item->instance->defineFields() as $group)
+    @foreach($item->instance->defineSettings() as $group)
         <h4><b>{{$group['label'] ?? ''}}</b></h4>
         @if(count($group['fields'] ?? []))
             @foreach($group['fields'] as $key => $field)

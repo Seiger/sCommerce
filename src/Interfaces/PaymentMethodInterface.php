@@ -11,16 +11,6 @@
 interface PaymentMethodInterface
 {
     /**
-     * Get the unique name of the payment method.
-     *
-     * This name is used as an identifier for the payment method
-     * in the system.
-     *
-     * @return string The unique name of the payment method.
-     */
-    public function getName(): string;
-
-    /**
      * Get a unique identifier for the payment instance.
      *
      * This is particularly useful when multiple instances of the same
@@ -29,6 +19,16 @@ interface PaymentMethodInterface
      * @return string The unique identifier.
      */
     public function getIdentifier(): string;
+
+    /**
+     * Get the unique name of the payment method.
+     *
+     * This name is used as an identifier for the payment method
+     * in the system.
+     *
+     * @return string The unique name of the payment method.
+     */
+    public function getName(): string;
 
     /**
      * Get the admin display type for the payment method.
@@ -63,6 +63,26 @@ interface PaymentMethodInterface
     public function getDescription(?string $lang = null): string;
 
     /**
+     * Retrieve the credentials for this payment method.
+     *
+     * Fetches the credentials configured for the payment method from the
+     * storage and returns them as an array.
+     *
+     * @return array An array of credentials for the payment method.
+     */
+    public function initializeCredentials(): self;
+
+    /**
+     * Retrieve the settings for this payment method.
+     *
+     * Fetches the settings configured for the payment method from the
+     * storage and returns them as an array.
+     *
+     * @return array An array of settings for the payment method.
+     */
+    public function getSettings(): array;
+
+    /**
      * Validate the payment data submitted by the user.
      *
      * Ensures that the provided payment data meets the required
@@ -93,7 +113,18 @@ interface PaymentMethodInterface
      *
      * @return array An array of field definitions.
      */
-    public function defineFields(): array;
+    public function defineSettings(): array;
+
+    /**
+     * Define the credentials fields for this payment method.
+     *
+     * Specifies the credentials fields for the payment method in the
+     * administration panel. These fields allow customization of the
+     * payment method's behavior.
+     *
+     * @return array An array of field definitions.
+     */
+    public function defineCredentials(): array;
 
     /**
      * Prepare the settings data for storage.
@@ -105,14 +136,4 @@ interface PaymentMethodInterface
      * @return string A JSON string containing the prepared settings data.
      */
     public function prepareSettings(array $data): string;
-
-    /**
-     * Retrieve the settings for this payment method.
-     *
-     * Fetches the settings configured for the payment method from the
-     * storage and returns them as an array.
-     *
-     * @return array An array of settings for the payment method.
-     */
-    public function getSettings(): array;
 }

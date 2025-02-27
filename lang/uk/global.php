@@ -64,6 +64,7 @@
     "content" => "Контент",
     "courier" => "Кур'єр",
     "created" => "Створено",
+    "credentials" => "Облікові дані",
     "currencies" => "Валюти",
     "currencies_help" => "Список доступних валют магазину та їх відношення одна до одної.",
     "currencies_icon" => "fa fa-coins",

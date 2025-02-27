@@ -16,6 +16,7 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
      * @var sPaymentMethod The associated payment method data from the database.
      */
     protected sPaymentMethod $method;
+    public $credentials = [];
 
     /**
      * BasePaymentMethod constructor.
@@ -34,6 +35,7 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
             'class' => static::class,
             'identifier' => $identifier,
         ]);
+        $this->initializeCredentials();
     }
 
     /**
@@ -71,6 +73,35 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
     }
 
     /**
+     * Retrieve the stored credentials securely.
+     */
+    public function initializeCredentials(): self
+    {
+        $defines = $this->defineCredentials();
+        if (!empty($defines)) {
+            if (is_array($defines) && count($defines) > 0) {
+                $fields = [];
+                foreach ($defines as $define) {
+                    if (isset($define['fields'])) {
+                        $fields = array_merge($fields, array_keys($define['fields']));
+                    }
+                }
+
+                if (count($fields) > 0) {
+                    $credentials = json_decode($this->method->сredentials ?? '', true);
+                    unset($this->method->сredentials);
+
+                    foreach ($fields as $key) {
+                        $this->credentials[$key] = isset($credentials[$key]) ? $credentials[$key] : null;
+                    }
+                }
+            }
+        }
+
+        return $this;
+    }
+
+    /**
      * Retrieve the settings for the payment method.
      *
      * @return array An associative array of settings for the payment method.
@@ -101,6 +132,29 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
     }
 
     /**
+     * Prepare the credentials data for storage.
+     *
+     * Validates and formats the credentials data for the payment method based on its fields configuration.
+     *
+     * @param array $data The credentials data to process.
+     * @return string A JSON-encoded string of the validated credentials data.
+     */
+    public function prepareCredentials(array $data): string
+    {
+        $preparedData = [];
+        $fieldNames =  $this->extractFieldNames($this->defineCredentials());
+
+        foreach ($fieldNames as $fieldName) {
+            $key = preg_split('/\]\[|\[|\]/', rtrim($fieldName, ']'))[0];
+            if (isset($data[$key])) {
+                $preparedData[$key] = $data[$key];
+            }
+        }
+
+        return json_encode($preparedData, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
      * Prepare the settings data for storage.
      *
      * Validates and formats the settings data for the payment method based on its fields configuration.
@@ -111,7 +165,7 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
     public function prepareSettings(array $data): string
     {
         $preparedData = [];
-        $fieldNames =  $this->extractFieldNames($this->defineFields());
+        $fieldNames =  $this->extractFieldNames($this->defineSettings());
 
         foreach ($fieldNames as $fieldName) {
             $key = preg_split('/\]\[|\[|\]/', rtrim($fieldName, ']'))[0];

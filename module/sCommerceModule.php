@@ -1674,11 +1674,10 @@ switch ($get) {
         if ($requestId > 0 && $item) {
             $className = $item->class;
             if (class_exists($className)) {
-                $instance = new $className($item->identifier);
-                $item->instance = $instance;
+                $item->instance = new $className($item->identifier);
                 $item->type = ucfirst(str_replace('_', ' ', $item->name));
-                if (method_exists($instance, 'getType')) {
-                    $item->type = $instance->getType();
+                if (method_exists($item->instance, 'getType')) {
+                    $item->type = $item->instance->getType();
                 }
             }
 
@@ -1707,6 +1706,7 @@ switch ($get) {
                 $item->position = request()->integer('position');
                 $item->title = json_encode(request()->input('title', []), JSON_UNESCAPED_UNICODE);
                 $item->description = json_encode(request()->input('description', []), JSON_UNESCAPED_UNICODE);
+                $item->сredentials = $instance->prepareCredentials(request()->all());
                 $item->settings = $instance->prepareSettings(request()->all());
                 $item->update();
             }

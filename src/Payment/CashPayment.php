@@ -51,18 +51,9 @@ class CashPayment extends BasePaymentMethod
         return true; // No additional validation required
     }
 
-    /**
-     * Process the cash payment.
-     *
-     * This method assumes the payment is successful and always returns true.
-     * It can be extended to handle specific business logic if required.
-     *
-     * @param array $data The payment data to process.
-     * @return bool True indicating the payment is successful.
-     */
-    public function processPayment(array $data): bool
+    public function defineCredentials(): array
     {
-        return true; // Assume the payment is successful
+        return [];
     }
 
     /**
@@ -73,7 +64,7 @@ class CashPayment extends BasePaymentMethod
      *
      * @return array The configuration array for the payment method's settings.
      */
-    public function defineFields(): array
+    public function defineSettings(): array
     {
         return [
             'message' => [
@@ -89,5 +80,19 @@ class CashPayment extends BasePaymentMethod
                 ],
             ],
         ];
+    }
+
+    /**
+     * Process the cash payment.
+     *
+     * This method assumes the payment is successful and always returns true.
+     * It can be extended to handle specific business logic if required.
+     *
+     * @param array $data The payment data to process.
+     * @return bool True indicating the payment is successful.
+     */
+    public function processPayment(array $data): bool
+    {
+        return true; // Assume the payment is successful
     }
 }
