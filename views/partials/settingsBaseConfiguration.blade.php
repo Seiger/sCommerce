@@ -89,6 +89,18 @@
 </div>
 <div class="row form-row">
     <div class="col-auto">
+        <label for="basic__search" class="warning">@lang('sCommerce::global.search')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.search_help')"></i>
+    </div>
+    <div class="col col-4 col-md-3 col-lg-2">
+        <select id="basic__search" class="form-control" name="basic__search" onchange="documentDirty=true;">
+            <option value="blurred" @if(sCommerce::config('basic.search', 'blurred') == 'blurred') selected @endif>@lang('sCommerce::global.blurred')</option>
+            <option value="focused" @if(sCommerce::config('basic.search', 'blurred') == 'focused') selected @endif>@lang('sCommerce::global.focused')</option>
+        </select>
+    </div>
+</div>
+<div class="row form-row">
+    <div class="col-auto">
         <label for="basic__orders_on">@lang('sCommerce::global.orders_on')</label>
         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.orders_on_help')"></i>
     </div>

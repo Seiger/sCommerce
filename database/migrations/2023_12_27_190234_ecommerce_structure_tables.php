@@ -139,6 +139,7 @@ return new class extends Migration
         */
         Schema::create('s_delivery_methods', function (Blueprint $table) {
             $table->id('id');
+            $table->uuid('uuid')->default(DB::raw('(UUID())'));
             $table->string('name')->unique()->comment('Unique identifier for the delivery method');
             $table->string('class')->comment('PHP class implementing the delivery method');
             $table->boolean('active')->default(false)->comment('Indicates if the delivery method is active');
@@ -156,6 +157,7 @@ return new class extends Migration
 
         Schema::create('s_payment_methods', function (Blueprint $table) {
             $table->id('id');
+            $table->uuid('uuid')->default(DB::raw('(UUID())'));
             $table->string('name')->index()->comment('Unique identifier for the payment method');
             $table->string('class')->index()->comment('PHP class implementing the payment method');
             $table->string('identifier')->index()->default('')->comment('Unique identifier for each method');

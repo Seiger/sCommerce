@@ -197,15 +197,20 @@ class sProduct extends Model
                 ->replaceMatches('/[^\p{L}\p{N}\@\.!#$%&\'*+-\/=?^_`{|}~]/iu', ' ') // allowed symbol in email
                 ->replaceMatches('/(\s){2,}/', '$1') // removing extra spaces
                 ->trim()->explode(' ')
-                ->filter(fn($word) => mb_strlen($word) > 2);
+                ->filter(fn($word) => mb_strlen($word) > 0);
 
             $select = collect([0]);
 
-            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate points source
+            $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$search->implode(' ')}%' THEN 10 ELSE 0 END)")); // Generate Exact match points source
+            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate Partial match points source
 
-            return $builder->addSelect(DB::Raw('(' . $select->implode(' + ') . ') as points'))
-                ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
-                ->orderByDesc('points');
+            $s = $builder->addSelect(DB::Raw('(' . $select->implode(' + ') . ') as points'));
+            if (sCommerce::config('basic.search', 'blurred') == 'blurred') {
+                $s->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))));
+            } else {
+                $s->when($search->count(), fn($query) => $query->where(fn($query) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$search->implode(' ')}%"))));
+            }
+            return $s->orderByDesc('points');
         }
     }
 
