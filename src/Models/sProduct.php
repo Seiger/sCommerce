@@ -246,15 +246,6 @@ class sProduct extends Model
                         ->whereColumn('product', 's_products.id')
                         ->take(1)
                 ]);
-                /*$builder->addSelect(
-                    DB::Raw(
-                        '(select `' . DB::getTablePrefix() . 's_product_translates`.`constructor` ->> "$.' . $field . '"
-                        from `' . DB::getTablePrefix() . 's_product_translates` 
-                        where `' . DB::getTablePrefix() . 's_product_translates`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`
-                        and `' . DB::getTablePrefix() . 's_product_translates`.`lang` = "base"
-                        ) as constructor_' . $field
-                    )
-                );*/
             }
         }
 
@@ -268,7 +259,7 @@ class sProduct extends Model
      */
     public function categories()
     {
-        return $this->belongsToMany(sCategory::class, 's_product_category', 'product', 'category', 'product')->withPivot('position');
+        return $this->belongsToMany(sCategory::class, 's_product_category', 'product', 'category')->withPivot('position');
     }
 
     /**

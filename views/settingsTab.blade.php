@@ -101,6 +101,7 @@
     @include('sCommerce::partials.settingsProductConfiguration')
     @include('sCommerce::partials.settingsProductsConfiguration')
     @include('sCommerce::partials.settingsCartConfiguration')
+    @include('sCommerce::partials.settingsNotificationsEmailConfiguration')
     <span id="parentName" class="hidden"></span>
     <input type="hidden" name="parent" value="0"/>
 </form>

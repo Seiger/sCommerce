@@ -10,6 +10,7 @@ use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 use Seiger\sCommerce\Models\sDeliveryMethod;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
+use View;
 
 /**
  * Class sCheckout
@@ -420,6 +421,24 @@ class sCheckout
             evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", 'sCommerce: Order Created');
             Log::info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
+            if (sCommerce::config('notifications.email_template_admin_order_on', 0)) {
+                self::notifyEmail(
+                    explode(',', sCommerce::config('notifications.email_addresses', '')),
+                    sCommerce::config('notifications.email_template_admin_order', ''),
+                    ['order' => $order]
+                );
+            }
+
+            if (sCommerce::config('notifications.email_template_customer_order_on', 0)) {
+                if (!empty($order->user_info['email'])) {
+                    self::notifyEmail(
+                        $order->user_info['email'],
+                        sCommerce::config('notifications.email_template_customer_order', ''),
+                        ['order' => $order]
+                    );
+                }
+            }
+
             unset($_SESSION['sCheckout'], $_SESSION['sCart']);
             $this->orderData = [];
 
@@ -571,6 +590,24 @@ class sCheckout
         evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", 'sCommerce: Order By Click Created');
         Log::info("Order By Click #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
+        if (sCommerce::config('notifications.email_template_admin_fast_order_on', 0)) {
+            self::notifyEmail(
+                explode(',', sCommerce::config('notifications.email_addresses', '')),
+                sCommerce::config('notifications.email_template_admin_fast_order', ''),
+                ['order' => $order]
+            );
+        }
+
+        if (sCommerce::config('notifications.email_template_customer_fast_order_on', 0)) {
+            if (!empty($order->user_info['email'])) {
+                self::notifyEmail(
+                    $order->user_info['email'],
+                    sCommerce::config('notifications.email_template_customer_fast_order', ''),
+                    ['order' => $order]
+                );
+            }
+        }
+
         return [
             'success' => true,
             'message' => __('sCommerce::order.success'),
@@ -705,16 +742,62 @@ class sCheckout
         return $order;
     }
 
-    protected function notifyUser(int $orderId): void
+    /**
+     * Sends an email notification to the specified recipients using a template and data.
+     *
+     * This method processes the recipient list, message template, and additional data,
+     * renders the template using the View, and sends the email via the `evo()->sendMail` method.
+     *
+     * @param array|string $to     The recipients of the email. Can be a single email or a comma-separated list.
+     * @param string $template      The email template or the text to be sent.
+     * @param array $data           Additional data for the template (optional).
+     *
+     * @return void
+     *
+     * @throws \Exception If there are errors during the template rendering or email sending.
+     */
+    protected static function notifyEmail(array|string $to, string $template, array $data = []): void
     {
-        /*$email = $this->orderData['user']['email'] ?? null;
+        if (is_scalar($to)) {
+            $to = explode(',', $to);
+        }
 
-        if ($email) {
-            evo()->sendMail(
-                $email,
-                'Ваше замовлення підтверджено',
-                "Ваше замовлення #{$orderId} успішно створено. Загальна сума: {$this->orderData['total_cost']} грн."
-            );
-        }*/
+        $to = array_diff($to, ['', null]);
+
+        if (!empty($to)) {
+            $to = array_map('trim', $to);
+            $params['to'] = implode(',', $to);
+
+            if (trim($template)) {
+                $params['subject'] = 'sCheckout notify - ' . evo()->getConfig('site_name');
+                if (Str::endsWith($template, '.blade.php')) {
+                    try {
+                        $template = rtrim($template, '.blade.php');
+                        $view = View::make($template, $data);
+                        $renderSections = $view->renderSections();
+
+                        if (isset($renderSections['subject'])) {
+                            $params['subject'] = trim($renderSections['subject']);
+                        }
+
+                        $params['body'] = $view->render();
+                    } catch (\Exception $e) {
+                        Log::error("sCheckout. Render template. " . $e->getMessage());
+                    }
+                } else {
+                    $params['body'] = $template;
+                }
+
+                try {
+                    evo()->sendMail($params);
+                } catch (\Exception $e) {
+                    Log::error("sCheckout. Send Email. " . $e->getMessage());
+                }
+            } else {
+                Log::alert("sCheckout. User notify by Email template or text missing.");
+            }
+        } else {
+            Log::alert("sCheckout. User notify by Email address is empty.");
+        }
     }
 }

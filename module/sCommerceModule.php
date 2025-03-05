@@ -1738,6 +1738,16 @@ switch ($get) {
             return header('Location: ' . sCommerce::moduleUrl() . $back);
         }
 
+        $views = [];
+        foreach (File::allFiles(View::getFinder()->getPaths()) as $file) {
+            if (Str::startsWith($file->getRelativePath(), 'notifications/email')) {
+                if (Str::endsWith($file, '.blade.php') && !Str::endsWith($file, 'layout.blade.php')) {
+                    $views[] = $file->getRelativePathname();
+                }
+            }
+        }
+
+        $data['emailNotifications'] = $views;
         $data['mainProductConstructors'] = [];
         $_SESSION['itemaction'] = 'Editing Settings';
         break;
