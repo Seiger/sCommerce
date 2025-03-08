@@ -143,7 +143,7 @@
     "notifications_email" => "Email Notifications",
     "notifications_email_addresses" => "Notification addresses",
     "notifications_email_addresses_help" => "List of Email addresses for sCommerce system notifications. If you need to specify more than one address, separate them with a comma.",
-    "notifications_email_layout" => "Basic template file for Емейл: <code>:file</code>. All notification templates must be placed in the <code>:directory</code> directory and be in Blade format.",
+    "notifications_email_layout" => "Basic template file for Email: <code>:file</code>. All notification templates must be placed in the <code>:directory</code> directory and be in Blade format.",
     "notifications_email_template_admin_order" => "Administrator - Order",
     "notifications_email_template_admin_fast_order" => "Administrator - Quick order",
     "notifications_email_template_customer_order" => "Customer - Order",

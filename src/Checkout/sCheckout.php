@@ -418,7 +418,7 @@ class sCheckout
 
             $order = $this->saveOrder();
 
-            evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", 'sCommerce: Order Created');
+            evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", "sCommerce: Order #{$order->id} Created");
             Log::info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
             if (sCommerce::config('notifications.email_template_admin_order_on', 0)) {
@@ -587,7 +587,7 @@ class sCheckout
             unset($_SESSION['sCheckout'], $_SESSION['sCart']);
         }
 
-        evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", 'sCommerce: Order By Click Created');
+        evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", "sCommerce: Order #{$order->id} By Click Created");
         Log::info("Order By Click #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
         if (sCommerce::config('notifications.email_template_admin_fast_order_on', 0)) {

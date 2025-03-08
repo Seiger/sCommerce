@@ -368,8 +368,15 @@
                             @include('sCommerce::partials.attributeMultiselect')
                             @break
                         @case(sAttribute::TYPE_ATTR_TEXT)
-                            @php($value = json_decode($attribute->value ?? '', true) ?? [])
-                            @include('sCommerce::partials.attributeText')
+                            @php($field = (array)$attribute)
+                            @php($field['prefix'] = $prefix)
+                            @php($field['label'] = $field['pagetitle'])
+                            @php($field['name'] = $field['key'])
+                            <div class="row-col col-12">
+                                <div class="row form-row">
+                                    @include('sCommerce::partials.textField')
+                                </div>
+                            </div>
                             @break
                         @case(sAttribute::TYPE_ATTR_CUSTOM)
                             @php(View::getFinder()->setPaths([MODX_BASE_PATH . 'assets/modules/scommerce/attribute']))
