@@ -14,11 +14,11 @@ class sReview extends Model
     /**
      * Apply search filters to the query
      *
-     * @param \Illuminate\Database\Eloquent\Builder $query The query builder object
+     * @param \Illuminate\Database\Eloquent\Builder $builder The query builder object
      *
      * @return \Illuminate\Database\Eloquent\Builder The modified query builder object
      */
-    public function scopeSearch($query)
+    public function scopeSearch($builder)
     {
         if (request()->has('search')) {
             $fields = collect(['product', 'name', 'message']);
@@ -32,9 +32,10 @@ class sReview extends Model
 
             $select = collect([0]);
 
-            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN \"{$field}\" LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate points source
+            $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$search->implode(' ')}%' THEN 10 ELSE 0 END)")); // Generate Exact match points source
+            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate Partial match points source
 
-            return $query->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
+            return $builder->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
                 ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
                 ->orderByDesc('points');
         }
