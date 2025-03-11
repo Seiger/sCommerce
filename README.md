@@ -71,6 +71,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] Plugin events.
   - [x] sCommerceManagerAddTabEvent.
   - [x] sCommerceFormFieldRender.
+  - [x] sCommerceAfterFormFieldRender.
   - [x] sCommerceAfterProductSave.
   - [x] sCommerceAfterProductContentSave.
   - [x] sCommerceAfterProductDuplicate.

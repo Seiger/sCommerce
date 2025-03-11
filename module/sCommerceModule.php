@@ -1219,6 +1219,7 @@ switch ($get) {
         break;
     case "reviewSave":
         $all = request()->all();
+        unset($all['a'], $all['id']);
         $requestId = (int)request()->input('i', 0);
         $review = sReview::find($requestId);
 
@@ -1284,13 +1285,22 @@ switch ($get) {
             }
         }
 
-        $review->product = (int)($all['product'] ?? 0);
+        $columns = Schema::getColumnListing('s_reviews');
+        $columns = array_intersect($columns, array_keys($all));
+
+        if ($columns) {
+            foreach ($columns as $column) {
+                $review->{$column} = $all[$column] ?? '';
+            }
+            $review->save();
+        }
+        /*$review->product = (int)($all['product'] ?? 0);
         $review->rating = (int)($all['rating'] ?? 5);
         $review->name = $all['name'] ?? '';
         $review->message = $all['message'] ?? '';
         $review->published = (int)($all['published'] ?? 0);
         $review->created_at = $all['created_at'];
-        $review->save();
+        $review->save();*/
 
         $_SESSION['itemaction'] = 'Saving Review';
         $_SESSION['itemname'] = $review->name . (($review->toProduct ?? false) ? ' for ' . $review->toProduct->title : '');

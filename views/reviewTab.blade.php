@@ -84,6 +84,9 @@
             </div>
         </div>
     </div>
+    @if(is_array($events = evo()->invokeEvent('sCommerceAfterFormFieldRender', ['field' => 'message', 'dataInput' => $sCommerceController->getData()])))
+        @foreach($events as $event){!!$event!!}@endforeach
+    @endif
 </form>
 <div class="split my-3"></div>
 
