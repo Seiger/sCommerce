@@ -71,7 +71,9 @@ class sCheckout
         $paymentMethods = array_keys($this->paymentMethods);
 
         $rules = [
-            'user.name' => 'required|string|max:255',
+            'user.first_name' => 'required|string|max:255',
+            'user.middle_name' => 'nullable|string|max:255',
+            'user.last_name' => 'nullable|string|max:255',
             'user.email' => 'required|email|max:255',
             'user.phone' => 'required|string|max:20',
             'user.address.country' => 'sometimes|string|max:255',
@@ -115,7 +117,9 @@ class sCheckout
 
         $userData = [
             'id' => $user['id'] ?? 0,
-            'name' => $user['fullname'] ?? '',
+            'first_name' => $user['first_name'] ?? '',
+            'middle_name' => $user['middle_name'] ?? '',
+            'last_name' => $user['last_name'] ?? '',
             'email' => $user['email'] ?? '',
             'phone' => $user['phone'] ?? '',
             'address' => [
@@ -498,7 +502,9 @@ class sCheckout
 
         $userData = [
             'id' => $user['id'] ?? 0,
-            'name' => $user['fullname'] ?? '',
+            'first_name' => $user['first_name'] ?? '',
+            'middle_name' => $user['middle_name'] ?? '',
+            'last_name' => $user['last_name'] ?? '',
             'email' => $data['email'] ?? ($user['email'] ?? ''),
             'phone' => $data['phone'] ?? ($user['phone'] ?? ''),
             'address' => [

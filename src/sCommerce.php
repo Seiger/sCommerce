@@ -6,6 +6,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
@@ -14,6 +15,7 @@ use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
+use View;
 
 /**
  * Class sCommerce
@@ -434,6 +436,65 @@ class sCommerce
         }
 
         return static::$currentCurrency;
+    }
+
+    /**
+     * Sends an email notification to the specified recipients using a template and data.
+     *
+     * This method processes the recipient list, message template, and additional data,
+     * renders the template using the View, and sends the email via the `evo()->sendMail` method.
+     *
+     * @param array|string $to The recipients of the email. Can be a single email or a comma-separated list.
+     * @param string $template The email template or the text to be sent.
+     * @param array $data      Additional data for the template (optional).
+     *
+     * @return void
+     *
+     * @throws \Exception If there are errors during the template rendering or email sending.
+     */
+    public static function notifyEmail(array|string $to, string $template, array $data = []): void
+    {
+        if (is_scalar($to)) {
+            $to = explode(',', $to);
+        }
+
+        $to = array_diff($to, ['', null]);
+
+        if (!empty($to)) {
+            $to = array_map('trim', $to);
+            $params['to'] = implode(',', $to);
+
+            if (trim($template)) {
+                $params['subject'] = 'sCommerce notify - ' . evo()->getConfig('site_name');
+                if (Str::endsWith($template, '.blade.php')) {
+                    try {
+                        $template = rtrim($template, '.blade.php');
+                        $view = View::make($template, $data);
+                        $renderSections = $view->renderSections();
+
+                        if (isset($renderSections['subject'])) {
+                            $params['subject'] = trim($renderSections['subject']);
+                        }
+
+                        $params['body'] = $view->render();
+                    } catch (\Exception $e) {
+                        Log::error("sCommerce. Render template. " . $e->getMessage());
+                    }
+                } else {
+                    $params['body'] = $template;
+                }
+
+                try {
+                    evo()->sendMail($params);
+                } catch (\Exception $e) {
+                    Log::error("sCommerce. Send Email. " . $e->getMessage());
+                }
+            } else {
+                Log::alert("sCommerce. User notify by Email template or text missing.");
+            }
+        } else {
+            Log::alert("sCommerce. User notify by Email address is empty.");
+        }
     }
 
     /**
