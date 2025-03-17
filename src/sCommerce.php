@@ -10,9 +10,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sFilter;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sCategory;
+use Seiger\sCommerce\Models\sOrder;
+use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use View;
@@ -301,8 +304,11 @@ class sCommerce
      *
      * @return float The converted price.
      */
-    public function convertPriceNumber($price, $currencyFrom, $currencyTo): float
+    public function convertPriceNumber($price, $currencyFrom = null, $currencyTo = null): float
     {
+        $currencyFrom = $currencyFrom ?? static::loadCurrentCurrency();
+        $currencyTo = $currencyTo ?? $currencyFrom;
+
         $price = preg_replace('/[^\d\.]+/', '', $price);
         $rate = config('seiger.settings.sCommerceCurrencies.' . $currencyFrom . '_' . $currencyTo, 1);
         return floatval($price) * $rate;
@@ -439,6 +445,50 @@ class sCommerce
     }
 
     /**
+     * Render the payment button for the order.
+     *
+     * This method is responsible for rendering the payment button by:
+     * 1. Determining the payment system based on the provided order details.
+     * 2. Finding the corresponding payment method from the database.
+     * 3. Dynamically calling the corresponding payment system class and invoking its `payButton` method.
+     *
+     * If the payment method is not available or if the method `payButton` does not exist for the payment system, an empty string is returned.
+     *
+     * @param int|string|array $data The order ID, order key, or an array containing order data.
+     *  - If it's an integer, the method assumes it's the order ID.
+     *  - If it's a string, the method assumes it's the order key (identifier).
+     *  - If it's an array, it assumes it's the complete order data.
+     *
+     * @return string The HTML for the payment button or an empty string if the payment method is not found or invalid.
+     *
+     * @throws \Exception If there is an issue accessing the payment method class or other unforeseen issues.
+     */
+    public static function payButton(int|string|array $data): string
+    {
+        if (is_int($data)) {
+            $order = sOrder::whereId((int)$data)->first()->toArray();
+        } elseif (is_string($data)) {
+            $order = sOrder::whereIdentifier(trim($data))->first()->toArray();
+        } elseif (is_array($data)) {
+            $order = $data;
+        }
+
+        if (!$order || empty($order) || !isset($order['payment_info']['method']) || empty($order['payment_info']['method'])) {
+            return '';
+        }
+
+        $paymentMethod = sPaymentMethod::find((int)sCheckout::getPayment($order['payment_info']['method'])['id']);
+
+        if (!$paymentMethod || empty($paymentMethod) || !class_exists($paymentMethod->class)) {
+            return '';
+        }
+
+        $instance = new $paymentMethod->class($paymentMethod->identifier);
+
+        return $instance->payButton($data);
+    }
+
+    /**
      * Sends an email notification to the specified recipients using a template and data.
      *
      * This method processes the recipient list, message template, and additional data,
@@ -495,6 +545,38 @@ class sCommerce
         } else {
             Log::alert("sCommerce. User notify by Email address is empty.");
         }
+    }
+
+    /**
+     * Convert data to a string representation.
+     *
+     * @param mixed $data The data to convert.
+     * @return string The string representation of the data.
+     */
+    public static function logPrepare(mixed $data): string
+    {
+        ob_start();
+        var_dump($data);
+        $data = ob_get_contents();
+        ob_end_clean();
+
+        $data = Str::of($data)->replaceMatches('/string\(\d+\) .*/', function ($match) {
+            return substr($match[0], (strpos($match[0], ') ') + 2)) . ',';
+        })->replaceMatches('/bool\(\w+\)/', function ($match) {
+            return str_replace(['bool(', ')'], ['', ','], $match[0]);
+        })->replaceMatches('/int\(\d+\)/', function ($match) {
+            return str_replace(['int(', ')'], ['', ','], $match[0]);
+        })->replaceMatches('/float\(\d+\.\d+\)/', function ($match) {
+            return str_replace(['float(', ')'], ['', ','], $match[0]);
+        })->replaceMatches('/array\(\d+\) /', function ($match) {
+            return str_replace($match[0], '', $match[0]);
+        })->replaceMatches('/=>\n[ \t]{1,}/', function () {
+            return ' => ';
+        })->replaceMatches('/  /', function () {
+            return '    ';
+        })->remove('[')->remove(']')->replace('{', '[')->replace('}', '],')->rtrim(",\n");
+
+        return $data;
     }
 
     /**

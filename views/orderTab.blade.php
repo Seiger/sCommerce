@@ -2,7 +2,7 @@
 <h3>
     @lang('sCommerce::global.order') <b>#{{$item->id}}</b>
     @if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif
-    <b>{{$item->user_info['name']}} {{$item->user_info['phone']}}</b>
+    <b>{{implode(' ', array_diff([$item->user_info['first_name'], $item->user_info['middle_name'], $item->user_info['last_name']], ['']))}} {{$item->user_info['phone']}}</b>
 </h3>
 <p></p>
 <p>
@@ -49,32 +49,32 @@
     <h3>@lang('sCommerce::global.products_in_order')</h3>
     <table class="table table-condensed table-hover sectionTrans scom-table">
         <thead>
-            <tr>
-                <th>@lang('sCommerce::global.product_name')</th>
-                <th>@lang('sCommerce::global.price')</th>
-                <th>@lang('sCommerce::global.quantity')</th>
-                <th>@lang('sCommerce::global.sum')</th>
-            </tr>
+        <tr>
+            <th>@lang('sCommerce::global.product_name')</th>
+            <th>@lang('sCommerce::global.price')</th>
+            <th>@lang('sCommerce::global.quantity')</th>
+            <th>@lang('sCommerce::global.sum')</th>
+        </tr>
         </thead>
         <tbody>
-            @foreach($item->products as $product)
-                @php($info = '')
-                @foreach($product as $p)
-                    @if(is_array($p) && isset($p['title']))
-                        @php($info .= '<b>' . htmlentities($p['title']) . ':</b> ' . htmlentities($p['label'] ?? '') . '<br>')
-                    @endif
-                @endforeach
-                <tr style="height: 42px;">
-                    <td>
-                        <img src="{{$product['coverSrc']}}" class="product-thumbnail">
-                        <a href="{{$product['link']}}" target="_blank"><b>{{$product['title']}}</b></a>
-                        @if(trim($info))<i class="fa fa-question-circle" data-tooltip="{!!$info!!}"></i>@endif
-                    </td>
-                    <td>{{$product['price']}}</td>
-                    <td>{{$product['quantity']}}</td>
-                    <td>{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $item->currency, $item->currency), $item->currency)}}</td>
-                </tr>
+        @foreach($item->products as $product)
+            @php($info = '')
+            @foreach($product as $p)
+                @if(is_array($p) && isset($p['title']))
+                    @php($info .= '<b>' . htmlentities($p['title']) . ':</b> ' . htmlentities($p['label'] ?? '') . '<br>')
+                @endif
             @endforeach
+            <tr style="height: 42px;">
+                <td>
+                    <img src="{{$product['coverSrc']}}" class="product-thumbnail">
+                    <a href="{{$product['link']}}" target="_blank"><b>{{$product['title']}}</b></a>
+                    @if(trim($info))<i class="fa fa-question-circle" data-tooltip="{!!$info!!}"></i>@endif
+                </td>
+                <td>{{$product['price']}}</td>
+                <td>{{$product['quantity']}}</td>
+                <td>{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $item->currency, $item->currency), $item->currency)}}</td>
+            </tr>
+        @endforeach
         </tbody>
     </table>
     <div class="split my-3"></div>
@@ -83,7 +83,7 @@
     <p><strong>@lang('sCommerce::global.delivery_name'):</strong>@if(!$delivery) @lang('sCommerce::global.not_selected_or_unknown') @else {{$delivery['title']}}@endif</p>
     @if($delivery)
         <p><strong>@lang('sCommerce::global.shipping_cost'):</strong> {{sCommerce::convertPrice(floatval($item->delivery_info['cost'] ?? 0), $item->currency)}}</p>
-        @if(is_array($item->delivery_info[$item->delivery_info['method']]))
+        @if(isset($item->delivery_info[$item->delivery_info['method']]) && is_array($item->delivery_info[$item->delivery_info['method']]))
             @foreach($item->delivery_info[$item->delivery_info['method']] as $key => $value)
                 <p><strong>{{$key}}:</strong> {{$value}}</p>
             @endforeach
@@ -95,9 +95,11 @@
     <p>
         <strong>@lang('global.user_full_name'):</strong>
         @if((int)$item->user_info['id'] > 0)
-            <a href="/manager/index.php?a=88&id={{(int)$item->user_info['id']}}" target="_blank">{{$item->user_info['name'] ?? ''}}</a>
+            <a href="/manager/index.php?a=88&id={{(int)$item->user_info['id']}}" target="_blank">
+                {{implode(' ', array_diff([$item->user_info['first_name'], $item->user_info['middle_name'], $item->user_info['last_name']], ['']))}}
+            </a>
         @else
-            {{$item->user_info['name'] ?? ''}}
+            {{implode(' ', array_diff([$item->user_info['first_name'], $item->user_info['middle_name'], $item->user_info['last_name']], ['']))}}
         @endif
     </p>
     <p><strong>@lang('global.user_phone'):</strong> {{$item->user_info['phone'] ?? ''}}</p>
@@ -135,9 +137,16 @@
             <tr>
                 <td>{{$history['timestamp'] ?? ''}}</td>
                 <td>
-                    <span @class(['badge', 'bg-active' => in_array((int)$history['status'], $unprocessedes), 'bg-progress' => in_array((int)$history['status'], $workings), 'bg-disactive' => in_array((int)$history['status'], $completeds)])>
-                        {{sOrder::getOrderStatusName($item->status)}}
-                    </span>
+                    @if(isset($history['status']))
+                        <span @class(['badge', 'bg-active' => in_array((int)$history['status'], $unprocessedes), 'bg-progress' => in_array((int)$history['status'], $workings), 'bg-disactive' => in_array((int)$history['status'], $completeds)])>
+                            {{sOrder::getOrderStatusName((int)$history['status'])}}
+                        </span>
+                    @endif
+                    @if(isset($history['payment_status']))
+                        <span @class(['badge', 'bg-paid' => (int)$history['payment_status'] == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => (int)$history['payment_status'] != sOrder::PAYMENT_STATUS_PAID])>
+                            {{sOrder::getPaymentStatusName((int)$history['payment_status'])}}
+                        </span>
+                    @endif
                 </td>
                 <td>
                     @if((int)$history['user_id'] > 0)

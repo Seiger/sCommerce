@@ -82,6 +82,31 @@ class CashPayment extends BasePaymentMethod
         ];
     }
 
+
+    /**
+     * Render the payment button for the order.
+     *
+     * This method generates the HTML code for the payment button. It is expected that each payment method
+     * will implement this method to generate a unique payment button for the user, based on the order details.
+     * The method can be called from the main application to display the payment button to the user for completing the payment.
+     *
+     * The method accepts various forms of data input (order ID, order key, or an array of order data) and
+     * dynamically handles these inputs to render the appropriate button.
+     *
+     * @param int|string|array $data The order ID, order key, or an array containing order data.
+     *  - If it's an integer, the method assumes it's the order ID.
+     *  - If it's a string, the method assumes it's the order key (identifier).
+     *  - If it's an array, it assumes it's the complete order data.
+     *
+     * @return string The HTML for the payment button, or an empty string if the payment method is not found or invalid.
+     *
+     * @throws \Exception If there is an issue processing the payment button (e.g., missing or invalid payment method).
+     */
+    public function payButton(int|string|array $data): string
+    {
+        return '';
+    }
+
     /**
      * Process the cash payment.
      *

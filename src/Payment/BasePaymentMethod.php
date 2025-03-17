@@ -39,6 +39,19 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
     }
 
     /**
+     * Get the unique identifier for the payment method.
+     *
+     * This method returns the ID of the associated payment method from the database.
+     * If the payment method is not found, it returns 0 as the default value.
+     *
+     * @return int The ID of the payment method or 0 if not found.
+     */
+    public function getId(): int
+    {
+        return (int)$this->method->id ?? 0;
+    }
+
+    /**
      * Get a unique identifier for the payment method.
      *
      * Combines the method's name and identifier to generate a unique key.

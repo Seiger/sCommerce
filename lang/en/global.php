@@ -16,6 +16,7 @@
     "all_products" => "All products",
     "all_statuses" => "Усі статуси",
     "alternative_text" => "Alternative text",
+    "api_key" => "API key",
     "are_you_sure" => "Are you sure?",
     "as_filter" => "As a filter",
     "as_filter_help" => "Use this attribute to filter products in the store catalog.",

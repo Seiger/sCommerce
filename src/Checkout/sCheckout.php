@@ -76,6 +76,7 @@ class sCheckout
             'user.last_name' => 'nullable|string|max:255',
             'user.email' => 'required|email|max:255',
             'user.phone' => 'required|string|max:20',
+            'user.vat' => 'sometimes|string|max:32',
             'user.address.country' => 'sometimes|string|max:255',
             'user.address.state' => 'sometimes|string|max:255',
             'user.address.city' => 'sometimes|string|max:255',
@@ -257,7 +258,7 @@ class sCheckout
         $methods = [];
 
         if (sCommerce::config('basic.payments_on', 1) == 1) {
-            $reservedKeys = ['name', 'title', 'description'];
+            $reservedKeys = ['id', 'name', 'title', 'description'];
 
             foreach ($this->paymentMethods as $methodName => $methodInstance) {
                 $settings = $methodInstance->getSettings();
@@ -279,6 +280,7 @@ class sCheckout
                 $filteredSettings = array_diff_key($settings, array_flip($reservedKeys));
 
                 $methods[] = array_merge([
+                    'id' => $methodInstance->getId(),
                     'key' => $methodInstance->getIdentifier(),
                     'name' => $methodInstance->getName(),
                     'title' => $methodInstance->getTitle(),
@@ -321,11 +323,12 @@ class sCheckout
             throw new \InvalidArgumentException("Payment method '{$methodName}' not found.");
         }
 
-        $reservedKeys = ['name', 'title', 'description'];
+        $reservedKeys = ['id', 'name', 'title', 'description'];
         $settings = $methodInstance->getSettings();
         $filteredSettings = array_diff_key($settings, array_flip($reservedKeys));
 
         return array_merge([
+            'id' => $methodInstance->getId(),
             'key' => $methodInstance->getIdentifier(),
             'name' => $methodInstance->getName(),
             'title' => $methodInstance->getTitle(),
@@ -404,7 +407,7 @@ class sCheckout
                 $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method']] ?? null;
 
                 if (!$deliveryMethod) {
-                    throw new \Exception("Invalid delivery method.");
+                    throw new \Exception("Invalid delivery method $this->orderData['delivery']['method'].");
                 }
 
                 $this->orderData['cost'] += $this->orderData['delivery']['cost'] ?? 0;
@@ -413,8 +416,15 @@ class sCheckout
             if (sCommerce::config('basic.payments_on', 1) == 1) {
                 $paymentMethod = $this->paymentMethods[$this->orderData['payment']['method']] ?? null;
 
-                if (!$paymentMethod) {
-                    throw new \Exception("Invalid payment method.");
+                if (!$paymentMethod || !$paymentMethod->validatePayment($this->orderData)) {
+                    evo()->logEvent(0, 3, 'Payment method ' . $this->orderData['payment']['method'] . ' is Invalid or not available. Please check your API credentials.', 'sCommerce: Payment ' . $this->orderData['payment']['method'] . ' Failed');
+                    Log::error("Order processing failed: Payment method {$this->orderData['payment']['method']} is Invalid or not available. Please check your API credentials.", ['order_data' => $this->orderData]);
+
+                    return [
+                        'success' => false,
+                        'message' => 'The selected payment method is currently unavailable. Please try again later.',
+                        'error_code' => 0,
+                    ];
                 }
             }
 
@@ -426,7 +436,7 @@ class sCheckout
             Log::info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
             if (sCommerce::config('notifications.email_template_admin_order_on', 0)) {
-                self::notifyEmail(
+                sCommerce::notifyEmail(
                     explode(',', sCommerce::config('notifications.email_addresses', '')),
                     sCommerce::config('notifications.email_template_admin_order', ''),
                     ['order' => $order]
@@ -435,7 +445,7 @@ class sCheckout
 
             if (sCommerce::config('notifications.email_template_customer_order_on', 0)) {
                 if (!empty($order->user_info['email'])) {
-                    self::notifyEmail(
+                    sCommerce::notifyEmail(
                         $order->user_info['email'],
                         sCommerce::config('notifications.email_template_customer_order', ''),
                         ['order' => $order]
@@ -597,7 +607,7 @@ class sCheckout
         Log::info("Order By Click #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
         if (sCommerce::config('notifications.email_template_admin_fast_order_on', 0)) {
-            self::notifyEmail(
+            sCommerce::notifyEmail(
                 explode(',', sCommerce::config('notifications.email_addresses', '')),
                 sCommerce::config('notifications.email_template_admin_fast_order', ''),
                 ['order' => $order]
@@ -606,7 +616,7 @@ class sCheckout
 
         if (sCommerce::config('notifications.email_template_customer_fast_order_on', 0)) {
             if (!empty($order->user_info['email'])) {
-                self::notifyEmail(
+                sCommerce::notifyEmail(
                     $order->user_info['email'],
                     sCommerce::config('notifications.email_template_customer_fast_order', ''),
                     ['order' => $order]
@@ -746,64 +756,5 @@ class sCheckout
         $order->save();
 
         return $order;
-    }
-
-    /**
-     * Sends an email notification to the specified recipients using a template and data.
-     *
-     * This method processes the recipient list, message template, and additional data,
-     * renders the template using the View, and sends the email via the `evo()->sendMail` method.
-     *
-     * @param array|string $to     The recipients of the email. Can be a single email or a comma-separated list.
-     * @param string $template      The email template or the text to be sent.
-     * @param array $data           Additional data for the template (optional).
-     *
-     * @return void
-     *
-     * @throws \Exception If there are errors during the template rendering or email sending.
-     */
-    protected static function notifyEmail(array|string $to, string $template, array $data = []): void
-    {
-        if (is_scalar($to)) {
-            $to = explode(',', $to);
-        }
-
-        $to = array_diff($to, ['', null]);
-
-        if (!empty($to)) {
-            $to = array_map('trim', $to);
-            $params['to'] = implode(',', $to);
-
-            if (trim($template)) {
-                $params['subject'] = 'sCheckout notify - ' . evo()->getConfig('site_name');
-                if (Str::endsWith($template, '.blade.php')) {
-                    try {
-                        $template = rtrim($template, '.blade.php');
-                        $view = View::make($template, $data);
-                        $renderSections = $view->renderSections();
-
-                        if (isset($renderSections['subject'])) {
-                            $params['subject'] = trim($renderSections['subject']);
-                        }
-
-                        $params['body'] = $view->render();
-                    } catch (\Exception $e) {
-                        Log::error("sCheckout. Render template. " . $e->getMessage());
-                    }
-                } else {
-                    $params['body'] = $template;
-                }
-
-                try {
-                    evo()->sendMail($params);
-                } catch (\Exception $e) {
-                    Log::error("sCheckout. Send Email. " . $e->getMessage());
-                }
-            } else {
-                Log::alert("sCheckout. User notify by Email template or text missing.");
-            }
-        } else {
-            Log::alert("sCheckout. User notify by Email address is empty.");
-        }
     }
 }
