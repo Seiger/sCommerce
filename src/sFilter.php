@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Facades\sWishlist;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sProduct;
@@ -85,7 +87,10 @@ class sFilter
         if (empty($category)) {
             $category = static::$isValidated ? (int)static::$cachedResult['category'] : evo()->documentIdentifier;
 
-            if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
+            if (
+                (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) ||
+                (!empty(evo()->getPlaceholder('checkAsWishlist')) && evo()->getPlaceholder('checkAsWishlist'))
+            ) {
                 $category = sCommerce::config('basic.catalog_root', $category);
             }
         }
@@ -394,6 +399,8 @@ class sFilter
 
         if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
             $nonPriceProductIds = array_intersect($nonPriceProductIds, sProduct::search()->pluck('id')->toArray());
+        } elseif (!empty(evo()->getPlaceholder('checkAsWishlist')) && evo()->getPlaceholder('checkAsWishlist')) {
+            $nonPriceProductIds = array_intersect($nonPriceProductIds, sWishlist::getWishlist());
         }
 
         // If empty, means no products left after other filters
@@ -527,7 +534,10 @@ class sFilter
             // Get the parent categories for the current category
             $category = static::$isValidated ? (int)static::$cachedResult['category'] : (int)$path['category'];
 
-            if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
+            if (
+                (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) ||
+                (!empty(evo()->getPlaceholder('checkAsWishlist')) && evo()->getPlaceholder('checkAsWishlist'))
+            ) {
                 $category = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
             }
 

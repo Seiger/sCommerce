@@ -213,6 +213,16 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
+        | Create a wishlist and favorites fields as JSON columns
+        |--------------------------------------------------------------------------
+        */
+        Schema::table('user_attributes', function (Blueprint $table) {
+            $table->json('wishlist')->nullable()->default(new Expression('(JSON_ARRAY())'));
+            $table->json('favorites')->nullable()->default(new Expression('(JSON_ARRAY())'));
+        });
+
+        /*
+        |--------------------------------------------------------------------------
         | Create a Product template
         |--------------------------------------------------------------------------
         */
@@ -238,6 +248,15 @@ return new class extends Migration
         |--------------------------------------------------------------------------
         */
         $templateProduct = SiteTemplate::whereTemplatealias('s_commerce_product')->delete();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delete a wishlist and favorites fields as JSON columns
+        |--------------------------------------------------------------------------
+        */
+        Schema::table('user_attributes', function (Blueprint $table) {
+            $table->dropColumn(['wishlist', 'favorites']);
+        });
 
         /*
         |--------------------------------------------------------------------------

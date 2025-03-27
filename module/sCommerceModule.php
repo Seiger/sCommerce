@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
-use Seiger\sCommerce\Controllers\tabProductController;
+use Seiger\sCommerce\Controllers\TabProductController;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
@@ -891,7 +891,7 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $requestLang = request()->input('lang', 'base');
         $iUrl = trim($iUrl) ?: '&i=0';
-        $result = (new tabProductController())->content($requestId, $requestLang);
+        $result = (new TabProductController())->content($requestId, $requestLang);
 
         $tabs = $result['tabs'] ?? [];
         $editor = $result['editor'] ?? [];

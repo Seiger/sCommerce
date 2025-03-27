@@ -129,4 +129,14 @@
         <input type="hidden" id="basic__payments_on" name="basic__payments_on" value="{{sCommerce::config('basic.payments_on', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
+<div class="row form-row">
+    <div class="col-auto">
+        <label for="basic__wishlist_on">@lang('sCommerce::global.wishlist')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.wishlist_on_help')"></i>
+    </div>
+    <div class="col">
+        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__wishlist_on);" @if(sCommerce::config('basic.wishlist_on', 1) == 1) checked @endif>
+        <input type="hidden" id="basic__wishlist_on" name="basic__wishlist_on" value="{{sCommerce::config('basic.wishlist_on', 1)}}" onchange="documentDirty=true;">
+    </div>
+</div>
 <div class="split my-3"></div>

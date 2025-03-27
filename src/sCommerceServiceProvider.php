@@ -54,6 +54,10 @@ class sCommerceServiceProvider extends ServiceProvider
         // Register the sCheckout class as a singleton
         $this->app->singleton(sCheckout::class);
         $this->app->alias(sCheckout::class, 'sCheckout');
+
+        // Register the sWishlist class as a singleton
+        $this->app->singleton(sWishlist::class);
+        $this->app->alias(sWishlist::class, 'sWishlist');
     }
 
     /**

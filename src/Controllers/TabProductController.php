@@ -6,7 +6,7 @@ use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use View;
 
-class tabProductController
+class TabProductController
 {
     public function content(int $requestId = 0, string $requestLang = 'base')
     {
@@ -23,7 +23,7 @@ class tabProductController
 
         if (count($fields)) {
             foreach ($fields as $idx => $field) {
-                if (is_file(dirname($field).'/template.blade.php')) {
+                if (is_file(dirname($field) . '/template.blade.php')) {
                     $template = basename(dirname($field));
                     $field = require $field;
 

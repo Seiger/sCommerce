@@ -10,6 +10,7 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Facades\sFilter;
+use Seiger\sCommerce\Facades\sWishlist;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
@@ -367,6 +368,9 @@ class sCommerceController
 
         if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
             $correctingProductIds = sProduct::search()->pluck('id')->toArray();
+            $query->whereIn('product', $correctingProductIds);
+        } elseif (!empty(evo()->getPlaceholder('checkAsWishlist')) && evo()->getPlaceholder('checkAsWishlist')) {
+            $correctingProductIds = sProduct::whereIn('id', sWishlist::getWishlist())->pluck('id')->toArray();
             $query->whereIn('product', $correctingProductIds);
         }
 

@@ -63,10 +63,10 @@ class sCommerce
      * @param int $perPage The number of products to return per page. Defaults to 1000.
      * @return object The paginated list of products as a Laravel collection.
      */
-    public function getProducts(array $productIds, string $lang = null, int $perPage = 1000): object
+    public function getProducts(array $productIds, string $lang = null, int $perPage = 10000): object
     {
         $lang = !$lang ? evo()->getLocale() : $lang;
-        $this->sort = empty($this->sort) ? $this->controller->validateSort() : $this->sort;
+        $this->sort = empty($this->sort) ? [$this->controller->validateSort()] : $this->sort;
 
         $query = sProduct::lang($lang)
             ->addSelect(['position' =>
@@ -127,7 +127,7 @@ class sCommerce
                             break;
                     }
                 } else {
-                    $query->orderBy($sort, $order);
+                    $query->orderBy($sort, $order ?? 'asc');
                 }
             }
         }

@@ -4,6 +4,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCheckout;
+use Seiger\sCommerce\Facades\sWishlist;
 
 Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(function () {
     Route::post('add-to-cart', fn() => tap(
@@ -26,4 +27,8 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         sCheckout::quickOrder(request()->all()),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
     ))->name('quickOrder');
+    Route::post('wishlist', fn() => tap(
+        sWishlist::updateWishlist(request()->all()),
+        fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
+    ))->name('wishlist');
 });

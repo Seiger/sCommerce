@@ -338,6 +338,8 @@
     "weight" => "Weight",
     "width" => "Width",
     "with_id" => "With ID",
+    "wishlist" => "Wishlist",
+    "wishlist_on_help" => "Enable the wishlist functionality.",
     "working_orders" => "In Progress",
     "you_sure" => "Are you sure?",
     "you_sure_duplicate" => "Are you sure you want to duplicate?",
