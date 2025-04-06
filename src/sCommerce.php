@@ -127,7 +127,9 @@ class sCommerce
                             break;
                     }
                 } else {
-                    $query->orderBy($sort, $order ?? 'asc');
+                    if (is_scalar($sort) && trim($sort)) {
+                        $query->orderBy($sort, $order ?? 'asc');
+                    }
                 }
             }
         }
