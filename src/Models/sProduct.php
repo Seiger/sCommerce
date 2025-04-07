@@ -20,6 +20,7 @@ use Seiger\sGallery\sGallery;
  * @method static Builder|sProduct lang(string $locale)
  * @method Builder|sProduct search()
  * @method Builder|sProduct active()
+ * @method Builder|sProduct extractConstructor()
  * @property-read string $attrValues The attributes associated with the product.
  * @property-read string $attribute The attribute associated with the product by alias.
  * @property-read string $title The Title of the product.

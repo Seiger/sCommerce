@@ -174,7 +174,9 @@ switch ($get) {
             $direc = request()->input('direc', 'desc');
         }
 
-        $query = sProduct::lang($sCommerceController->langDefault())->search()
+        $query = sProduct::lang($sCommerceController->langDefault())
+            ->search()
+            ->extractConstructor()
             ->addSelect(['position' =>
                 DB::table('s_product_category')
                     ->select('position')
@@ -183,20 +185,6 @@ switch ($get) {
                     ->whereColumn('s_product_category.product', 's_products.id')
                     ->limit(1)
             ]);
-
-        if (count(sCommerce::config('products.additional_fields', []))) {
-            foreach (sCommerce::config('products.additional_fields', []) as $field) {
-                $query->addSelect(
-                    DB::Raw(
-                        '(select `' . DB::getTablePrefix() . 's_product_translates`.`constructor` ->> "$.'.$field.'"
-                        from `' . DB::getTablePrefix() . 's_product_translates` 
-                        where `' . DB::getTablePrefix() . 's_product_translates`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`
-                        and `' . DB::getTablePrefix() . 's_product_translates`.`lang` = "base"
-                        ) as ' . $field
-                    )
-                );
-            }
-        }
 
         if ($cat > 0) {
             $query->whereHas('categories', function ($q) use ($cat) {

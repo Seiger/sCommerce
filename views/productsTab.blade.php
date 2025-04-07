@@ -243,7 +243,7 @@
                 @endif
                 @if(count(sCommerce::config('products.additional_fields', [])))
                     @foreach(sCommerce::config('products.additional_fields', []) as $field)
-                        <td>{{ $item->{$field} }}</td>
+                        <td>{{ $item->{'constructor_' . $field} }}</td>
                     @endforeach
                 @endif
                 <td style="text-align:center;">
