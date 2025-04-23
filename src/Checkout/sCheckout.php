@@ -595,7 +595,7 @@ class sCheckout
         $order->currency = sCommerce::currentCurrency();
         $order->lang = evo()->getLocale();
         $order->is_quick = true;
-        $order->admin_notes = $adminNotes;
+        $order->manager_notes = $adminNotes;
         $order->history = $history;
         $order->save();
 

@@ -154,7 +154,7 @@
                     <td>{{$item->sku}}</td>
                 @endif
                 <td>
-                    <img src="{{$item->coverSrc}}" alt="{{$item->coverSrc}}" class="product-thumbnail">
+                    <img src="{{sGallery::file($item->cover)->fit(sGallery::defaultFit(), sGallery::defaultWidth(), sGallery::defaultHeight())}}" alt="{{$item->coverSrc}}" class="product-thumbnail">
                     <a href="{{$item->link}}" target="_blank"><b>{{$item->pagetitle ?? __('sCommerce::global.no_text')}}</b></a>
                 </td>
                 @if (sCommerce::config('products.show_field_price', 1) && sCommerce::config('product.show_field_price', 1))

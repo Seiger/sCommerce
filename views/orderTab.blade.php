@@ -108,7 +108,7 @@
 
     <h3>@lang('sCommerce::global.comments_and_notes')</h3>
     <textarea name="note" class="form-control" rows="4" placeholder="@lang('sCommerce::global.add_comment')"></textarea>
-    @foreach($item->admin_notes as $note)
+    @foreach($item->manager_notes as $note)
         <p>
             <strong>{{$note['timestamp'] ?? ''}}:</strong>
             @if((int)$note['user_id'] > 0)

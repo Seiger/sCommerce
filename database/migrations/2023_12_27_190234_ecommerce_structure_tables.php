@@ -186,7 +186,8 @@ return new class extends Migration
             $table->boolean('do_not_call')->default(false)->comment('"Do not call back" option');
             $table->text('comment')->nullable()->comment('Comment on the order');
             $table->string('lang', 10)->index()->default('base');
-            $table->jsonb('admin_notes')->default(new Expression('(JSON_ARRAY())'))->comment('Hidden comments (available only in admin panel)');
+            $table->jsonb('manager_info')->default(new Expression('(JSON_ARRAY())'))->comment('Manager information (JSON)');
+            $table->jsonb('manager_notes')->default(new Expression('(JSON_ARRAY())'))->comment('Hidden Manager comments (available only in admin panel)');
             $table->jsonb('history')->default(new Expression('(JSON_ARRAY())'))->comment('History of changes');
             $table->string('identifier')->unique()->comment('Unique order key (required by some payment systems)');
             $table->timestamps();
