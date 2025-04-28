@@ -6,7 +6,8 @@
  * Defines the structure for payment methods in the sCommerce module.
  * This interface ensures that all payment methods follow a consistent
  * structure and provide necessary functionality, such as retrieving
- * localized titles, validating, and processing payments.
+ * localized titles, validating, processing payments, managing modes,
+ * and providing available modes.
  */
 interface PaymentMethodInterface
 {
@@ -73,35 +74,14 @@ interface PaymentMethodInterface
     public function getDescription(?string $lang = null): string;
 
     /**
-     * Retrieve the credentials for this payment method.
+     * Check if the payment method is active.
      *
-     * Fetches the credentials configured for the payment method from the
-     * storage and returns them as an array.
+     * This method checks the 'active' field of the payment method
+     * to determine if the method is available for use.
      *
-     * @return array An array of credentials for the payment method.
+     * @return bool Returns true if the payment method is active, false otherwise.
      */
-    public function initializeCredentials(): self;
-
-    /**
-     * Retrieve the settings for this payment method.
-     *
-     * Fetches the settings configured for the payment method from the
-     * storage and returns them as an array.
-     *
-     * @return array An array of settings for the payment method.
-     */
-    public function getSettings(): array;
-
-    /**
-     * Validate the payment data submitted by the user.
-     *
-     * Ensures that the provided payment data meets the required
-     * criteria for the payment method.
-     *
-     * @param array $data The payment data submitted by the user.
-     * @return bool True if the data is valid, false otherwise.
-     */
-    public function validatePayment(array $data): bool;
+    public function isActive(): bool;
 
     /**
      * Render the payment button for the order.
@@ -125,6 +105,17 @@ interface PaymentMethodInterface
     public function payButton(int|string|array $data): string;
 
     /**
+     * Validate the payment data submitted by the user.
+     *
+     * Ensures that the provided payment data meets the required
+     * criteria for the payment method.
+     *
+     * @param array $data The payment data submitted by the user.
+     * @return bool True if the data is valid, false otherwise.
+     */
+    public function validatePayment(array $data): bool;
+
+    /**
      * Process the payment.
      *
      * Handles the payment logic, such as interacting with external
@@ -133,7 +124,27 @@ interface PaymentMethodInterface
      * @param array $data The payment data.
      * @return bool True if the payment is successfully processed, false otherwise.
      */
-    public function processPayment(array $data): bool;
+    public function processPayment(array $data): array|bool;
+
+    /**
+     * Retrieve the credentials for this payment method.
+     *
+     * Fetches the credentials configured for the payment method from the
+     * storage and returns them as an array.
+     *
+     * @return array An array of credentials for the payment method.
+     */
+    public function initializeCredentials(): self;
+
+    /**
+     * Retrieve the settings for this payment method.
+     *
+     * Fetches the settings configured for the payment method from the
+     * storage and returns them as an array.
+     *
+     * @return array An array of settings for the payment method.
+     */
+    public function getSettings(): array;
 
     /**
      * Define the settings fields for this payment method.
@@ -167,4 +178,26 @@ interface PaymentMethodInterface
      * @return string A JSON string containing the prepared settings data.
      */
     public function prepareSettings(array $data): string;
+
+    /**
+     * Get the mode of the payment system.
+     *
+     * This method returns the mode of the payment system, such as 'test' for test environments
+     * or 'production' for live environments. If the payment system does not use modes,
+     * this method should return an empty string.
+     *
+     * @return string The mode of the payment system (e.g., 'test', 'production').
+     */
+    public function getMode(): string;
+
+    /**
+     * Define the list of available modes for this payment method.
+     *
+     * This method defines the available modes, such as ['test', 'production'],
+     * for the payment system. If the payment system does not support modes,
+     * this method can define an empty array.
+     *
+     * @return array An associative array of available modes with mode as key and description as value.
+     */
+    public function defineAvailableModes(): array;
 }

@@ -1530,14 +1530,13 @@ switch ($get) {
                 try {
                     $instance = new $methodClass();
                     $name = $instance->getName();
-                    $identifier = $instance->getIdentifier();
                     $title = ['base' => ucfirst(str_replace('_', ' ', $instance->getName()))];
                     $description = ['base' => ''];
 
                     sPaymentMethod::create([
                         'name' => $name,
                         'class' => $methodClass,
-                        'identifier' => $identifier,
+                        'identifier' => '',
                         'active' => false,
                         'position' => sPaymentMethod::max('position') + 1,
                         'title' => json_encode($title, JSON_UNESCAPED_UNICODE),
@@ -1611,6 +1610,7 @@ switch ($get) {
                 $item->description = json_encode(request()->input('description', []), JSON_UNESCAPED_UNICODE);
                 $item->сredentials = $instance->prepareCredentials(request()->all());
                 $item->settings = $instance->prepareSettings(request()->all());
+                $item->mode = request()->string('mode', '')->trim();
                 $item->update();
             }
         }

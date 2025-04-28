@@ -23,6 +23,15 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         sCheckout::processOrder(),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
     ))->name('processOrder');
+    Route::post('pay-order/{method?}', function ($method = null) {
+        $result = sCheckout::payOrder($method, request()->all());
+        if (request()->header('Accept') && strpos(request()->header('Accept'), 'application/json') !== false) {
+            return response()->json($result, $result['success'] ? 200 : 422);
+        }
+        unset($_SESSION['payOrderResponse']);
+        $_SESSION['payOrderResponse'] = $result;
+        return back();
+    })->name('payOrder');
     Route::post('quick-order', fn() => tap(
         sCheckout::quickOrder(request()->all()),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)

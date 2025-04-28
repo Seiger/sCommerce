@@ -632,6 +632,43 @@ class sCheckout
     }
 
     /**
+     * Process the payment order.
+     *
+     * This method checks if the payment method exists and processes the payment
+     * using the corresponding payment method's processPayment() method.
+     *
+     * @param string|null $method The payment method identifier (optional, can be from URL).
+     * @param array $data The data from the POST request (e.g., payment details).
+     * @return array The result of the payment processing.
+     */
+    public function payOrder(?string $method, array $data): array
+    {
+        if (!$method && isset($data['payment_method'])) {
+            $method = $data['payment_method'];
+        }
+
+        $paymentMethod = $this->paymentMethods[$method] ?? null;
+
+        if (!$paymentMethod) {
+            return [
+                'success' => false,
+                'message' => 'Payment method not found or invalid.',
+                'code' => 404,
+            ];
+        }
+
+        if (method_exists($paymentMethod, 'processPayment')) {
+            return $paymentMethod->processPayment($data);
+        }
+
+        return [
+            'success' => false,
+            'message' => 'Payment method does not support processing.',
+            'code' => 501,
+        ];
+    }
+
+    /**
      * Register a delivery method.
      *
      * Adds a delivery method instance to the list of available methods.

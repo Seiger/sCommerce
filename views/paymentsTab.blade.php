@@ -11,6 +11,9 @@
             <th class="sorting @if($order == 'position') sorted @endif" data-order="position">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.position') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
+            <th class="sorting @if($order == 'mode') sorted @endif" data-order="mode">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.mode') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
             <th class="sorting @if($order == 'active') sorted @endif" data-order="active">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.availability') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
@@ -24,6 +27,7 @@
                     <td>{!!$item->type!!}</td>
                     <td>{{$item->title}} @if(trim($item->description))<i class="fa fa-question-circle" data-tooltip="{!!$item->description!!}"></i>@endif</td>
                     <td>{{$item->position}}</td>
+                    <td>{{$item->mode}}</td>
                     <td>
                         @if($item->active)
                             <span class="badge badge-success">@lang('global.page_data_published')</span>

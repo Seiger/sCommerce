@@ -18,6 +18,23 @@
                     </div>
                 </div>
             </div>
+            @if(count($item->instance->defineAvailableModes()))
+                <div class="row-col col-lg-2 col-md-4 col-6">
+                    <div class="row form-row">
+                        <div class="col-auto">
+                            <label for="position">@lang('sCommerce::global.mode')</label>
+                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.mode_help')"></i>
+                        </div>
+                        <div class="input-group col">
+                            <select class="form-control" name="mode" id="mode" onchange="documentDirty=true" size="1">
+                                @foreach($item->instance->defineAvailableModes() as $key => $title)
+                                    <option value="{{$key}}" @if(($item->mode ?? '') == $key) selected @endif>{{$title}}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            @endif
             <div class="row-col col-lg-2 col-md-4 col-6">
                 <div class="row form-row">
                     <div class="col-auto">
@@ -37,7 +54,7 @@
     </div>
     <div class="split my-3"></div>
     @foreach($item->instance->defineCredentials() as $group)
-        <h4><b>{{$group['label'] ?? ''}}</b></h4>
+        <h4><b>{{$group['label'] ?? ''}}</b>@if(trim($group['helptext'] ?? '')) <i class="fa fa-question-circle" data-tooltip="{{$group['helptext'] ?? ''}}"></i>@endif</h4>
         @if(count($group['fields'] ?? []))
             @foreach($group['fields'] as $key => $field)
                 <div class="row-col col-12">

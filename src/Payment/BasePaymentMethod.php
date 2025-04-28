@@ -17,6 +17,7 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
      */
     protected sPaymentMethod $method;
     public $credentials = [];
+    public $settings = [];
 
     /**
      * BasePaymentMethod constructor.
@@ -86,6 +87,58 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
     }
 
     /**
+     * Retrieve the settings for the payment method.
+     *
+     * @return array An associative array of settings for the payment method.
+     */
+    public function getSettings(): array
+    {
+        $settings = json_decode($this->method->settings ?? '', true);
+        $this->settings = is_array($settings) ? $settings : [];
+        return is_array($settings) ? $settings : [];
+    }
+
+    /**
+     * Get the mode of the payment system.
+     *
+     * Returns the mode (e.g., 'test', 'production') of the payment system.
+     * If no mode is set, it will return an empty string.
+     *
+     * @return string The mode of the payment system.
+     */
+    public function getMode(): string
+    {
+        return $this->method->mode ?? ''; // Return mode if set, otherwise empty string
+    }
+
+    /**
+     * Check if the payment method is active.
+     *
+     * This method checks the 'active' field of the payment method
+     * to determine if the method is available for use.
+     *
+     * @return bool Returns true if the payment method is active, false otherwise.
+     */
+    public function isActive(): bool
+    {
+        return (bool)$this->method->active;
+    }
+
+    /**
+     * Define the list of available modes for this payment method.
+     *
+     * This method should be implemented by specific payment systems to define their
+     * available modes, such as ['test' => 'Test Mode', 'production' => 'Live Mode'].
+     *
+     * @return array An associative array of available modes.
+     */
+    public function defineAvailableModes(): array
+    {
+        // Default to an empty array, but this can be overridden in specific payment methods
+        return [];
+    }
+
+    /**
      * Retrieve the stored credentials securely.
      */
     public function initializeCredentials(): self
@@ -112,36 +165,6 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
         }
 
         return $this;
-    }
-
-    /**
-     * Retrieve the settings for the payment method.
-     *
-     * @return array An associative array of settings for the payment method.
-     */
-    public function getSettings(): array
-    {
-        $settings = json_decode($this->method->settings ?? '', true);
-        return is_array($settings) ? $settings : [];
-    }
-
-    /**
-     * Extract a localized string based on the specified or current language.
-     *
-     * @param string $json A JSON-encoded string of translations.
-     * @param string|null $lang The language code. If null, uses the current system language.
-     * @return string The localized string.
-     */
-    protected function getLocalizedString(string $json, ?string $lang = null): string
-    {
-        $lang = $lang ?? evo()->getLocale();
-        $data = json_decode($json, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
-            return '';
-        }
-
-        return $data[$lang] ?? ($data['en'] ?? reset($data));
     }
 
     /**
@@ -188,6 +211,25 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
         }
 
         return json_encode($preparedData, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * Extract a localized string based on the specified or current language.
+     *
+     * @param string $json A JSON-encoded string of translations.
+     * @param string|null $lang The language code. If null, uses the current system language.
+     * @return string The localized string.
+     */
+    protected function getLocalizedString(string $json, ?string $lang = null): string
+    {
+        $lang = $lang ?? evo()->getLocale();
+        $data = json_decode($json, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+            return '';
+        }
+
+        return $data[$lang] ?? ($data['en'] ?? reset($data));
     }
 
     /**

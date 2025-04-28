@@ -156,6 +156,7 @@ return new class extends Migration
         });
 
         Schema::create('s_payment_methods', function (Blueprint $table) {
+            $table->comment('Table that stores payment methods. This includes information such as credentials, settings and other relevant data for integrating and managing website payment systems.');
             $table->id('id');
             $table->uuid('uuid')->default(DB::raw('(UUID())'));
             $table->string('name')->index()->comment('Unique identifier for the payment method');
@@ -167,6 +168,7 @@ return new class extends Migration
             $table->jsonb('description')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Description of the payment method');
             $table->jsonb('сredentials')->default(new Expression('(JSON_ARRAY())'))->comment('Stores credentials for the payment method (e.g., API keys, merchant ID, secret keys)');
             $table->jsonb('settings')->default(new Expression('(JSON_ARRAY())'))->comment('Additional settings for the payment method (e.g. API integrations)');
+            $table->string('mode')->default('')->comment('Mode of the payment system, such as \'test\' for test environments or \'production\' for live environments. If the payment system does not utilize modes, this field remains empty.');
             $table->string('icon')->nullable()->comment('Icon for the payment method');
             $table->timestamps();
         });
