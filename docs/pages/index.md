@@ -78,12 +78,14 @@ of Evolution CMS for seamless and efficient **online commerce**.
   - [x] sCommerceManagerAddTabEvent.
   - [x] sCommerceFormFieldRender.
   - [x] sCommerceAfterFormFieldRender.
+  - [x] sCommerceAfterOrderSave.
   - [x] sCommerceAfterProductSave.
   - [x] sCommerceAfterProductContentSave.
   - [x] sCommerceAfterProductDuplicate.
 - [x] Javascript events.
   - [x] sCommerceAddedToCart.
   - [x] sCommerceRemovedFromCart.
+  - [x] sCommerceSetWishlist.
 - [x] Multi-currency Support (ISO 4217).
 - [x] Integration with Payment Systems.
   - [x] Cash.

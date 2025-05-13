@@ -81,8 +81,16 @@
                 <td>{{$item->client}} {{$item->user_info['phone'] ?? ''}}</td>
                 <td>{{$item->created_at}}</td>
                 <td>{{sCommerce::convertPrice($item->cost, $item->currency)}}</td>
-                <td>{{sOrder::getPaymentStatusName($item->payment_status)}}</td>
-                <td>{{sOrder::getOrderStatusName($item->status)}}</td>
+                <td>
+                    <span @class(['badge', 'bg-paid' => $item->payment_status == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => $item->payment_status != sOrder::PAYMENT_STATUS_PAID])>
+                        {{sOrder::getPaymentStatusName($item->payment_status)}}
+                    </span>
+                </td>
+                <td>
+                    <span @class(['badge', 'bg-active' => in_array($item->status, $unprocessedes), 'bg-progress' => in_array($item->status, $workings), 'bg-disactive' => in_array($item->status, $completeds)])>
+                        {{sOrder::getOrderStatusName($item->status)}}
+                    </span>
+                </td>
                 <td style="text-align:center;">
                     <div class="btn-group">
                         <a href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}" class="btn btn-outline-success">

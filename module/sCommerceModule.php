@@ -154,6 +154,52 @@ switch ($get) {
         $_SESSION['itemaction'] = 'Editing a Order of #' . $item->id;
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
+    case "orderSave":
+        $requestId = request()->integer('i');
+        $item = sOrder::find($requestId);
+
+        if ($item) {
+            $history = $item->history;
+
+            $payment_status = request()->integer('payment_status', $item->payment_status);
+            if ($payment_status != $item->payment_status) {
+                $item->payment_status = $payment_status;
+                $history[] = [
+                    'payment_status' => $payment_status,
+                    'timestamp' => now()->toDateTimeString(),
+                    'user_id' => (int)evo()->getLoginUserID('mgr'),
+                ];
+            }
+
+            $status = request()->integer('status', $item->status);
+            if ($status != $item->status) {
+                $item->status = $status;
+                $history[] = [
+                    'status' => $status,
+                    'timestamp' => now()->toDateTimeString(),
+                    'user_id' => (int)evo()->getLoginUserID('mgr'),
+                ];
+            }
+
+            if (request()->string('note')->isNotEmpty()) {
+                $manager_notes = $item->manager_notes;
+                $manager_notes[] = [
+                    'comment' => request()->string('note')->value(),
+                    'timestamp' => now()->toDateTimeString(),
+                    'user_id' => (int)evo()->getLoginUserID('mgr'),
+                ];
+                $item->manager_notes = $manager_notes;
+            }
+
+            $item->history = $history;
+            $item->update();
+        }
+
+        $_SESSION['itemaction'] = 'Saving a Order of #' . $item->id;
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=orders'));
+        evo()->invokeEvent('sCommerceAfterOrderSave', compact('item'));
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------
     | Products

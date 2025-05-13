@@ -17,6 +17,8 @@
                     setWishlist(result.products);
                 }
 
+                document.dispatchEvent(new CustomEvent('sCommerceSetWishlist', {detail: result}));
+
                 if ('disabled' in e.target) e.target.disabled = false;
             }
         }

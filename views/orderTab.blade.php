@@ -2,7 +2,7 @@
 <h3>
     @lang('sCommerce::global.order') <b>#{{$item->id}}</b>
     @if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif
-    <b>{{implode(' ', array_diff([$item->user_info['first_name'], $item->user_info['middle_name'], $item->user_info['last_name']], ['']))}} {{$item->user_info['phone']}}</b>
+    <b>{{implode(' ', array_diff([$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? ''], ['']))}} {{$item->user_info['phone']}}</b>
 </h3>
 <p></p>
 <p>
@@ -13,7 +13,9 @@
 </p>
 <p>
     <strong>@lang('sCommerce::global.sum'):</strong> {{sCommerce::convertPrice($item->cost, $item->currency)}}
-    <span @class(['badge', 'bg-paid' => $item->payment_status == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => $item->payment_status != sOrder::PAYMENT_STATUS_PAID])>{{sOrder::getPaymentStatusName($item->payment_status)}}</span>
+    <span @class(['badge', 'bg-paid' => $item->payment_status == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => $item->payment_status != sOrder::PAYMENT_STATUS_PAID])>
+        {{sOrder::getPaymentStatusName($item->payment_status)}}
+    </span>
 </p>
 <div class="split my-3"></div>
 
@@ -96,10 +98,10 @@
         <strong>@lang('global.user_full_name'):</strong>
         @if((int)$item->user_info['id'] > 0)
             <a href="/manager/index.php?a=88&id={{(int)$item->user_info['id']}}" target="_blank">
-                {{implode(' ', array_diff([$item->user_info['first_name'], $item->user_info['middle_name'], $item->user_info['last_name']], ['']))}}
+                {{implode(' ', array_diff([$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? ''], ['']))}}
             </a>
         @else
-            {{implode(' ', array_diff([$item->user_info['first_name'], $item->user_info['middle_name'], $item->user_info['last_name']], ['']))}}
+            {{implode(' ', array_diff([$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? ''], ['']))}}
         @endif
     </p>
     <p><strong>@lang('global.user_phone'):</strong> {{$item->user_info['phone'] ?? ''}}</p>
@@ -108,7 +110,7 @@
 
     <h3>@lang('sCommerce::global.comments_and_notes')</h3>
     <textarea name="note" class="form-control" rows="4" placeholder="@lang('sCommerce::global.add_comment')"></textarea>
-    @foreach($item->manager_notes as $note)
+    @foreach(array_reverse($item->manager_notes) as $note)
         <p>
             <strong>{{$note['timestamp'] ?? ''}}:</strong>
             @if((int)$note['user_id'] > 0)
@@ -133,7 +135,7 @@
         </tr>
         </thead>
         <tbody>
-        @foreach($item->history as $history)
+        @foreach(array_reverse($item->history) as $history)
             <tr>
                 <td>{{$history['timestamp'] ?? ''}}</td>
                 <td>
