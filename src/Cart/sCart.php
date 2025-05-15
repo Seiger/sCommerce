@@ -37,14 +37,15 @@ class sCart
     public function addProduct(int $productId = 0, int $optionId = 0, int $quantity = 1, string $trigger = null): array
     {
         if ($productId === 0) {
-            $productId = request()->integer('productId');
-            $optionId = request()->integer('optionId');
-            $quantity = max(request()->integer('quantity'), 1);
+            $productId = request()->integer('productId', $productId);
         }
 
         if (!$trigger) {
             $trigger = request()->string('trigger')->trim()->value() ?? 'buy';
         }
+
+        $optionId = request()->integer('optionId', $optionId);
+        $quantity = max(request()->integer('quantity'), $quantity);
 
         $product = sCommerce::getProduct($productId);
 
@@ -54,6 +55,7 @@ class sCart
 
             return [
                 'success' => false,
+                'trigger' => $trigger,
                 'message' =>  $message,
             ];
         }
@@ -69,6 +71,7 @@ class sCart
 
                 return [
                     'success' => false,
+                    'trigger' => $trigger,
                     'message' =>  $message,
                 ];
             } else {
@@ -76,7 +79,6 @@ class sCart
             }
         }
 
-        $quantity = ($quantity == 1 ? $this->cartData[$productId][$optionId] : $quantity);
         $this->cartData[$productId][$optionId] = $quantity;
         $this->saveCartData();
 
@@ -91,6 +93,7 @@ class sCart
 
         return [
             'success' => true,
+            'trigger' => $trigger,
             'message' => $message,
             'product' => array_merge($this->getProductFields($product), compact('quantity')),
             'miniCart' => $this->getMiniCart(),
