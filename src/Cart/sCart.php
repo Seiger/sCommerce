@@ -18,7 +18,9 @@ class sCart
         'sku',
         'inventory',
         'price',
-        'oldPrice'
+        'priceAsFloat',
+        'oldPrice',
+        'oldPriceAsFloat',
     ];
 
     public function __construct()

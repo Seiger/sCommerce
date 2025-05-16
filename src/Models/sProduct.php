@@ -464,6 +464,23 @@ class sProduct extends Model
     }
 
     /**
+     * Get the numerical price of the product in the current currency.
+     *
+     * This accessor computes the effective product price as a float, based on
+     * the active currency. If a special price is available and lower than
+     * the regular price, it takes precedence. Otherwise, the regular price is used.
+     *
+     * Internally, the method calls `priceToNumber()` which uses the `sCommerce::convertPriceNumber`
+     * method to perform the currency conversion.
+     *
+     * @return float The converted numeric price of the product.
+     */
+    public function getPriceAsFloatAttribute(): float
+    {
+        return $this->priceToNumber(sCommerce::currentCurrency());
+    }
+
+    /**
      * Convert the price to the specified currency and format it as a string.
      *
      * @param string $currency The target currency.
@@ -535,6 +552,23 @@ class sProduct extends Model
     public function getOldPriceAttribute(): string
     {
         return $this->oldPriceTo(sCommerce::currentCurrency());
+    }
+
+    /**
+     * Get the numerical old price of the product in the current currency.
+     *
+     * This accessor computes the effective product old price as a float, based on
+     * the active currency. If a special price is available and lower than
+     * the regular price, it takes precedence. Otherwise, the regular price is used.
+     *
+     * Internally, the method calls `priceToNumber()` which uses the `sCommerce::convertPriceNumber`
+     * method to perform the currency conversion.
+     *
+     * @return float The converted numeric price of the product.
+     */
+    public function getOldPriceAsFloatAttribute(): float
+    {
+        return $this->oldPriceToNumber(sCommerce::currentCurrency());
     }
 
     /**
