@@ -29,7 +29,7 @@ Event::listen('evolution.OnPageNotFound', function($params) {
             }
         } else {
             $doc = sFilter::validateFilters();
-            if ($doc) {
+            if ($doc && ((bool)evo()->getDocument($doc) != false || evo()->getLoginUserID('mgr'))) {
                 evo()->sendForward($doc);
                 exit();
             };
