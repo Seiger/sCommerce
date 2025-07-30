@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class sDeliveryMethod extends Model
 {
@@ -24,6 +25,15 @@ class sDeliveryMethod extends Model
      * @var bool
      */
     public $timestamps = true;
+
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string)Str::uuid();
+            }
+        });
+    }
 
     /**
      * Scope a query to only include active delivery methods.

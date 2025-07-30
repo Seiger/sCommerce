@@ -112,7 +112,7 @@ class sCheckout
             return evo()->sendRedirect(back()->getTargetUrl());
         }
 
-        $userId = $userId = evo()->getLoginUserID('web') ?: evo()->getLoginUserID('mgr'); // Checking if the user is authorized
+        $userId = evo()->getLoginUserID('web') ?: evo()->getLoginUserID('mgr'); // Checking if the user is authorized
         $user = evo()->getUserInfo($userId ?: 0) ?: [];
         $user = array_merge($user, evo()->getUserSettings());
 

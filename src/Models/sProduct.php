@@ -124,6 +124,12 @@ class sProduct extends Model
      */
     protected static function booted()
     {
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string)Str::uuid();
+            }
+        });
+
         static::addGlobalScope('translate', function (Builder $builder) {
             if (!isset($builder->getQuery()->columns)) {
                 $builder->select('*');

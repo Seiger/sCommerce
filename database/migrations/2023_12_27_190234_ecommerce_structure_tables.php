@@ -64,7 +64,7 @@ return new class extends Migration
         */
         Schema::create('s_products', function (Blueprint $table) {
             $table->id('id');
-            $table->uuid('uuid')->default(DB::raw('(UUID())'));
+            $table->uuid('uuid')->unique();
             $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
             $table->unsignedTinyInteger('availability')->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
             $table->string('sku')->index()->comment('It is the SKU Product code');
@@ -139,7 +139,7 @@ return new class extends Migration
         */
         Schema::create('s_delivery_methods', function (Blueprint $table) {
             $table->id('id');
-            $table->uuid('uuid')->default(DB::raw('(UUID())'));
+            $table->uuid('uuid')->unique();
             $table->string('name')->unique()->comment('Unique identifier for the delivery method');
             $table->string('class')->comment('PHP class implementing the delivery method');
             $table->boolean('active')->default(false)->comment('Indicates if the delivery method is active');
@@ -158,7 +158,7 @@ return new class extends Migration
         Schema::create('s_payment_methods', function (Blueprint $table) {
             $table->comment('Table that stores payment methods. This includes information such as credentials, settings and other relevant data for integrating and managing website payment systems.');
             $table->id('id');
-            $table->uuid('uuid')->default(DB::raw('(UUID())'));
+            $table->uuid('uuid')->unique();
             $table->string('name')->index()->comment('Unique identifier for the payment method');
             $table->string('class')->index()->comment('PHP class implementing the payment method');
             $table->string('identifier')->index()->default('')->comment('Unique identifier for each method');
