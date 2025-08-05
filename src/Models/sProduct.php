@@ -148,9 +148,15 @@ class sProduct extends Model
                     ->where('spt.lang', function ($leftJoin) use ($builder, $locale) {
                         $leftJoin->select('lang')
                             ->from('s_product_translates as t')
-                            ->whereRaw('`' . DB::getTablePrefix() . 't`.`product` = `' . DB::getTablePrefix() . 's_products`.`id`')
-                            ->whereIn('lang', [$locale, 'base'])
-                            ->orderByRaw('FIELD(`lang`, "' . $locale . '", "base")')
+                            ->whereColumn('t.product', 's_products.id')
+                            ->whereIn('t.lang', [$locale, 'base'])
+                            ->orderByRaw("
+                                CASE lang
+                                    WHEN ? THEN 0
+                                    WHEN 'base' THEN 1
+                                    ELSE 2
+                                END
+                            ", [$locale])
                             ->limit(1);
                     });
             });

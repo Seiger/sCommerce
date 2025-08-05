@@ -20,10 +20,10 @@ return new class extends Migration
         */
         Schema::create('s_attributes', function (Blueprint $table) {
             $table->id('id');
-            $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
-            $table->unsignedTinyInteger('asfilter')->default(0)->index()->comment('0-Not filter|1-Using as filter');
-            $table->unsignedInteger('position')->default(0)->index()->comment('Position the Attribute in list');
-            $table->unsignedInteger('type')->default(0)->comment('Type of input the attribute');
+            $table->tinyInteger('published')->unsigned()->default(0)->index()->comment('0-Unpublished|1-Published');
+            $table->tinyInteger('asfilter')->unsigned()->default(0)->index()->comment('0-Not filter|1-Using as filter');
+            $table->integer('position')->unsigned()->default(0)->index()->comment('Position the Attribute in list');
+            $table->integer('type')->unsigned()->default(0)->comment('Type of input the attribute');
             $table->string('alias', 512)->index()->comment('It using for generate url');
             $table->tinyText('helptext')->comment('Description about this Attribute in adminpanel');
             $table->timestamps();
@@ -44,7 +44,7 @@ return new class extends Migration
         Schema::create('s_attribute_values', function (Blueprint $table) {
             $table->id('avid');
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
-            $table->unsignedInteger('position')->default(0)->index()->comment('Position the Attribute value in list');
+            $table->integer('position')->unsigned()->default(0)->index()->comment('Position the Attribute value in list');
             $table->string('alias', 512)->index()->comment('It using for generate url');
             $table->string('code', 512)->comment('Code of Attribute value e.x. blue, #007bff');
             $table->tinyText('base')->default('')->comment('Base translate for Title');
@@ -54,7 +54,7 @@ return new class extends Migration
 
         Schema::create('s_attribute_category', function (Blueprint $table) {
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
-            $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
+            $table->integer('category')->unsigned()->default(0)->index()->comment('Resource ID as Category');
         });
 
         /*
@@ -65,22 +65,22 @@ return new class extends Migration
         Schema::create('s_products', function (Blueprint $table) {
             $table->id('id');
             $table->uuid('uuid')->unique();
-            $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
-            $table->unsignedTinyInteger('availability')->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
+            $table->tinyInteger('published')->unsigned()->default(0)->index()->comment('0-Unpublished|1-Published');
+            $table->tinyInteger('availability')->unsigned()->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
             $table->string('sku')->index()->comment('It is the SKU Product code');
             $table->string('alias', 512)->index()->comment('It using for generate url');
-            $table->unsignedInteger('views')->default(0)->index()->comment('Count view the product');
-            $table->unsignedInteger('rating')->default(5)->index()->comment('Rating the product base on votes');
-            $table->unsignedInteger('type')->default(0)->comment('Type the product');
-            $table->unsignedDecimal('price_regular', 9, 2)->default(0)->comment('The regular price of the product');
-            $table->unsignedDecimal('price_special', 9, 2)->default(0)->comment('The special price of the product');
-            $table->unsignedDecimal('price_opt_regular', 9, 2)->default(0)->comment('The wholesale price of the product');
-            $table->unsignedDecimal('price_opt_special', 9, 2)->default(0)->comment('The special wholesale price of the product');
-            $table->unsignedDecimal('weight', 11, 4)->default(0)->comment('The weight of production is indicated if necessary for technical purposes');
-            $table->unsignedDecimal('width', 11, 4)->default(0)->comment('The width of production is indicated if necessary for technical purposes');
-            $table->unsignedDecimal('height', 11, 4)->default(0)->comment('The height of production is indicated if necessary for technical needs');
-            $table->unsignedDecimal('length', 11, 4)->default(0)->comment('The length of production is indicated if necessary for technical needs');
-            $table->unsignedDecimal('volume', 11, 4)->default(0)->comment('The volume of production is indicated if necessary for technical needs');
+            $table->integer('views')->unsigned()->default(0)->index()->comment('Count view the product');
+            $table->integer('rating')->unsigned()->default(5)->index()->comment('Rating the product base on votes');
+            $table->integer('type')->unsigned()->default(0)->comment('Type the product');
+            $table->decimal('price_regular', 9, 2)->unsigned()->default(0)->comment('The regular price of the product');
+            $table->decimal('price_special', 9, 2)->unsigned()->default(0)->comment('The special price of the product');
+            $table->decimal('price_opt_regular', 9, 2)->unsigned()->default(0)->comment('The wholesale price of the product');
+            $table->decimal('price_opt_special', 9, 2)->unsigned()->default(0)->comment('The special wholesale price of the product');
+            $table->decimal('weight', 11, 4)->unsigned()->default(0)->comment('The weight of production is indicated if necessary for technical purposes');
+            $table->decimal('width', 11, 4)->unsigned()->default(0)->comment('The width of production is indicated if necessary for technical purposes');
+            $table->decimal('height', 11, 4)->unsigned()->default(0)->comment('The height of production is indicated if necessary for technical needs');
+            $table->decimal('length', 11, 4)->unsigned()->default(0)->comment('The length of production is indicated if necessary for technical needs');
+            $table->decimal('volume', 11, 4)->unsigned()->default(0)->comment('The volume of production is indicated if necessary for technical needs');
             $table->integer('inventory')->default(0)->comment('Quantity products in stock');
             $table->char('currency', 3)->default('USD')->comment('Currency price this product');
             $table->string('cover', 512)->default('')->comment('Cover image file link');
@@ -109,21 +109,21 @@ return new class extends Migration
 
         Schema::create('s_product_category', function (Blueprint $table) {
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
-            $table->unsignedInteger('category')->default(0)->index()->comment('Resource ID as Category');
+            $table->integer('category')->unsigned()->default(0)->index()->comment('Resource ID as Category');
             $table->string('scope')->index()->default('');
-            $table->unsignedInteger('position')->default(0)->comment('Product position in Category');
+            $table->integer('position')->unsigned()->default(0)->comment('Product position in Category');
         });
 
         Schema::create('s_product_attribute_values', function (Blueprint $table) {
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
-            $table->unsignedInteger('valueid')->default(0)->index()->comment('This is Id if the attribute value is given as an element from the data set of values');
+            $table->integer('valueid')->unsigned()->default(0)->index()->comment('This is Id if the attribute value is given as an element from the data set of values');
             $table->text('value')->index()->comment('It using for value if valueid is null');
         });
 
         Schema::create('s_product_modifications', function (Blueprint $table) {
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
-            $table->unsignedInteger('type')->default(0)->index()->comment('Modification type (group, option, variation)');
+            $table->integer('type')->unsigned()->default(0)->index()->comment('Modification type (group, option, variation)');
             $table->string('sku')->index()->comment('Unique modification code');
             $table->jsonb('mods')->default(new Expression('(JSON_ARRAY())'))->comment('JSON object with modification attributes (e.g. size, color)');
             $table->jsonb('parameters')->default(new Expression('(JSON_ARRAY())'))->comment('JSON object with modification parameters (e.g. size, color)');
@@ -143,7 +143,7 @@ return new class extends Migration
             $table->string('name')->unique()->comment('Unique identifier for the delivery method');
             $table->string('class')->comment('PHP class implementing the delivery method');
             $table->boolean('active')->default(false)->comment('Indicates if the delivery method is active');
-            $table->unsignedInteger('position')->default(0)->comment('Sorting order');
+            $table->integer('position')->unsigned()->default(0)->comment('Sorting order');
             $table->jsonb('title')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Title of the delivery method');
             $table->jsonb('description')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Description of the delivery method');
             $table->decimal('cost', 9, 2)->default(0)->comment('Base cost of delivery');
@@ -163,7 +163,7 @@ return new class extends Migration
             $table->string('class')->index()->comment('PHP class implementing the payment method');
             $table->string('identifier')->index()->default('')->comment('Unique identifier for each method');
             $table->boolean('active')->default(false)->comment('Indicates if the payment method is active');
-            $table->unsignedInteger('position')->default(0)->comment('Sorting order');
+            $table->integer('position')->unsigned()->default(0)->comment('Sorting order');
             $table->jsonb('title')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Title of the payment method');
             $table->jsonb('description')->default(new Expression('(JSON_ARRAY())'))->comment('Multilang Description of the payment method');
             $table->jsonb('сredentials')->default(new Expression('(JSON_ARRAY())'))->comment('Stores credentials for the payment method (e.g., API keys, merchant ID, secret keys)');
@@ -175,15 +175,15 @@ return new class extends Migration
 
         Schema::create('s_orders', function (Blueprint $table) {
             $table->id('id');
-            $table->unsignedBigInteger('user_id')->default(0)->index()->comment('User ID (if authorized)');
+            $table->bigInteger('user_id')->unsigned()->default(0)->index()->comment('User ID (if authorized)');
             $table->jsonb('user_info')->default(new Expression('(JSON_ARRAY())'))->comment('User information (JSON)');
             $table->jsonb('delivery_info')->default(new Expression('(JSON_ARRAY())'))->comment('Shipping information (JSON)');
             $table->jsonb('payment_info')->default(new Expression('(JSON_ARRAY())'))->comment('Payment information (JSON)');
             $table->jsonb('products')->default(new Expression('(JSON_ARRAY())'))->comment('Product list (JSON)');
             $table->decimal('cost', 9, 2)->default(0)->comment('Total order amount');
             $table->char('currency', 3)->default('USD')->comment('Currency cost this order');
-            $table->unsignedInteger('payment_status')->default(0)->comment('Payment status (0: pending, 1: completed, 2: failed, etc.)');
-            $table->unsignedInteger('status')->default(1)->comment('Order status (1: new)');
+            $table->integer('payment_status')->unsigned()->default(0)->comment('Payment status (0: pending, 1: completed, 2: failed, etc.)');
+            $table->integer('status')->unsigned()->default(1)->comment('Order status (1: new)');
             $table->boolean('is_quick')->default(false)->comment('Flag indicating if the order is a quick purchase');
             $table->boolean('do_not_call')->default(false)->comment('"Do not call back" option');
             $table->text('comment')->nullable()->comment('Comment on the order');
@@ -203,14 +203,14 @@ return new class extends Migration
         Schema::create('s_reviews', function (Blueprint $table) {
             $table->id('id');
             $table->string('lang', 10)->default('base')->index()->comment('The Lang field');
-            $table->unsignedBigInteger('parent')->default(0)->index()->comment('If it is answer');
-            $table->unsignedBigInteger('product')->default(0)->index()->comment('The product ID');
-            $table->unsignedDecimal('rating', 2, 1)->default(5)->comment('Rating the Review');
-            $table->unsignedBigInteger('user')->default(0)->index()->comment('The product user ID');
+            $table->bigInteger('parent')->unsigned()->default(0)->index()->comment('If it is answer');
+            $table->bigInteger('product')->unsigned()->default(0)->index()->comment('The product ID');
+            $table->decimal('rating', 2, 1)->unsigned()->default(5)->comment('Rating the Review');
+            $table->bigInteger('user')->unsigned()->default(0)->index()->comment('The product user ID');
             $table->string('name')->default('')->comment('The User name');
             $table->string('title')->default('')->comment('The Title of Message');
             $table->string('message')->default('')->comment('The Message');
-            $table->unsignedTinyInteger('published')->default(0)->index()->comment('0-Unpublished|1-Published');
+            $table->tinyInteger('published')->unsigned()->default(0)->index()->comment('0-Unpublished|1-Published');
             $table->timestamps();
         });
 
