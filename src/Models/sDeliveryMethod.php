@@ -28,11 +28,11 @@ class sDeliveryMethod extends Model
 
     protected static function booted(): void
     {
-        static::creating(function ($model) {
+        /*static::creating(function ($model) {
             if (empty($model->uuid)) {
                 $model->uuid = (string)Str::uuid();
             }
-        });
+        });*/
     }
 
     /**
