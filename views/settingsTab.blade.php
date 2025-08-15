@@ -3,14 +3,14 @@
 @if(!is_writable(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerceCurrencies.php'))<div class="alert alert-danger" role="alert">@lang('sCommerce::global.not_writable_currencies')</div>@endif
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=settingsSave" onsubmit="documentDirty=false;">
     <input type="hidden" name="back" value="&get=settings" />
-    <h3 class="sectionTrans">
+    {{--<h3 class="sectionTrans">
         @lang('sCommerce::global.additional_fields_main_product_tab')
         <div class="btn-group">
             <span class="btn btn-primary" onclick="addItem('main_product_constructors')">
                 <i class="fa fa-plus"></i> <span>@lang('global.add')</span>
             </span>
         </div>
-    </h3>
+    </h3>--}}
     <div class="col col-12 col-sm-12 col-md-6">
         <div id="main_product_constructors" class="row form-row widgets sortable">
             @foreach(sCommerce::config('constructor.main_product', []) as $item)

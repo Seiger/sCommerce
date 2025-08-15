@@ -42,6 +42,7 @@
                 <td>
                     {{$item->pagetitle ?? __('sCommerce::global.no_text')}}
                     @if(isset($item->asfilter) && $item->asfilter)<span class="badge bg-seigerit bg-super">@lang('sCommerce::global.as_filter')</span>@endif
+                    @if(trim($item->helptext ?? ''))<i class="fa fa-question-circle" data-tooltip="{{$item->helptext}}"></i>@endif
                 </td>
                 <td>
                     @if($item->categories->count())
