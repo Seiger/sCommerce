@@ -1,3 +1,4 @@
+@php use Seiger\sCommerce\Models\sAttribute; @endphp
 <h3>@lang('sCommerce::global.representation_products_fields')</h3>
 <div class="row form-row">
     <div class="col-auto">
