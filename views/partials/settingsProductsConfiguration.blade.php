@@ -182,19 +182,6 @@
         <input type="hidden" id="products__show_field_rating" name="products__show_field_rating" value="{{sCommerce::config('products.show_field_rating', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
-<div class="row form-row">
-    <div class="col-auto">
-        <label for="basic__available_currencies">@lang('sCommerce::global.additional_fields_to_products_tab')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.additional_fields_to_products_tab_help')"></i>
-    </div>
-    <div class="col">
-        <select id="products__additional_fields" class="form-control select2" name="products__additional_fields[]" multiple onchange="documentDirty=true;">
-            @foreach(sCommerce::config('constructor.main_product', []) as $item)
-                <option value="{{$item['key']}}" @if(in_array($item['key'], sCommerce::config('products.additional_fields', []))) selected @endif>{{$item['pagetitle']}}</option>
-            @endforeach
-        </select>
-    </div>
-</div>
 @if(evo()->getConfig('scom_pro', false))
     <div class="row form-row">
         <div class="col-auto">

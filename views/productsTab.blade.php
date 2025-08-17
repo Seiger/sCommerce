@@ -1,4 +1,5 @@
 @php
+    use Seiger\sCommerce\Models\sAttribute;
     use Seiger\sCommerce\Models\sProduct;
     $order = request()->has('order') ? request()->input('order') : 'id';
     if (evo()->getConfig('check_sMultisite', false)) {
@@ -134,17 +135,10 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.rating') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
-            @if(count(sCommerce::config('products.additional_fields', [])))
-                @foreach(sCommerce::config('products.additional_fields', []) as $field)
-                    <th class="sorting @if($order == $field) sorted @endif" data-order="{{$field}}">
-                        <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">{{sCommerce::config('constructor.main_product.'.$field.'.pagetitle', $field)}} <i class="fas fa-sort" style="color: #036efe;"></i></button>
-                    </th>
-                @endforeach
-            @endif
             @if(evo()->getConfig('scom_pro', false) && count(sCommerce::config('products.attributes', [])))
                 @foreach(sCommerce::config('products.attributes', []) as $field)
                     <th class="sorting @if($order == $field) sorted @endif" data-order="a.{{$field}}">
-                        <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">{{sCommerce::config('constructor.main_product.'.$field.'.pagetitle', $field)}} <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                        <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">{{sAttribute::whereAlias($field)->first()->text(ManagerTheme::getLang())->first()->pagetitle ?? ''}} <i class="fas fa-sort" style="color: #036efe;"></i></button>
                     </th>
                 @endforeach
             @endif
