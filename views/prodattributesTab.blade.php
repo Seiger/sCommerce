@@ -4,7 +4,7 @@
 
 <div class="row-col col-12">
     <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=prodattributesSave" onsubmit="documentDirty=false;">
-        <input type="hidden" name="back" value="&get=prodattributes&i={{(int)request()->input('i', 0)}}" />
+        <input type="hidden" name="back" value="&get=prodattributes&i={{(int)request()->input('i', 0)}}{{request()->has('page') ? '&page=' . request()->page : ''}}" />
         <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}" />
         <div class="row form-row">
             @php($prefix = 'attribute__')

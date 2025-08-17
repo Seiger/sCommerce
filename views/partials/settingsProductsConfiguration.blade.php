@@ -194,4 +194,19 @@
         </select>
     </div>
 </div>
+@if(evo()->getConfig('scom_pro', false))
+    <div class="row form-row">
+        <div class="col-auto">
+            <label for="basic__available_currencies">@lang('sCommerce::global.attributes')</label>
+            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.attributes_to_products_tab_help')"></i>
+        </div>
+        <div class="col">
+            <select id="products__attributes" class="form-control select2" name="products__attributes[]" multiple onchange="documentDirty=true;">
+                @foreach(sAttribute::all() as $item)
+                    <option value="{{$item->alias}}" @if(in_array($item->alias, sCommerce::config('products.attributes', []))) selected @endif>{{$item->text->pagetitle}}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+@endif
 <div class="split my-3"></div>

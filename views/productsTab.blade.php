@@ -141,6 +141,13 @@
                     </th>
                 @endforeach
             @endif
+            @if(evo()->getConfig('scom_pro', false) && count(sCommerce::config('products.attributes', [])))
+                @foreach(sCommerce::config('products.attributes', []) as $field)
+                    <th class="sorting @if($order == $field) sorted @endif" data-order="a.{{$field}}">
+                        <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">{{sCommerce::config('constructor.main_product.'.$field.'.pagetitle', $field)}} <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                    </th>
+                @endforeach
+            @endif
             <th id="action-btns">@lang('global.onlineusers_action')</th>
         </tr>
         </thead>
@@ -244,6 +251,11 @@
                 @if(count(sCommerce::config('products.additional_fields', [])))
                     @foreach(sCommerce::config('products.additional_fields', []) as $field)
                         <td>{{ $item->{'constructor_' . $field} }}</td>
+                    @endforeach
+                @endif
+                @if(evo()->getConfig('scom_pro', false) && count(sCommerce::config('products.attributes', [])))
+                    @foreach(sCommerce::config('products.attributes', []) as $field)
+                        <td>{{$item->attribute($field)->label ?? ''}}</td>
                     @endforeach
                 @endif
                 <td style="text-align:center;">

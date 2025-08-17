@@ -1,5 +1,7 @@
 @php
-    use Carbon\Carbon;use Illuminate\Support\Str;use Seiger\sCommerce\Facades\sCommerce;
+    use Carbon\Carbon;
+    use Illuminate\Support\Str;
+    use Seiger\sCommerce\Facades\sCommerce;
     use Seiger\sCommerce\Models\sAttribute;
     use Seiger\sCommerce\Models\sProduct;
 @endphp
@@ -7,7 +9,7 @@
 <div class="split my-3"></div>
 
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=productSave" onsubmit="documentDirty=false;">
-    <input type="hidden" name="back" value="&get=product&i={{(int)request()->input('i', 0)}}"/>
+    <input type="hidden" name="back" value="&get=product&i={{(int)request()->input('i', 0)}}{{request()->has('page') ? '&page=' . request()->page : ''}}"/>
     <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}"/>
     <div class="row-col col-12">
         <div class="row form-row">

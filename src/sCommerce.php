@@ -349,7 +349,7 @@ class sCommerce
      */
     public function tabRender($tabId, $tabTpl = null, $dataInput = [], $tabName = null, $tabIcon = null, $tabHelp = null, $fullUrl = null)
     {
-        $saveUri = '&get=' . $tabId . ($dataInput['iUrl'] ?? '');
+        $saveUri = '&get=' . $tabId . ($dataInput['iUrl'] ?? '') . ($dataInput['pUrl'] ?? '');
         $fullUrl = $fullUrl ?: $this->moduleUrl() . $saveUri;
         $tabName = $tabName ?: __('sCommerce::global.' . $tabId);
         $tabIcon = $tabIcon ?: __('sCommerce::global.' . $tabId . '_icon');

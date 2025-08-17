@@ -64,7 +64,7 @@
         <input type="hidden" id="basic__in_main_menu" name="basic__in_main_menu" value="{{sCommerce::config('basic.in_main_menu', 0)}}" onchange="documentDirty=true;">
     </div>
 </div>
-<div class="row form-row">
+{{--<div class="row form-row">
     <div class="col-auto">
         <label for="basic__in_new_tab">@lang('sCommerce::global.in_new_tab')</label>
         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.in_new_tab_help')"></i>
@@ -73,7 +73,7 @@
         <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__in_new_tab);" @if(sCommerce::config('basic.in_new_tab', 1) == 1) checked @endif>
         <input type="hidden" id="basic__in_new_tab" name="basic__in_new_tab" value="{{sCommerce::config('basic.in_new_tab', 1)}}" onchange="documentDirty=true;">
     </div>
-</div>
+</div>--}}
 <div class="row form-row">
     <div class="col-auto">
         <label for="basic__main_menu_order">@lang('sCommerce::global.main_menu_order')</label>

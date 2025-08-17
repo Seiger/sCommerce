@@ -4,6 +4,7 @@
  */
 
 use Carbon\Carbon;
+use EvolutionCMS\Facades\ManagerTheme;
 use EvolutionCMS\Models\SiteContent;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cookie;
@@ -38,6 +39,7 @@ $sCommerceController = new sCommerceController();
 Paginator::defaultView('sCommerce::partials.pagination');
 $get = request()->get ?? (sCommerce::config('basic.orders_on', 1) == 1 ? "orders" : "products");
 $iUrl = (int)request()->input('i', 0) > 0 ? '&i=' . (int)request()->input('i', 0) : '';
+$pUrl = (int)request()->input('page', 1) > 1 ? '&page=' . (int)request()->input('page', 1) : '';
 $editor = [];
 $tabs = [];
 
@@ -254,7 +256,42 @@ switch ($get) {
                 );
                 $query->orderBy('cat', $direc);
                 break;
-            default :
+            case str_starts_with($order, 'a.'):
+                $order = ltrim($order, 'a.');
+                $hasLang = Schema::hasColumn('s_attribute_values', ManagerTheme::getLang());
+                $query->addSelect(['sort' =>
+                    DB::table('s_attribute_values')
+                        ->select(DB::raw(
+                            $hasLang
+                                ? "CASE WHEN " . ManagerTheme::getLang() . " IS NOT NULL AND " . ManagerTheme::getLang() . " != '' THEN " . ManagerTheme::getLang() . " ELSE base END as value"
+                                : "base as value"
+                        ))
+                        ->where('s_attribute_values.avid', function ($q) use ($order) {
+                            $q->select('valueid')
+                                ->from('s_product_attribute_values')
+                                ->where('s_product_attribute_values.attribute', function ($q) use ($order) {
+                                    $q->select('id')
+                                        ->from('s_attributes')
+                                        ->where('s_attributes.alias', $order);
+                                })
+                                ->whereColumn('s_product_attribute_values.product', 's_products.id')
+                                ->limit(1);
+                        })
+                        ->union(DB::table('s_product_attribute_values')
+                            ->select('value')
+                            ->where('s_product_attribute_values.attribute', function ($q) use ($order) {
+                                $q->select('id')
+                                    ->from('s_attributes')
+                                    ->where('s_attributes.alias', $order);
+                            })
+                            ->whereColumn('s_product_attribute_values.product', 's_products.id')
+                            ->limit(1)
+                        )
+                        ->limit(1)
+                ]);
+                $query->orderBy('sort', $direc);
+                break;
+            default:
                 $query->orderBy($order, $direc);
                 break;
         }
@@ -1716,6 +1753,7 @@ $data['editor'] = count($editor) ? $sCommerceController->textEditor(implode(',',
 $data['tabs'] = $tabs;
 $data['get'] = $get;
 $data['iUrl'] = $iUrl;
+$data['pUrl'] = $pUrl;
 $data['moduleUrl'] = sCommerce::moduleUrl();
 
 echo $sCommerceController->view('index', $data);
