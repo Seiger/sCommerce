@@ -118,6 +118,10 @@
     @if(is_array($events = evo()->invokeEvent('sCommerceFormFieldRender', ['field' => 'seo', 'lang' => request()->input('lang', $sCommerceController->langDefault()), 'dataInput' => $sCommerceController->getData()])))
         @foreach($events as $event){!!$event!!}@endforeach
     @endif
+    @if (evo()->getConfig('check_sLang', false))
+        @php($seoFields = evo()->invokeEvent('OnRenderSeoFields', ['type' => 'product', 'lang' => request()->input('lang', $sCommerceController->langDefault()), 'id' => request()->integer('i')]))
+        @if(is_array($seoFields))<div class="split my-3"></div>{!!implode('', $seoFields)!!}@endif
+    @endif
 </form>
 
 @push('scripts.bot')
