@@ -33,7 +33,7 @@
         ],
     ],
     "product" => [
-        "available_types" => [
+        "available_modes" => [
             0 => 0,
             1 => 1,
         ],

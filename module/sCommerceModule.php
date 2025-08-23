@@ -366,9 +366,9 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $product = sCommerce::getProduct($requestId);
 
-        if ($product && (int)$product?->type > 0) {
-            if (in_array($product->type, [
-                sProduct::TYPE_GROUP,
+        if ($product && (int)$product?->mode > 0) {
+            if (in_array($product->mode, [
+                sProduct::MODE_GROUP,
             ])) {
                 $tabs[] = 'modifications';
             }
@@ -480,7 +480,7 @@ switch ($get) {
         $product->similar = json_encode(request()->input('similar', []), JSON_UNESCAPED_UNICODE);
         $product->tmplvars = json_encode(request()->input('tmplvars', []), JSON_UNESCAPED_UNICODE);
         $product->votes = json_encode($votes, JSON_UNESCAPED_UNICODE);
-        $product->type = request()->integer('type');
+        $product->mode = request()->integer('mode');
         $product->save();
 
         $inputCats = (array)request()->input('categories', []);
@@ -562,7 +562,7 @@ switch ($get) {
             $newProduct->similar = $product->similar;
             $newProduct->tmplvars = $product->tmplvars;
             $newProduct->votes = $product->votes;
-            $newProduct->type = $product->type;
+            $newProduct->mode = $product->mode;
             $newProduct->additional = $product->additional;
             $newProduct->representation = $product->representation;
             $newProduct->save();
@@ -748,7 +748,7 @@ switch ($get) {
         $select = collect([]);
         $search->map(fn($word) => $select->push("(CASE WHEN " . sProduct::getGrammar()->wrap('pagetitle') . " LIKE '%{$word}%' THEN 1 ELSE 0 END)"));
 
-        $productIds = sProduct::whereIn('type', [sProduct::TYPE_GROUP])->whereNotIn('product', array_merge($modificationsIds, [$product->id]))
+        $productIds = sProduct::whereIn('mode', [sProduct::MODE_GROUP])->whereNotIn('product', array_merge($modificationsIds, [$product->id]))
             ->addSelect('product', DB::Raw('(' . $select->implode(' + ') . ') as points'))
             ->orderByDesc('points')
             ->get()->pluck('product')->toArray();
@@ -775,7 +775,7 @@ switch ($get) {
         $product = sCommerce::getProduct($requestId);
 
         if ($product) {
-            if ($product->type == sProduct::TYPE_GROUP) {
+            if ($product->mode == sProduct::MODE_GROUP) {
                 $modificationsQuery = DB::table('s_product_modifications')->select('mods')->where('product', $product->id)->first();
                 if ($modificationsQuery) {
                     $modificationsIds = json_decode($modificationsQuery->mods ?? '', true) ?: [0];
@@ -791,7 +791,7 @@ switch ($get) {
                     foreach ($modifications as $modification) {
                         DB::table('s_product_modifications')->insert([
                             'product' => $modification,
-                            'type' => sProduct::TYPE_GROUP,
+                            'mode' => sProduct::MODE_GROUP,
                             'mods' => json_encode($modifications, JSON_UNESCAPED_UNICODE),
                             'parameters' => json_encode($parameters, JSON_UNESCAPED_UNICODE),
                         ]);
@@ -810,9 +810,9 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $product = sCommerce::getProduct($requestId);
 
-        if ($product && (int)$product?->type > 0) {
-            if (in_array($product->type, [
-                sProduct::TYPE_GROUP,
+        if ($product && (int)$product?->mode > 0) {
+            if (in_array($product->mode, [
+                sProduct::MODE_GROUP,
             ])) {
                 $tabs[] = 'modifications';
             }

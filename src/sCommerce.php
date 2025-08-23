@@ -311,7 +311,7 @@ class sCommerce
         $currencyFrom = $currencyFrom ?? static::loadCurrentCurrency();
         $currencyTo = $currencyTo ?? $currencyFrom;
 
-        $price = preg_replace('/[^\d\.]+/', '', $price);
+        $price = preg_replace('/[^\d\.]+/', '', ($price ?? ''));
         $rate = config('seiger.settings.sCommerceCurrencies.' . $currencyFrom . '_' . $currencyTo, 1);
         return floatval($price) * $rate;
     }
@@ -593,6 +593,10 @@ class sCommerce
 
         if (!$currency && Cookie::has('currency')) {
             $currency = Cookie::get('currency');
+        }
+
+        if ($currency && !in_array($currency, static::config('basic.available_currencies', []))) {
+            $currency = null;
         }
 
         if (!$currency) {

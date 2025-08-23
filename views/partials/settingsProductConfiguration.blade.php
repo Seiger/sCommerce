@@ -108,13 +108,13 @@
 </div>
 <div class="row form-row">
     <div class="col-auto">
-        <label for="product__available_types">@lang('sCommerce::global.available_types')</label>
+        <label for="product__available_modes">@lang('sCommerce::global.available_types')</label>
         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.available_types_help')"></i>
     </div>
     <div class="col">
-        <select id="product__available_types" class="form-control select2" name="product__available_types[]" multiple onchange="documentDirty=true;">
-            @foreach(sProduct::listType() as $id => $item)
-                <option value="{{$id}}" @if(in_array($id, sCommerce::config('product.available_types', []))) selected @endif>{{$item}}</option>
+        <select id="product__available_modes" class="form-control select2" name="product__available_modes[]" multiple onchange="documentDirty=true;">
+            @foreach(sProduct::listMode() as $id => $item)
+                <option value="{{$id}}" @if(in_array($id, sCommerce::config('product.available_modes', []))) selected @endif>{{$item}}</option>
             @endforeach
         </select>
     </div>

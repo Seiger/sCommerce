@@ -65,13 +65,13 @@ return new class extends Migration
         Schema::create('s_products', function (Blueprint $table) {
             $table->id('id');
             $table->uuid('uuid')->unique()->nullable();
-            $table->tinyInteger('published')->unsigned()->default(0)->index()->comment('0-Unpublished|1-Published');
-            $table->tinyInteger('availability')->unsigned()->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
+            $table->smallInteger('published')->unsigned()->default(0)->index()->comment('0-Unpublished|1-Published');
+            $table->smallInteger('availability')->unsigned()->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
             $table->string('sku')->index()->comment('It is the SKU Product code');
             $table->string('alias', 512)->index()->comment('It using for generate url');
             $table->integer('views')->unsigned()->default(0)->index()->comment('Count view the product');
             $table->integer('rating')->unsigned()->default(5)->index()->comment('Rating the product base on votes');
-            $table->integer('type')->unsigned()->default(0)->comment('Type the product');
+            $table->smallInteger('mode')->unsigned()->default(0)->comment('Type the product');
             $table->decimal('price_regular', 9, 2)->unsigned()->default(0)->comment('The regular price of the product');
             $table->decimal('price_special', 9, 2)->unsigned()->default(0)->comment('The special price of the product');
             $table->decimal('price_opt_regular', 9, 2)->unsigned()->default(0)->comment('The wholesale price of the product');
@@ -123,7 +123,7 @@ return new class extends Migration
 
         Schema::create('s_product_modifications', function (Blueprint $table) {
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
-            $table->integer('type')->unsigned()->default(0)->index()->comment('Modification type (group, option, variation)');
+            $table->smallInteger('mode')->unsigned()->default(0)->index()->comment('Modification type (group, option, variation)');
             $table->string('sku')->index()->comment('Unique modification code');
             $table->jsonb('mods')->default(new Expression('(JSON_ARRAY())'))->comment('JSON object with modification attributes (e.g. size, color)');
             $table->jsonb('parameters')->default(new Expression('(JSON_ARRAY())'))->comment('JSON object with modification parameters (e.g. size, color)');

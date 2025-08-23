@@ -97,6 +97,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] **[sLang](https://github.com/Seiger/sLang)** Integration.
 - [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
 - [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.
+- [x] **[sSeo](https://github.com/Seiger/sSeo)** Integration.
 - [ ] Personalized Recommendations.
 - [ ] Social Media Integration.
 - [ ] Automated Email Marketing.

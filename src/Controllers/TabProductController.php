@@ -78,11 +78,14 @@ class TabProductController
             $editor[] = 'introtext';
         }
 
-        $product = sCommerce::getProduct($content->product ?? 0);
+        $product = sCommerce::getProduct($content->product ?? 0, $requestLang);
 
-        if ($product && (int)$product?->type > 0) {
-            if (in_array($product->type, [
-                sProduct::TYPE_GROUP,
+        if (!$product->id) $product->id = $requestId;
+        if (!$product->type) $product->type = 'product';
+
+        if ($product && (int)$product?->mode > 0) {
+            if (in_array($product->mode, [
+                sProduct::MODE_GROUP,
             ])) {
                 $tabs[] = 'modifications';
             }
@@ -101,6 +104,7 @@ class TabProductController
             $tabs[] = 'prodattributes';
         }
 
+        evo()->documentObject = array_merge($product?->toArray() ?? []);
         $data['product'] = $product;
         $data['item'] = $content;
         $data['buttons'] = $buttons;

@@ -65,17 +65,17 @@ class sProduct extends Model
     /**
      * Type Product constants
      */
-    const TYPE_SIMPLE = 0;       // Standard product type without variations. Ideal for straightforward items.
-    const TYPE_GROUP = 1;        // A collection of related products displayed as a group.
-    // const TYPE_BUNDLE = 2;       // A package of multiple products sold together at a discounted price.
-    // const TYPE_VARIABLE = 3;     // Products with variations, such as size or color.
-    // const TYPE_OPTIONAL = 4;     // Additional items that can complement a purchase (e.g., accessories).
-    // const TYPE_DOWNLOADABLE = 5; // Digital products, such as software, eBooks, or media files.
-    // const TYPE_VIRTUAL = 6;      // Non-physical products, including services or licenses.
-    // const TYPE_SERVICE = 7;      // Offerings like installation, consulting, or maintenance.
-    // const TYPE_SUBSCRIPTION = 8; // Products with recurring billing (e.g., memberships or digital content).
-    // const TYPE_PREORDER = 9;     // Products not yet available but open for early purchase.
-    // const TYPE_CUSTOM = 10;      // Personalized or tailor-made products created upon request.
+    const MODE_SIMPLE = 0;       // Standard product type without variations. Ideal for straightforward items.
+    const MODE_GROUP = 1;        // A collection of related products displayed as a group.
+    // const MODE_BUNDLE = 2;       // A package of multiple products sold together at a discounted price.
+    // const MODE_VARIABLE = 3;     // Products with variations, such as size or color.
+    // const MODE_OPTIONAL = 4;     // Additional items that can complement a purchase (e.g., accessories).
+    // const MODE_DOWNLOADABLE = 5; // Digital products, such as software, eBooks, or media files.
+    // const MODE_VIRTUAL = 6;      // Non-physical products, including services or licenses.
+    // const MODE_SERVICE = 7;      // Offerings like installation, consulting, or maintenance.
+    // const MODE_SUBSCRIPTION = 8; // Products with recurring billing (e.g., memberships or digital content).
+    // const MODE_PREORDER = 9;     // Products not yet available but open for early purchase.
+    // const MODE_CUSTOM = 10;      // Personalized or tailor-made products created upon request.
 
     /**
      * Return list of availability codes and labels
@@ -100,12 +100,12 @@ class sProduct extends Model
      *
      * @return array The array of types. The key of each element is the constant value, and the value of each element is the corresponding translation string.
      */
-    public static function listType(): array
+    public static function listMode(): array
     {
         $list = [];
         $class = new ReflectionClass(__CLASS__);
         foreach ($class->getConstants() as $constant => $value) {
-            if (str_starts_with($constant, 'TYPE_')) {
+            if (str_starts_with($constant, 'MODE_')) {
                 $const = strtolower($constant);
                 $list[$value] = __('sCommerce::global.'.$const);
             }

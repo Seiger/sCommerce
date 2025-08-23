@@ -151,7 +151,7 @@
                     </div>
                 </div>
             @endif
-            @if(count(sCommerce::config('product.available_types', [])) > 1)
+            @if(count(sCommerce::config('product.available_modes', [])) > 1)
                 <div class="row-col col-lg-3 col-md-6 col-12">
                     <div class="row form-row">
                         <div class="col-auto col-title">
@@ -159,9 +159,9 @@
                             {{--<i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.product_type_help')"></i>--}}
                         </div>
                         <div class="col">
-                            <select id="type" name="type" class="form-control" onchange="documentDirty=true;">
-                                @foreach(sCommerce::config('product.available_types', []) as $type)
-                                    <option value="{{$type}}" @if(($item->type ?? 0) == $type) selected @endif>{{sProduct::listType()[$type]}}</option>
+                            <select id="mode" name="mode" class="form-control" onchange="documentDirty=true;">
+                                @foreach(sCommerce::config('product.available_modes', []) as $mode)
+                                    <option value="{{$type}}" @if(($item->mode ?? 0) == $mode) selected @endif>{{sProduct::listMode()[$mode]}}</option>
                                 @endforeach
                             </select>
                         </div>
