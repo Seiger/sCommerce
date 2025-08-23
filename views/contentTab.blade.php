@@ -119,6 +119,7 @@
         @php($seoFields = evo()->invokeEvent('OnRenderSeoFields', ['type' => 'product', 'lang' => request()->input('lang', $sCommerceController->langDefault()), 'id' => request()->integer('i')]))
         @if(is_array($seoFields))<div class="split my-3"></div>{!!implode('', $seoFields)!!}@endif
     @endif
+    <div class="split my-3"></div>
 </form>
 
 @push('scripts.bot')

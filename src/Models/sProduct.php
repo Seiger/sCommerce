@@ -438,6 +438,7 @@ class sProduct extends Model
                 break;
         }
 
+        $base_url = rtrim($base_url, evo()->getConfig('friendly_url_suffix', '')) . '/';
         return $base_url . $this->alias . evo()->getConfig('friendly_url_suffix', '');
     }
 
