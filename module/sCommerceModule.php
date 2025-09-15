@@ -47,6 +47,9 @@ if (sCommerce::config('basic.orders_on', 1) == 1) {
     $tabs[] = 'orders';
 }
 $tabs = array_merge($tabs, ['products', 'reviews', 'attributes']);
+if (sCommerce::config('basic.integrations_on', 1) == 1) {
+    $tabs[] = 'integrations';
+}
 if (count(sCommerce::config('basic.available_currencies', [])) > 1 && trim(sCommerce::config('basic.main_currency', ''))) {
     $tabs[] = 'currencies';
 }

@@ -17,8 +17,6 @@ permalink: /
 
 ## Welcome to sCommerce!
 
-{% include callout.html text="sCommerce not stable yet. It active development." color="skyred" %}
-
 **sCommerce** stands as a comprehensive suite of **e-commerce** tools meticulously crafted
 for Evolution CMS. Tailored to empower Evolution CMS users, this dynamic package
 seamlessly integrates with the CMS platform, transforming it into a robust foundation

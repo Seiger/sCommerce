@@ -12,9 +12,6 @@
 
 # Welcome to sCommerce!
 
-> [!IMPORTANT]  
-> sCommerce not stable yet. It active development.
-
 **sCommerce** stands as a comprehensive suite of **e-commerce** tools meticulously crafted
 for Evolution CMS. Tailored to empower Evolution CMS users, this dynamic package
 seamlessly integrates with the CMS platform, transforming it into a robust foundation
