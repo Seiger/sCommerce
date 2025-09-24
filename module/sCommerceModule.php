@@ -6,6 +6,7 @@
 use Carbon\Carbon;
 use EvolutionCMS\Facades\ManagerTheme;
 use EvolutionCMS\Models\SiteContent;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
@@ -16,11 +17,13 @@ use Seiger\sCommerce\Controllers\TabProductController;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
+use Seiger\sCommerce\Interfaces\IntegrationInterface;
 use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sDeliveryMethod;
+use Seiger\sCommerce\Models\sIntegration;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
@@ -47,6 +50,9 @@ if (sCommerce::config('basic.orders_on', 1) == 1) {
     $tabs[] = 'orders';
 }
 $tabs = array_merge($tabs, ['products', 'reviews', 'attributes']);
+if (sCommerce::config('basic.integrations_on', 1) == 1) {
+    $tabs[] = 'integrations';
+}
 if (sCommerce::config('basic.integrations_on', 1) == 1) {
     $tabs[] = 'integrations';
 }
@@ -447,7 +453,6 @@ switch ($get) {
             $votes['1'] = 0;
             $votes['2'] = 0;
             $votes['3'] = 0;
-            $votes['3'] = 0;
             $votes['4'] = 0;
             $votes['5'] = 0;
         }
@@ -458,7 +463,7 @@ switch ($get) {
                 $summ += (int)$key * (int)$value;
             }
         }
-        $rating = round((int)$votes['total'] ? $summ / $votes['total'] : 5, 1);
+        $rating = (int)$votes['total'] > 0 ? round($summ / ($votes['total'] ?? 1), 1) : 0;
 
         $product->published = (int)request()->input('published', 0);
         $product->availability = (int)request()->input('availability', 0);
@@ -1079,7 +1084,7 @@ switch ($get) {
 
         if ($requestId > 0) {
             $_SESSION['itemaction'] = 'Editing Attribute';
-            $_SESSION['itemname'] = $data['texts']['base']->pagetitle;
+            $_SESSION['itemname'] = $data['texts'][$sCommerceController->langDefault()]?->pagetitle;
         } else {
             $_SESSION['itemaction'] = 'Creating a Attribute';
             $_SESSION['itemname'] = __('sCommerce::global.title');
@@ -1103,7 +1108,7 @@ switch ($get) {
         $data['values'] = $attribute->values;
 
         $_SESSION['itemaction'] = 'Viewing a list of attribute values';
-        $_SESSION['itemname'] = $attribute->texts()->whereLang('base')->first()->pagetitle;
+        $_SESSION['itemname'] = $attribute->texts()->whereLang($sCommerceController->langDefault())->first()?->pagetitle ?? '';
         break;
     case "attributeSave":
         $requestId = (int)request()->input('i', 0);
@@ -1149,13 +1154,13 @@ switch ($get) {
         }
 
         $_SESSION['itemaction'] = 'Saving a Attribute';
-        $_SESSION['itemname'] = $attribute->texts()->whereLang('base')->first()->pagetitle;
+        $_SESSION['itemname'] = $attribute->texts()->whereLang($sCommerceController->langDefault())->first()?->pagetitle ?? '';
         $back = str_replace('&i=0', '&i=' . $attribute->id, (request()->back ?? '&get=attribute'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "attributeDelete":
         $attribute = sCommerce::getAttribute((int)request()->input('i', 0));
         $_SESSION['itemaction'] = 'Deleting Attribute';
-        $_SESSION['itemname'] = $attribute->texts()->whereLang('base')->first()->pagetitle;
+        $_SESSION['itemname'] = $attribute->texts()->whereLang($sCommerceController->langDefault())->first()?->pagetitle ?? '';
 
         if ($attribute) {
             $attribute->categories()->sync([]);
@@ -1176,9 +1181,13 @@ switch ($get) {
             $langs = $sCommerceController->langList();
             $columns = sAttributeValue::describe()->forget(['created_at', 'updated_at']);
             if ($langs != ['base']) {
-                /** @TODO multilang $columns */
-                $columns = sAttributeValue::describe();
-                dd(!$columns->has('eng'));
+                foreach ($langs as $lang) {
+                    if (!$columns->has($lang)) {
+                        Schema::table(sAttributeValue::query()->from, function (Blueprint $table) use ($lang) {
+                            $table->tinyText($lang)->after('base')->default('')->comment(strtoupper($lang) . 'translate for Title');
+                        });
+                    }
+                }
             }
 
             if (count($requestValues)) {
@@ -1233,7 +1242,7 @@ switch ($get) {
         }
 
         $_SESSION['itemaction'] = 'Saving Attribute values';
-        $_SESSION['itemname'] = $attribute->texts()->whereLang('base')->first()->pagetitle;
+        $_SESSION['itemname'] = $attribute->texts()->whereLang($sCommerceController->langDefault())->first()?->pagetitle ?? '';
         $back = str_replace('&i=0', '&i=' . $attribute->id, (request()->back ?? '&get=attrvalues'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
@@ -1414,6 +1423,134 @@ switch ($get) {
         }
 
         $back = request()->back ?? '&get=reviews';
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    /*
+    |--------------------------------------------------------------------------
+    | Integrations
+    |--------------------------------------------------------------------------
+    */
+    case "integrations":
+        $perpage = Cookie::get('scom_per_page', 50);
+
+        $newIntegrations = [];
+        $allIntegrations = sIntegration::all()->pluck('class')->toArray();
+
+        $classMap = require base_path('vendor/composer/autoload_classmap.php');
+        $exdMaps = require base_path('vendor/seiger/scommerce/config/excluded_namespaces.php');
+
+        foreach ($classMap as $className => $path) {
+            foreach ($exdMaps as $exdMap) {
+                if (str_starts_with($className, $exdMap)) {
+                    continue 2;
+                }
+            }
+
+            try {
+                if (class_exists($className)) {
+                    $reflection = new ReflectionClass($className);
+
+                    if ($reflection->implementsInterface(IntegrationInterface::class) && !$reflection->isAbstract()) {
+                        $newIntegrations[] = $className;
+                    }
+                }
+            } catch (Throwable $e) {
+                continue;
+            }
+        }
+
+        $needIntegrations = array_diff($newIntegrations, $allIntegrations);
+
+        if (!empty($needIntegrations)) {
+            foreach ($needIntegrations as $integrationClass) {
+                try {
+                    $instance = new $integrationClass();
+                    $key = $instance->getKey();
+
+                    sIntegration::create([
+                        'key' => $key,
+                        'class' => $integrationClass,
+                        'active' => false,
+                        'position' => sIntegration::max('position') + 1,
+                    ]);
+                } catch (Throwable $e) {
+                    \Log::error("Failed to register integration: {$integrationClass}", ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
+        $query = sIntegration::query();
+        if (!evo()->hasPermission('settings')) {$query->active();}
+        $query->orderBy('position');
+        $items = $query->paginate($perpage);
+
+        $items->getCollection()->transform(function ($integration) {
+            $className = $integration->class;
+            if (class_exists($className)) {
+                $instance = new $className();
+                $integration->icon = '';
+                $integration->title = '';
+                $integration->widget = '';
+                if (method_exists($instance, 'getIcon')) {
+                    $integration->icon = $instance->getIcon();
+                }
+                if (method_exists($instance, 'getTitle')) {
+                    $integration->title = $instance->getTitle();
+                }
+                if (method_exists($instance, 'renderWidget')) {
+                    $integration->widget = $instance->renderWidget();
+                }
+                return $integration;
+            }
+        });
+
+        $data['items'] = $items;
+
+        $_SESSION['itemaction'] = 'Viewing a list of integrations';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        break;
+    case "integration":
+        $tabs = ['integration'];
+        $requestId = request()->integer('i');
+        $item = sIntegration::find($requestId);
+
+        if ($requestId > 0 && $item) {
+            $className = $item->class;
+            if (class_exists($className)) {
+                $instance = new $className();
+                $item->instance = $instance;
+                $item->title = '';
+                if (method_exists($instance, 'getTitle')) {
+                    $item->title = $instance->getTitle();
+                }
+            }
+
+            $data['item'] = $item;
+
+            $_SESSION['itemaction'] = 'Editing Integration';
+            $_SESSION['itemname'] = $item->title;
+        } else {
+            return header('Location: ' . sCommerce::moduleUrl() . (request()->back ?? '&get=integrations'));
+        }
+        break;
+    case "integrationSave":
+        $requestId = request()->integer('i');
+        $item = sIntegration::find($requestId);
+
+        if ($requestId > 0 && $item) {
+            $className = $item->class;
+            if (class_exists($className)) {
+                $instance = new $className();
+
+                $item->active = request()->boolean('active');
+                $item->position = request()->integer('position');
+                $item->settings = $instance->prepareSettings(request()->all());
+                $item->update();
+            }
+        }
+
+        $_SESSION['itemaction'] = 'Saving Integration';
+        $_SESSION['itemname'] = $admintitle ?? '';
+        $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=integrations'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------

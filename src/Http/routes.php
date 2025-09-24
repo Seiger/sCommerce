@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sWishlist;
+use Seiger\sCommerce\Integration\IntegrationActionController;
 
 Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(function () {
     Route::post('add-to-cart', fn() => tap(
@@ -40,4 +41,13 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         sWishlist::updateWishlist(request()->all()),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
     ))->name('wishlist');
+});
+
+Route::middleware('mgr')->prefix('scommerce')->name('sCommerce.')->group(function () {
+    Route::post('integrations/{key}/tasks/{action}', [IntegrationActionController::class, 'start'])->whereAlpha('action')
+        ->name('integrations.task.start');
+    Route::get('integrations/tasks/{id}/progress', [IntegrationActionController::class, 'progress'])
+        ->name('integrations.progress');
+    Route::get('integrations/tasks/{id}/download', [IntegrationActionController::class, 'download'])
+        ->name('integrations.download');
 });

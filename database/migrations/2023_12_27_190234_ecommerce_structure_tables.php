@@ -134,7 +134,7 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | The order's tables structure
+        | The deliveries tables structure
         |--------------------------------------------------------------------------
         */
         Schema::create('s_delivery_methods', function (Blueprint $table) {

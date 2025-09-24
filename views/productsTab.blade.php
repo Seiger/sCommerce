@@ -208,7 +208,7 @@
                         @foreach($categories as $category)
                             @php($scope = str_replace('primary_', '', $category->pivot->scope))
                             @php($website = $domains->where('key', $scope)->first())
-                            <a href="https://{{$website->domain}}/" target="_blank">{{$website->site_name}}</a>
+                            <a href="https://{{$website?->domain}}/" target="_blank">{{$website?->site_name}}</a>
                         @endforeach
                     </td>
                 @endif
