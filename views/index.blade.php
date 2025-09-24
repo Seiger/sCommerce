@@ -345,7 +345,10 @@
         });
         //dropdown
         // cookies
-        if (typeof cookieName === 'undefined'){cookieName = 'test'}
+        let cookieName = 'scom_per_page';
+        if (typeof window.cookieName !== 'undefined') {
+            cookieName = window.cookieName;
+        }
         const cookieItems = document.querySelectorAll('[data-items]');
         const actualCount = document.querySelector('[data-actual]');
         const cookieValue = document.cookie.split('; ').find(row => row.startsWith(cookieName + '='))?.split('=')[1];

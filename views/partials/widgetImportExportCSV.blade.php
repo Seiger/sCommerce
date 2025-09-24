@@ -1,12 +1,12 @@
 <div id="{{$key}}Widget" class="card-body pt-2 pb-2">
     <div class="row g-2 align-items-center">
         <div class="col-auto">
-            <span id="pcsvExport" class="btn btn-primary">
+            <span id="{{$key}}Export" class="btn btn-primary">
                 <i class="fa fa-file-export me-1"></i> @lang('sCommerce::global.export_products_csv')
             </span>
         </div>
         <div class="col-auto">
-            <span id="pcsvImport" class="btn btn-success">
+            <span id="{{$key}}Import" class="btn btn-success">
                 <i class="fa fa-file-import"></i> @lang('sCommerce::global.products') @lang('sCommerce::global.import') CSV
             </span>
         </div>
@@ -29,14 +29,14 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('pcsvExport')?.addEventListener('click', async function() {
+        document.getElementById('{{$key}}Export')?.addEventListener('click', async function() {
             let root = document.getElementById('{{$key}}Log');
 
             widgetClearLog(root);
             widgetLogLine(root, '**{{__('sCommerce::global.export_products_csv')}}:** _{{__('sCommerce::global.i_launch')}}…_');
 
             // Disable buttons immediately when starting, with this button as active
-            disableButtons('{{$key}}', null, 'pcsvExport');
+            disableButtons('{{$key}}', null, '{{$key}}Export');
 
             let result = await callApi("{{$exportUrl}}");
 
@@ -50,14 +50,14 @@
             }
         });
 
-        document.getElementById('pcsvImport')?.addEventListener('click', async function() {
+        document.getElementById('{{$key}}Import')?.addEventListener('click', async function() {
             let root = document.getElementById('{{$key}}Log');
 
             widgetClearLog(root);
             widgetLogLine(root, '**{{__('sCommerce::global.import')}} CSV:** _{{__('sCommerce::global.i_launch')}}…_');
 
             // Disable buttons immediately when starting, with this button as active
-            disableButtons('{{$key}}', null, 'pcsvImport');
+            disableButtons('{{$key}}', null, '{{$key}}Import');
 
             // TODO: Implement import functionality
             widgetLogLine(root, '**{{__('sCommerce::global.import')}} функціональність в розробці...**', 'info');

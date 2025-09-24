@@ -102,8 +102,3 @@
 </div>
 @include('sCommerce::scripts.integrations')
 @include('sCommerce::scripts.global')
-@push('scripts.top')
-    <script>
-        const cookieName = "scom_per_page";
-    </script>
-@endpush
