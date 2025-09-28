@@ -418,7 +418,7 @@ class sCheckout
 
                 if (!$paymentMethod || !$paymentMethod->validatePayment($this->orderData)) {
                     evo()->logEvent(0, 3, 'Payment method ' . $this->orderData['payment']['method'] . ' is Invalid or not available. Please check your API credentials.', 'sCommerce: Payment ' . $this->orderData['payment']['method'] . ' Failed');
-                    Log::error("Order processing failed: Payment method {$this->orderData['payment']['method']} is Invalid or not available. Please check your API credentials.", ['order_data' => $this->orderData]);
+                    Log::channel('scommerce')->error("Order processing failed: Payment method {$this->orderData['payment']['method']} is Invalid or not available. Please check your API credentials.", ['order_data' => $this->orderData]);
 
                     return [
                         'success' => false,
@@ -433,7 +433,7 @@ class sCheckout
             $order = $this->saveOrder();
 
             evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", "sCommerce: Order #{$order->id} Created");
-            Log::info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
+            Log::channel('scommerce')->info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
             if (sCommerce::config('notifications.email_template_admin_order_on', 0)) {
                 sCommerce::notifyEmail(
@@ -463,7 +463,7 @@ class sCheckout
             ];
         } catch (\Exception $e) {
             evo()->logEvent(0, 3, $e->getMessage(), 'sCommerce: Order Processing Failed');
-            Log::error("Order processing failed: {$e->getMessage()}", ['order_data' => $this->orderData, 'error' => $e->getTraceAsString()]);
+            Log::channel('scommerce')->error("Order processing failed: {$e->getMessage()}", ['order_data' => $this->orderData, 'error' => $e->getTraceAsString()]);
 
             return [
                 'success' => false,
@@ -604,7 +604,7 @@ class sCheckout
         }
 
         evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", "sCommerce: Order #{$order->id} By Click Created");
-        Log::info("Order By Click #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
+        Log::channel('scommerce')->info("Order By Click #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
         if (sCommerce::config('notifications.email_template_admin_fast_order_on', 0)) {
             sCommerce::notifyEmail(

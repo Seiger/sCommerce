@@ -51,10 +51,14 @@ class IntegrationActionController extends BaseController
      * This method creates a new integration task and attempts to launch it asynchronously.
      * It resolves the integration from the database, creates the task with proper
      * initialization, and launches the background worker to process the task.
+     * 
+     * This method accepts ALL request parameters and passes them as options to the
+     * integration task, providing maximum flexibility for third-party developers.
+     * Security is ensured through admin middleware protection.
      *
      * The method handles:
      * - Integration resolution and validation
-     * - Task creation with proper status initialization
+     * - Task creation with all request parameters as options
      * - Asynchronous worker launching (exec/shell_exec or fallback)
      * - Error handling and logging
      *
@@ -63,12 +67,28 @@ class IntegrationActionController extends BaseController
      * @param string $key The integration key (e.g., 'simpexpcsv')
      * @param string $action The action to perform (e.g., 'export', 'import')
      * @return JsonResponse JSON response with task ID and status
+     * 
+     * @example
+     * // Import with filename
+     * POST /scommerce/integrations/simpexpcsv/tasks/import
+     * Body: {"filename": "import_file.csv"}
+     * 
+     * @example
+     * // Export with custom options
+     * POST /scommerce/integrations/simpexpcsv/tasks/export
+     * Body: {"delimiter": ";", "batch_size": 100, "include_attributes": true}
+     * 
+     * @example
+     * // Custom integration with any parameters
+     * POST /scommerce/integrations/custom/tasks/sync
+     * Body: {"api_key": "xxx", "endpoint": "https://api.example.com", "settings": {...}}
      */
     public function start(string $key, string $action): JsonResponse
     {
         try {
+            $options = request()->all();
             $integration = $this->resolveIntegrationOrFail($key);
-            $task = $integration->createTask($action);
+            $task = $integration->createTask($action, $options);
 
             if ($task && Carbon::parse($task->start_at) <= Carbon::now()) {
                 // Try to launch detached CLI worker
@@ -79,7 +99,7 @@ class IntegrationActionController extends BaseController
             return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
 
-        return response()->json(['success' => true, 'task' => (int)$task->id, 'message' => $task->message]);
+        return response()->json(['success' => true, 'id' => (int)$task->id, 'message' => $task->message]);
     }
 
     /**
@@ -103,10 +123,22 @@ class IntegrationActionController extends BaseController
     public function progress(int $id): JsonResponse
     {
         try {
+            // Check if ID is valid
+            if ($id <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 400,
+                    'error' => 'Invalid task ID',
+                    'id' => $id,
+                    'status' => 'error',
+                    'message' => 'Task ID must be greater than 0'
+                ], 400);
+            }
+
             $task = sIntegrationTask::findOrFail($id);
             $file = TaskProgress::file($id);
             
-            if (!is_file($file)) {
+        if (!is_file($file)) {
                 return response()->json([
                     'success' => false,
                     'code' => 404,
@@ -135,9 +167,23 @@ class IntegrationActionController extends BaseController
                 'success' => (isset($data['code']) && $data['code'] == 500 ? false : true),
                 'code' => 200,
             ], $data));
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::channel('scommerce')->warning('Task not found', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'code' => 404,
+                'error' => 'Task not found',
+                'id' => $id,
+                'status' => 'not_found',
+                'message' => 'Task with ID ' . $id . ' does not exist'
+            ], 404);
         } catch (\Throwable $e) {
             Log::channel('scommerce')->error('Failed to get task progress', [
-                'task_id' => $id,
+                'id' => $id,
                 'error' => $e->getMessage()
             ]);
 
@@ -197,26 +243,16 @@ class IntegrationActionController extends BaseController
                 ], 404);
             }
             
-            // Generate filename from task info
-            $extension = pathinfo($task->result, PATHINFO_EXTENSION);
-            $filename = sprintf(
-                '%s_%s_%s.%s',
-                $task->slug,
-                $task->action,
-                now()->format('Y-m-d_H-i-s'),
-                $extension
-            );
-            
             // Return file download response
+            $filename = basename($task->result);
             return response()->download(
                 $task->result,
                 $filename,
                 [
-                    'Content-Type' => $this->getMimeType($extension),
+                    'Content-Type' => $this->getMimeType(pathinfo($filename, PATHINFO_EXTENSION)),
                     'Content-Disposition' => 'attachment; filename="' . $filename . '"'
                 ]
             );
-            
         } catch (\Throwable $e) {
             Log::channel('scommerce')->error('Failed to download task file', [
                 'task_id' => $id,
@@ -328,25 +364,33 @@ class IntegrationActionController extends BaseController
         try {
             $artisanPath = EVO_CORE_PATH . 'artisan';
             
+            Log::channel('scommerce')->debug('Launching TaskWorker', [
+                'artisan_path' => $artisanPath,
+                'exec_available' => function_exists('exec') && !in_array('exec', explode(',', ini_get('disable_functions'))),
+                'shell_exec_available' => function_exists('shell_exec') && !in_array('shell_exec', explode(',', ini_get('disable_functions')))
+            ]);
+            
             // Try system execution first (if available)
             if (function_exists('exec') && !in_array('exec', explode(',', ini_get('disable_functions')))) {
                 $command = "php \"{$artisanPath}\" scommerce:task.worker > /dev/null 2>&1 &";
                 exec($command);
+                Log::channel('scommerce')->debug('TaskWorker launched via exec', ['command' => $command]);
                 return;
             }
             
             if (function_exists('shell_exec') && !in_array('shell_exec', explode(',', ini_get('disable_functions')))) {
                 $command = "php \"{$artisanPath}\" scommerce:task.worker > /dev/null 2>&1 &";
                 shell_exec($command);
+                Log::channel('scommerce')->debug('TaskWorker launched via shell_exec', ['command' => $command]);
                 return;
             }
-            
-        // Production fallback: execute after HTTP response is sent
+
             register_shutdown_function(function() {
                 try {
                     // Use EvolutionCMS Console for better integration
                     $console = app('Console');
                     $console->call('scommerce:task.worker');
+                    Log::channel('scommerce')->debug('TaskWorker executed via fallback');
                 } catch (\Throwable $e) {
                     Log::channel('scommerce')->error('TaskWorker failed to execute in shutdown function', [
                         'error' => $e->getMessage(),
@@ -354,12 +398,337 @@ class IntegrationActionController extends BaseController
                     ]);
                 }
             });
-            
         } catch (\Throwable $e) {
             Log::channel('scommerce')->error('Failed to launch TaskWorker', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
         }
+    }
+
+    /**
+     * Upload CSV file for import with chunked upload support.
+     *
+     * This method handles file uploads for CSV import operations, supporting both
+     * single file uploads and chunked uploads for large files. It creates a task
+     * to track the upload progress and returns the task information.
+     *
+     * @param string $key Integration key
+     * @param Request $request HTTP request containing file data
+     * @return JsonResponse JSON response with task information
+     * @throws \RuntimeException If integration not found or upload fails
+     */
+    public function upload(string $key, Request $request): JsonResponse
+    {
+        try {
+            // Resolve integration
+            $integration = $this->resolveIntegrationOrFail($key);
+
+            // Get server limits
+            $limitsResponse = $this->serverLimits();
+            $limits = $limitsResponse->getData(true);
+
+            // Check if this is a chunked upload
+            if ($request->has('chunk_index') && $request->has('total_chunks')) {
+                return $this->handleChunkedUpload($key, $request, $limits);
+            } else {
+                return $this->handleSingleUpload($key, $request, $limits);
+            }
+        } catch (\Exception $e) {
+            Log::channel('scommerce')->error('Upload failed', [
+                'key' => $key,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'code' => 500,
+                'message' => $e->getMessage(),
+                'rev' => time(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Handle single file upload (for smaller files).
+     *
+     * @param string $key Integration key
+     * @param Request $request HTTP request
+     * @param array $limits Server limits
+     * @return JsonResponse
+     */
+    private function handleSingleUpload(string $key, Request $request, array $limits): JsonResponse
+    {
+        $uploadedFile = $request->file('file');
+        
+        if (!$uploadedFile) {
+            throw new \RuntimeException('No file uploaded');
+        }
+
+        // Validate file
+        $this->validateUploadedFile($uploadedFile, $limits);
+
+        // Generate unique filename
+        $filename = $this->generateUniqueFilename($uploadedFile);
+        $uploadPath = $this->getUploadPath('scommerce/uploads', $filename);
+
+        // Move uploaded file
+        $uploadedFile->move(dirname($uploadPath), basename($uploadPath));
+
+        return response()->json([
+            'success' => true,
+            'code' => 200,
+            'slug' => $key,
+            'action' => 'upload',
+            'status' => 'finished',
+            'message' => __('sCommerce::global.upload_completed') . '. ' . __('sCommerce::global.temporary_file') . ': **' . basename($uploadPath) . '**',
+            'result' => $uploadPath,
+            'rev' => time(),
+        ]);
+    }
+
+    /**
+     * Handle chunked file upload (for large files).
+     *
+     * @param string $key Integration key
+     * @param Request $request HTTP request
+     * @param array $limits Server limits
+     * @return JsonResponse
+     */
+    private function handleChunkedUpload(string $key, Request $request, array $limits): JsonResponse
+    {
+        $chunkIndex = (int)$request->input('chunk_index');
+        $totalChunks = (int)$request->input('total_chunks');
+        $uploadedFile = $request->file('file');
+        
+        if (!$uploadedFile) {
+            throw new \RuntimeException('No file chunk uploaded');
+        }
+
+        // Generate unique filename for this upload session
+        $sessionId = $request->input('session_id', uniqid('upload_', true));
+        $originalFilename = $request->input('original_filename', 'upload.csv');
+        $filename = $sessionId . '_' . $originalFilename;
+        $uploadPath = $this->getUploadPath('scommerce/uploads', $filename);
+        $chunkPath = $uploadPath . '.chunk.' . $chunkIndex;
+
+        // Save chunk
+        $uploadedFile->move(dirname($chunkPath), basename($chunkPath));
+
+        // If this is the last chunk, combine all chunks
+        if ($chunkIndex + 1 === $totalChunks) {
+            $this->combineChunks($uploadPath, $totalChunks);
+            
+            return response()->json([
+                'success' => true,
+                'code' => 200,
+                'slug' => $key,
+                'action' => 'upload',
+                'status' => 'finished',
+                'message' => __('sCommerce::global.upload_completed') . '. ' . __('sCommerce::global.temporary_file') . ': **' . basename($uploadPath) . '**',
+                'result' => $uploadPath,
+                'rev' => time(),
+            ]);
+        } else {
+            return response()->json([
+                'success' => true,
+                'code' => 200,
+                'slug' => $key,
+                'action' => 'upload',
+                'status' => 'running',
+                'message' => __('sCommerce::global.uploading_file') . '... (' . ($chunkIndex + 1) . '/' . $totalChunks . ')',
+                'progress' => (int)(($chunkIndex + 1) * 100 / $totalChunks),
+                'rev' => time(),
+            ]);
+        }
+    }
+
+    /**
+     * Validate uploaded file.
+     *
+     * @param \Illuminate\Http\UploadedFile $file The uploaded file
+     * @param array $limits Server limits
+     * @return void
+     * @throws \RuntimeException If validation fails
+     */
+    private function validateUploadedFile($file, array $limits): void
+    {
+        // Check file size
+        if ($file->getSize() > $limits['maxFileSize']) {
+            throw new \RuntimeException(__('sCommerce::global.file_too_large') . ' (max: ' . niceSize($limits['maxFileSize']) . ')');
+        }
+
+        // Check file extension
+        $allowedExtensions = ['csv'];
+        $extension = strtolower($file->getClientOriginalExtension());
+        if (!in_array($extension, $allowedExtensions)) {
+            throw new \RuntimeException(__('sCommerce::global.invalid_file_extension') . ' ' . implode(', ', $allowedExtensions));
+        }
+
+        // Check if file is actually uploaded
+        if (!$file->isValid()) {
+            throw new \RuntimeException('File upload failed: ' . $file->getError());
+        }
+    }
+
+    /**
+     * Generate unique filename for upload.
+     *
+     * @param \Illuminate\Http\UploadedFile $file The uploaded file
+     * @return string Unique filename
+     */
+    private function generateUniqueFilename($file): string
+    {
+        $extension = $file->getClientOriginalExtension();
+        $timestamp = date('Ymd_His');
+        $random = substr(md5(uniqid()), 0, 8);
+        
+        return "import_{$timestamp}_{$random}.{$extension}";
+    }
+
+    /**
+     * Get upload path for file.
+     *
+     * @param string $uploadDir Upload directory
+     * @param string $filename Filename
+     * @return string Full path
+     */
+    private function getUploadPath(string $uploadDir, string $filename): string
+    {
+        $fullDir = storage_path($uploadDir);
+        
+        // Create directory if it doesn't exist
+        if (!is_dir($fullDir)) {
+            mkdir($fullDir, 0755, true);
+        }
+
+        return $fullDir . DIRECTORY_SEPARATOR . $filename;
+    }
+
+    /**
+     * Combine all chunks into final file.
+     *
+     * @param string $finalPath Final file path
+     * @param int $totalChunks Total number of chunks
+     * @return void
+     * @throws \RuntimeException If combination fails
+     */
+    private function combineChunks(string $finalPath, int $totalChunks): void
+    {
+        $finalFile = fopen($finalPath, 'wb');
+        if (!$finalFile) {
+            throw new \RuntimeException('Cannot create final file');
+        }
+
+        try {
+            for ($i = 0; $i < $totalChunks; $i++) {
+                $chunkPath = $finalPath . '.chunk.' . $i;
+                
+                if (!file_exists($chunkPath)) {
+                    throw new \RuntimeException("Chunk {$i} not found");
+                }
+
+                $chunkFile = fopen($chunkPath, 'rb');
+                if (!$chunkFile) {
+                    throw new \RuntimeException("Cannot read chunk {$i}");
+                }
+
+                stream_copy_to_stream($chunkFile, $finalFile);
+                fclose($chunkFile);
+                
+                // Remove chunk file
+                unlink($chunkPath);
+            }
+        } finally {
+            fclose($finalFile);
+        }
+    }
+
+    /**
+     * Get server upload limits for file operations.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function serverLimits()
+    {
+        try {
+            // Get PHP configuration
+            $uploadMaxFilesize = $this->parseSize(ini_get('upload_max_filesize'));
+            $postMaxSize = $this->parseSize(ini_get('post_max_size'));
+            $memoryLimit = $this->parseSize(ini_get('memory_limit'));
+            $maxExecutionTime = (int)ini_get('max_execution_time');
+            
+            // Calculate safe limits
+            $maxFileSize = min($uploadMaxFilesize, $postMaxSize);
+            
+            // For chunked uploads, we can handle larger files
+            // Use 80% of available memory or 100MB, whichever is smaller
+            $chunkedMaxSize = min($memoryLimit * 0.8, 100 * 1024 * 1024);
+            $maxFileSize = max($maxFileSize, $chunkedMaxSize);
+            
+            // Chunk size: 1/4 of memory limit or 1MB, whichever is smaller
+            $chunkSize = min($memoryLimit / 4, 1024 * 1024);
+            
+            // Single upload limit: 80% of upload_max_filesize
+            $singleUploadLimit = $uploadMaxFilesize * 0.8;
+            
+            // Ensure minimum values
+            $maxFileSize = max($maxFileSize, 5 * 1024 * 1024); // At least 5MB
+            $chunkSize = max($chunkSize, 256 * 1024); // At least 256KB
+            $singleUploadLimit = max($singleUploadLimit, 1 * 1024 * 1024); // At least 1MB
+
+            $limits = [
+                'success' => true,
+                'code' => 200,
+                'maxFileSize' => (int)$maxFileSize,
+                'chunkSize' => (int)$chunkSize,
+                'singleUploadLimit' => (int)$singleUploadLimit,
+                'maxExecutionTime' => $maxExecutionTime,
+                'memoryLimit' => $memoryLimit,
+                'uploadMaxFilesize' => $uploadMaxFilesize,
+                'postMaxSize' => $postMaxSize,
+            ];
+            
+            return response()->json($limits);
+        } catch (\Exception $e) {
+            Log::channel('scommerce')->error('Failed to get server limits', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'code' => 500,
+                'message' => $e->getMessage(),
+                'rev' => time(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Parse size string (e.g., "128M", "1G") to bytes.
+     *
+     * @param string $size Size string
+     * @return int Size in bytes
+     */
+    private function parseSize(string $size): int
+    {
+        $size = trim($size);
+        $last = strtolower($size[strlen($size) - 1]);
+        $size = (int)$size;
+
+        switch ($last) {
+            case 'g':
+                $size *= 1024;
+                // Fall through
+            case 'm':
+                $size *= 1024;
+                // Fall through
+            case 'k':
+                $size *= 1024;
+        }
+
+        return $size;
     }
 }

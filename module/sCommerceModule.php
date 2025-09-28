@@ -10,6 +10,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
@@ -480,7 +481,7 @@ switch ($get) {
         $product->height = $sCommerceController->validateNumber(request()->input('height', 0));
         $product->length = $sCommerceController->validateNumber(request()->input('length', 0));
         $product->volume = $sCommerceController->validateNumber(request()->input('volume', 0));
-        $product->cover = str_replace(MODX_SITE_URL, '', $cover->src ?? '/assets/site/noimage.png');
+        $product->cover = str_replace(EVO_SITE_URL, '', $cover->src ?? '/assets/site/noimage.png');
         $product->relevants = json_encode(request()->input('relevants', []), JSON_UNESCAPED_UNICODE);
         $product->similar = json_encode(request()->input('similar', []), JSON_UNESCAPED_UNICODE);
         $product->tmplvars = json_encode(request()->input('tmplvars', []), JSON_UNESCAPED_UNICODE);
@@ -950,6 +951,8 @@ switch ($get) {
                                 case sAttribute::TYPE_ATTR_CUSTOM : // 15
                                     if (is_array($value) && count($value)) {
                                         $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($value, JSON_UNESCAPED_UNICODE)]);
+                                    } elseif (is_string($value) && trim($value)) {
+                                        $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => trim($value)]);
                                     }
                                     break;
                             }
@@ -1470,7 +1473,7 @@ switch ($get) {
                         'position' => sIntegration::max('position') + 1,
                     ]);
                 } catch (Throwable $e) {
-                    \Log::error("Failed to register integration: {$integrationClass}", ['error' => $e->getMessage()]);
+                    Log::channel('scommerce')->error("Failed to register integration: {$integrationClass}", ['error' => $e->getMessage()]);
                 }
             }
         }
@@ -1620,7 +1623,7 @@ switch ($get) {
                         'description' => json_encode($description, JSON_UNESCAPED_UNICODE),
                     ]);
                 } catch (Throwable $e) {
-                    \Log::error("Failed to register delivery method: {$methodClass}", ['error' => $e->getMessage()]);
+                    Log::channel('scommerce')->error("Failed to register delivery method: {$methodClass}", ['error' => $e->getMessage()]);
                 }
             }
         }
@@ -1763,7 +1766,7 @@ switch ($get) {
                         'description' => json_encode($description, JSON_UNESCAPED_UNICODE),
                     ]);
                 } catch (Throwable $e) {
-                    \Log::error("Failed to register payment method: {$methodClass}", ['error' => $e->getMessage()]);
+                    Log::channel('scommerce')->error("Failed to register payment method: {$methodClass}", ['error' => $e->getMessage()]);
                 }
             }
         }

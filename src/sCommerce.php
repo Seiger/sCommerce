@@ -530,7 +530,7 @@ class sCommerce
 
                         $params['body'] = $view->render();
                     } catch (\Exception $e) {
-                        Log::error("sCommerce. Render template. " . $e->getMessage());
+                        Log::channel('scommerce')->error("sCommerce. Render template. " . $e->getMessage());
                     }
                 } else {
                     $params['body'] = $template;
@@ -539,13 +539,13 @@ class sCommerce
                 try {
                     evo()->sendMail($params);
                 } catch (\Exception $e) {
-                    Log::error("sCommerce. Send Email. " . $e->getMessage());
+                    Log::channel('scommerce')->error("sCommerce. Send Email. " . $e->getMessage());
                 }
             } else {
-                Log::alert("sCommerce. User notify by Email template or text missing.");
+                Log::channel('scommerce')->alert("sCommerce. User notify by Email template or text missing.");
             }
         } else {
-            Log::alert("sCommerce. User notify by Email address is empty.");
+            Log::channel('scommerce')->alert("sCommerce. User notify by Email address is empty.");
         }
     }
 

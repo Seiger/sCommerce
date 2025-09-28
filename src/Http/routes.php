@@ -43,11 +43,10 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
     ))->name('wishlist');
 });
 
-Route::middleware('mgr')->prefix('scommerce')->name('sCommerce.')->group(function () {
-    Route::post('integrations/{key}/tasks/{action}', [IntegrationActionController::class, 'start'])->whereAlpha('action')
-        ->name('integrations.task.start');
-    Route::get('integrations/tasks/{id}/progress', [IntegrationActionController::class, 'progress'])
-        ->name('integrations.progress');
-    Route::get('integrations/tasks/{id}/download', [IntegrationActionController::class, 'download'])
-        ->name('integrations.download');
+Route::middleware('mgr')->prefix('scommerce/integrations')->name('sCommerce.integrations.')->group(function () {
+    Route::get('servlimits', [IntegrationActionController::class, 'serverLimits'])->name('serverLimits');
+    Route::post('{key}/tasks/{action}', [IntegrationActionController::class, 'start'])->whereAlpha('action')->name('task.start');
+    Route::post('{key}/upload', [IntegrationActionController::class, 'upload'])->name('upload');
+    Route::get('tasks/{id}/progress', [IntegrationActionController::class, 'progress'])->name('progress');
+    Route::get('tasks/{id}/download', [IntegrationActionController::class, 'download'])->name('download');
 });

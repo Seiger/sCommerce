@@ -5,10 +5,49 @@
         height:150px;overflow-y:auto;background:#f1f1f1;border:1px solid #e1e1e1;border-radius:.5rem;
         padding:.6rem .9rem .6rem .9rem;white-space:normal;line-height:1.15;
         font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;font-size:.8rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .widget-log.widget-drag-zone:hover {
+        border-color: #198754;
+        background-color: #f8fff8;
+    }
+
+    .widget-log.widget-drag-zone.drag-over {
+        border-color: #198754;
+        background-color: #e8f5e8;
+        transform: scale(1.01);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.15);
     }
     .widget-log .line-info {color:inherit;}
     .widget-log .line-success {color:#198754;}
     .widget-log .line-error {color:#dc3545;}
+
+    /* Reset paragraph margins in widget-log to prevent double spacing */
+    .widget-log p {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Ensure proper spacing between log lines */
+    .widget-log .line-info,
+    .widget-log .line-success,
+    .widget-log .line-error {
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Dark mode support for drag zone */
+    body.darkness .widget-log.widget-drag-zone:hover {
+        border-color: #10b981;
+        background-color: #064e3b;
+    }
+    body.darkness .widget-log.widget-drag-zone.drag-over {
+        border-color: #10b981;
+        background-color: #065f46;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
     .widget-progress {
         position:relative;display:none;/*grid*/grid-template-columns:1fr auto;align-items:center;
         gap:.5rem;height:14px;margin:.1rem .9rem .1rem .9rem;color:#111827;background:#e9eef3;
@@ -50,6 +89,99 @@
     @media (prefers-reduced-motion: reduce){
         .widget-progress .widget-progress__bar {animation: none !important; transition: none;}
         .widget-progress.is-error .widget-progress__bar {animation: none !important;}
+    }
+
+    /* Import/Export Widget Improvements */
+    .widget-import-export {display: grid;grid-template-columns: 1fr 1fr;gap: 1rem;margin-bottom: 1rem;}
+    .widget-section {border: 1px solid #e1e1e1;border-radius: 8px;padding: 1rem;background: #f8f9fa;}
+    .widget-section.export {border-color: #0d6efd;background: #f0f8ff;}
+    .widget-section.import {border-color: #198754;background: #f0fff4;}
+    .widget-section h6 {margin: 0 0 0.5rem 0;font-weight: 600;display: flex;align-items: center;gap: 0.5rem;}
+    .widget-import-zone {border: 2px dashed #ccc;border-radius: 8px;padding: 20px;text-align: center;transition: all 0.3s ease;
+        cursor: pointer;position: relative;min-height: 120px;display: flex;flex-direction: column;justify-content: center;align-items: center;}
+    .widget-import-zone:hover {border-color: #198754;background-color: #f8fff8;}
+    .widget-import-zone.drag-over {
+        border-color: #198754;
+        background-color: #e8f5e8;
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.15);
+    }
+    .widget-import-zone .import-icon {
+        font-size: 2rem;
+        color: #198754;
+        margin-bottom: 0.5rem;
+        opacity: 0.7;
+    }
+    .widget-import-zone .import-text {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 0.25rem;
+    }
+    .widget-import-zone .import-hint {font-size: 0.75rem;color: #999;}
+    .widget-file-info {
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #fff;
+        border-radius: 4px;
+        border: 1px solid #e1e1e1;
+        font-size: 0.8rem;
+        display: none;
+    }
+    .widget-file-info.show {display: block;}
+    .widget-file-info .file-name {font-weight: 600;color: #198754;}
+    .widget-file-info .file-size {color: #666;margin-left: 0.5rem;}
+    .widget-upload-progress {margin-top: 0.5rem;display: none;}
+    .widget-upload-progress.show {display: block;}
+    .widget-upload-progress .progress {height: 8px;border-radius: 4px;}
+    .widget-upload-progress .progress-bar {background: linear-gradient(90deg, #198754, #20c997);border-radius: 4px;}
+    .widget-upload-progress .progress-text {
+        font-size: 0.75rem;
+        color: #666;
+        margin-top: 0.25rem;
+        text-align: center;
+    }
+    .widget-section .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .widget-section .btn i {margin-right: 0.5rem;}
+    /* Dark mode support */
+    body.darkness .widget-section {
+        background: #1f2937;
+        border-color: #374151;
+        color: #e5e7eb;
+    }
+    body.darkness .widget-section.export {
+        border-color: #3b82f6;
+        background: #1e3a8a;
+    }
+    body.darkness .widget-section.import {
+        border-color: #10b981;
+        background: #064e3b;
+    }
+    body.darkness .widget-import-zone {
+        border-color: #4b5563;
+        background: #111827;
+    }
+    body.darkness .widget-import-zone:hover {
+        border-color: #10b981;
+        background: #064e3b;
+    }
+    body.darkness .widget-import-zone.drag-over {
+        border-color: #10b981;
+        background: #065f46;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
+    body.darkness .widget-file-info {
+        background: #374151;
+        border-color: #4b5563;
+        color: #e5e7eb;
+    }
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .widget-import-export {grid-template-columns: 1fr;gap: 0.5rem;}
+        .widget-import-zone {min-height: 100px;padding: 15px;}
+        .widget-import-zone .import-icon {font-size: 1.5rem;}
     }
 </style>
 <div class="row form-row widgets">

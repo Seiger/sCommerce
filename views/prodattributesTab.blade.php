@@ -35,7 +35,7 @@
                         @include('sCommerce::partials.attributeColor')
                         @break
                     @case(sAttribute::TYPE_ATTR_CUSTOM)
-                        @php(View::getFinder()->setPaths([MODX_BASE_PATH . 'assets/modules/scommerce/attribute']))
+                        @php(View::getFinder()->setPaths([EVO_BASE_PATH . 'assets/modules/scommerce/attribute']))
                         @include($attribute->alias)
                         @break
                     @case(sAttribute::TYPE_ATTR_PRICE_RANGE)

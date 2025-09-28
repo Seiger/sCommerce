@@ -378,6 +378,19 @@
         })
         document.title = "@lang('sCommerce::global.title') - {{strip_tags(__('sCommerce::global.description'))}}";
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+    <script>
+        // Configure marked.js for safe Markdown processing
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: false,      // Don't convert \n to <br> (we handle line breaks ourselves)
+                gfm: true,          // GitHub Flavored Markdown
+                sanitize: false,    // We'll handle sanitization ourselves
+                smartLists: true,   // Smart list handling
+                smartypants: false  // Disable smart quotes to avoid conflicts
+            });
+        }
+    </script>
     <img src="{{evo()->getConfig('site_url', '/')}}assets/site/noimage.png" id="img-preview" style="display: none;" class="post-thumbnail">
     <div id="copyright"><a href="https://seiger.github.io/sCommerce/" target="_blank"><img src="{{evo()->getConfig('site_url', '/')}}assets/site/seigerit-blue.svg" alt="Seiger IT Logo"/></a></div>
 @endpush

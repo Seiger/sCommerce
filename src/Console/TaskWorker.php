@@ -90,7 +90,7 @@ class TaskWorker extends Command
         try {
             // Resolve integration by slug from database
             $integrationRecord = sIntegration::where('key', $task->slug)->where('active', true)->first();
-            
+
             if (!$integrationRecord) {
                 throw new \RuntimeException("Integration '{$task->slug}' not found or inactive");
             }
@@ -117,7 +117,7 @@ class TaskWorker extends Command
                     'message' => $task->message ?: __('sCommerce::global.done'),
                     'finished_at' => now()
                 ]);
-                
+
                 TaskProgress::write([
                     'id'        => (int)$task->id,
                     'slug'      => $task->slug,
@@ -134,13 +134,13 @@ class TaskWorker extends Command
                 }
             }
         } catch (\Throwable $e) {
-            Log::error('task.worker failed: ' . $e->getMessage(), ['task' => $task->id]);
+            Log::channel('scommerce')->error('task.worker failed: ' . $e->getMessage(), ['task' => $task->id]);
 
             $task->update([
                 'status' => sIntegrationTask::TASK_STATUS_FAILED,
                 'finished_at' => now()
             ]);
-            
+
             TaskProgress::write([
                 'id'      => (int)$task->id,
                 'slug'    => $task->slug,
@@ -186,8 +186,9 @@ class TaskWorker extends Command
             );
         }
 
-        // Call the action method with task and meta options
-        $integration->{$method}($task, (array)$task->meta);
+        // Call the action method with task and options
+        $options = array_merge((array)$task->options, (array)$task->meta);
+        $integration->{$method}($task, $options);
     }
 
     /**

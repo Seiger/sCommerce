@@ -54,6 +54,34 @@ declare function widgetLogLine(root: HTMLElement, text: string, level?: WidgetLo
  */
 declare function widgetWatcher(root: HTMLElement, url: string): () => void;
 
+/**
+ * Upload file with automatic chunking for large files.
+ *
+ * This function provides a unified interface for file uploads with intelligent
+ * method selection based on file size. It automatically:
+ * - Fetches server limits from the API
+ * - Validates file size against server constraints
+ * - Chooses between direct upload (small files) or chunked upload (large files)
+ * - Handles progress tracking and error management
+ * - Manages button states during upload process
+ *
+ * @param file - The file object to upload
+ * @param root - Log container element for displaying progress and messages
+ * @param widgetKey - Widget identifier for button state management
+ * @param uploadUrl - API endpoint URL for file upload
+ * @returns Promise that resolves when upload completes successfully
+ * @throws Error if upload fails or file is too large
+ *
+ * @example
+ * // Basic usage
+ * await uploadFile(file, logElement, 'myWidget', '/api/upload');
+ *
+ * @example
+ * // With custom URLs
+ * await uploadFile(file, document.getElementById('log'), 'csvImport', '{{route('sCommerce.integrations.upload', ['key' => 'simpexpcsv'])}}');
+ */
+declare function uploadFile(file: File, root: HTMLElement, widgetKey: string, uploadUrl: string): Promise<void>;
+
 /*
 |--------------------------------------------------------------------------
 | views/scripts/global.blade.php
@@ -69,13 +97,28 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTION
  * - Returns `null` when request fails (caught error or non-OK mapped error).
  *
  * @param url    Request URL (string | URL | Request)
- * @param form   Request body (FormData / Blob / string / URLSearchParams / etc.)
+ * @param data   Request body (FormData / object / string / URLSearchParams / etc.)
  * @param method HTTP method (default 'POST')
  * @param type   Desired response type (default 'json')
  */
-declare function callApi(url: string | URL | Request, form?: BodyInit | null, method?: HttpMethod, type: 'text'): Promise<string | null>;
-declare function callApi<T = any>(url: string | URL | Request, form?: BodyInit | null, method?: HttpMethod, type: 'json'): Promise<T | null>;
-declare function callApi(url: string | URL | Request, form?: BodyInit | null, method?: HttpMethod, type: 'blob'): Promise<Blob | null>;
-declare function callApi(url: string | URL | Request, form?: BodyInit | null, method?: HttpMethod, type: 'formData'): Promise<FormData | null>;
-declare function callApi(url: string | URL | Request, form?: BodyInit | null, method?: HttpMethod, type: 'arrayBuffer'): Promise<ArrayBuffer | null>;
-declare function callApi<T = any>(url: string | URL | Request, form?: BodyInit | null, method?: HttpMethod, type?: undefined): Promise<T | null>;
+declare function callApi(url: string | URL | Request, data?: BodyInit | object | null, method?: HttpMethod, type?: 'text'): Promise<string | null>;
+declare function callApi<T = any>(url: string | URL | Request, data?: BodyInit | object | null, method?: HttpMethod, type?: 'json'): Promise<T | null>;
+declare function callApi(url: string | URL | Request, data?: BodyInit | object | null, method?: HttpMethod, type?: 'blob'): Promise<Blob | null>;
+declare function callApi(url: string | URL | Request, data?: BodyInit | object | null, method?: HttpMethod, type?: 'formData'): Promise<FormData | null>;
+declare function callApi(url: string | URL | Request, data?: BodyInit | object | null, method?: HttpMethod, type?: 'arrayBuffer'): Promise<ArrayBuffer | null>;
+declare function callApi<T = any>(url: string | URL | Request, data?: BodyInit | object | null, method?: HttpMethod, type?: undefined): Promise<T | null>;
+
+/**
+ * Format file size in human readable format.
+ *
+ * Converts bytes to appropriate unit (B, KB, MB, GB, TB) with proper rounding.
+ *
+ * @param bytes - File size in bytes
+ * @returns Formatted file size with unit
+ *
+ * @example
+ * niceSize(1024); // "1 KB"
+ * niceSize(1048576); // "1 MB"
+ * niceSize(1536); // "1.5 KB"
+ */
+declare function niceSize(bytes: number): string;

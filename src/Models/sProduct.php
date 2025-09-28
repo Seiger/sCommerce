@@ -272,7 +272,7 @@ class sProduct extends Model
      */
     public function categories()
     {
-        return $this->belongsToMany(sCategory::class, 's_product_category', 'product', 'category')->withPivot('position');
+        return $this->belongsToMany(sCategory::class, 's_product_category', 'product', 'category')->withPivot('position', 'scope');
     }
 
     /**

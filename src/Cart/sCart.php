@@ -53,7 +53,7 @@ class sCart
 
         if (!$product || !$product->id) {
             $message = __('sCommerce::global.product_with_id', ['id' => $productId]) . __('sCommerce::global.not_found') . '.';
-            Log::warning('sCart - ' . $message);
+            Log::channel('scommerce')->warning('sCart - ' . $message);
 
             return [
                 'success' => false,
@@ -69,7 +69,7 @@ class sCart
         if (sCommerce::config('product.inventory_on', 0)) {
             if ($product->inventory < 0) {
                 $message = __('sCommerce::global.product_title_is_out_of_stock', ['title' => $product->title]);
-                Log::alert('sCart - ' . $message);
+                Log::channel('scommerce')->alert('sCart - ' . $message);
 
                 return [
                     'success' => false,
