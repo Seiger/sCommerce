@@ -27,19 +27,27 @@
         // Use marked.js for Markdown processing if available, fallback to simple processing
         if (typeof marked !== 'undefined') {
             try {
+                // Configure marked.js to add target="_blank" to all links
+                const renderer = new marked.Renderer();
+                renderer.link = function(href, title, text) {
+                    const link = marked.Renderer.prototype.link.call(this, href, title, text);
+                    return link.replace('<a', '<a target="_blank" rel="noopener noreferrer"');
+                };
+                marked.setOptions({ renderer });
+
                 s = marked.parse(s);
             } catch (e) {
                 console.warn('Marked.js parsing failed, using fallback:', e);
                 // Fallback to simple processing
                 s = s.replace(/`([^`]+)`/g,'<code>$1</code>');
-                s = s.replace(/\[([^\]]+)]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+                s = s.replace(/\[([^\]]+)]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
                 s = s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/_([^_]+)_/g,'<em>$1</em>').replace(/~~([^~]+)~~/g,'<s>$1</s>');
                 s = s.replace(/\n/g, '<br>');
             }
         } else {
             // Fallback if marked.js is not loaded
             s = s.replace(/`([^`]+)`/g,'<code>$1</code>');
-            s = s.replace(/\[([^\]]+)]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+            s = s.replace(/\[([^\]]+)]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
             s = s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/_([^_]+)_/g,'<em>$1</em>').replace(/~~([^~]+)~~/g,'<s>$1</s>');
             s = s.replace(/\n/g, '<br>');
         }
