@@ -43,6 +43,7 @@ use Seiger\sGallery\Facades\sGallery;
  */
 class ImportExportCSV extends BaseIntegration
 {
+    const ALLOWED_EXTENSIONS = ['csv'];
     /** Directory where this integration puts its CSV exports. */
     private const EXPORT_DIR = 'scommerce/exports';
     /** Keep export files for N days. */
@@ -71,7 +72,7 @@ class ImportExportCSV extends BaseIntegration
      */
     public function getIcon(): string
     {
-        return '<i class="far fa-file-alt"></i>';
+        return '<i class="fas fa-file-csv"></i>';
     }
 
     /**

@@ -13,6 +13,17 @@
     function widgetLogLine(root, text, level = 'info') {
         let s = String(text);
 
+        // Check for duplicate messages by comparing with the last log line
+        const logLines = root.querySelectorAll('.widget-log > div');
+        if (logLines.length > 0) {
+            const lastLine = logLines[logLines.length - 1];
+            const lastText = lastLine.textContent || lastLine.innerText || '';
+            if (lastText.trim() === text.trim()) {
+                // Skip duplicate message
+                return;
+            }
+        }
+
         // Use marked.js for Markdown processing if available, fallback to simple processing
         if (typeof marked !== 'undefined') {
             try {
@@ -247,7 +258,6 @@
      * @returns {Function} stop() - Function to stop watching and cleanup timers
      */
     function widgetWatcher(root, url, widgetKey = null) {
-        let since = 0;
         let stopped = false;
         let inFlight = false;
         let lastResponse = null;
@@ -264,7 +274,7 @@
         const MIN_DELAY = 25;       // 25ms minimum
         const MAX_DELAY = 25000;    // 25s maximum
         const CHANGE_THRESHOLD = 3; // 3 consecutive changes to decrease delay
-        const DELTA_STEP = 100;     // 100ms step for adjustments
+        const DELTA_STEP = 25;      // 25ms step for adjustments
         let delay = MIN_DELAY;
 
         async function loop() {

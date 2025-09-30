@@ -6,8 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Log;
-use Seiger\sCommerce\Interfaces\IntegrationInterface;
 use Seiger\sCommerce\Integration\TaskProgress;
+use Seiger\sCommerce\Interfaces\IntegrationInterface;
 use Seiger\sCommerce\Models\sIntegration;
 use Seiger\sCommerce\Models\sIntegrationTask;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -51,7 +51,7 @@ class IntegrationActionController extends BaseController
      * This method creates a new integration task and attempts to launch it asynchronously.
      * It resolves the integration from the database, creates the task with proper
      * initialization, and launches the background worker to process the task.
-     * 
+     *
      * This method accepts ALL request parameters and passes them as options to the
      * integration task, providing maximum flexibility for third-party developers.
      * Security is ensured through admin middleware protection.
@@ -67,17 +67,17 @@ class IntegrationActionController extends BaseController
      * @param string $key The integration key (e.g., 'simpexpcsv')
      * @param string $action The action to perform (e.g., 'export', 'import')
      * @return JsonResponse JSON response with task ID and status
-     * 
+     *
      * @example
      * // Import with filename
      * POST /scommerce/integrations/simpexpcsv/tasks/import
      * Body: {"filename": "import_file.csv"}
-     * 
+     *
      * @example
      * // Export with custom options
      * POST /scommerce/integrations/simpexpcsv/tasks/export
      * Body: {"delimiter": ";", "batch_size": 100, "include_attributes": true}
-     * 
+     *
      * @example
      * // Custom integration with any parameters
      * POST /scommerce/integrations/custom/tasks/sync
@@ -135,10 +135,9 @@ class IntegrationActionController extends BaseController
                 ], 400);
             }
 
-            $task = sIntegrationTask::findOrFail($id);
             $file = TaskProgress::file($id);
             
-        if (!is_file($file)) {
+            if (!is_file($file)) {
                 return response()->json([
                     'success' => false,
                     'code' => 404,
@@ -195,6 +194,50 @@ class IntegrationActionController extends BaseController
                 'status' => 'error',
                 'progress' => 0,
                 'message' => 'Failed to get progress'
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload file for import with chunked upload support.
+     *
+     * This method handles file uploads for CSV import operations, supporting both
+     * single file uploads and chunked uploads for large files. It creates a task
+     * to track the upload progress and returns the task information.
+     *
+     * @param string $key Integration key
+     * @param Request $request HTTP request containing file data
+     * @return JsonResponse JSON response with task information
+     * @throws \RuntimeException If integration not found or upload fails
+     */
+    public function upload(string $key, Request $request): JsonResponse
+    {
+        try {
+            // Resolve integration
+            $integration = $this->resolveIntegrationOrFail($key);
+
+            // Get server limits
+            $limitsResponse = $this->serverLimits();
+            $limits = $limitsResponse->getData(true);
+
+            // Check if this is a chunked upload
+            if ($request->has('chunk_index') && $request->has('total_chunks')) {
+                return $this->handleChunkedUpload($key, $request, $limits);
+            } else {
+                return $this->handleSingleUpload($key, $request, $limits);
+            }
+        } catch (\Exception $e) {
+            Log::channel('scommerce')->error('Upload failed', [
+                'key' => $key,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'code' => 500,
+                'message' => $e->getMessage(),
+                'rev' => time(),
             ], 500);
         }
     }
@@ -364,24 +407,16 @@ class IntegrationActionController extends BaseController
         try {
             $artisanPath = EVO_CORE_PATH . 'artisan';
             
-            Log::channel('scommerce')->debug('Launching TaskWorker', [
-                'artisan_path' => $artisanPath,
-                'exec_available' => function_exists('exec') && !in_array('exec', explode(',', ini_get('disable_functions'))),
-                'shell_exec_available' => function_exists('shell_exec') && !in_array('shell_exec', explode(',', ini_get('disable_functions')))
-            ]);
-            
             // Try system execution first (if available)
             if (function_exists('exec') && !in_array('exec', explode(',', ini_get('disable_functions')))) {
                 $command = "php \"{$artisanPath}\" scommerce:task.worker > /dev/null 2>&1 &";
                 exec($command);
-                Log::channel('scommerce')->debug('TaskWorker launched via exec', ['command' => $command]);
                 return;
             }
             
             if (function_exists('shell_exec') && !in_array('shell_exec', explode(',', ini_get('disable_functions')))) {
                 $command = "php \"{$artisanPath}\" scommerce:task.worker > /dev/null 2>&1 &";
                 shell_exec($command);
-                Log::channel('scommerce')->debug('TaskWorker launched via shell_exec', ['command' => $command]);
                 return;
             }
 
@@ -390,7 +425,6 @@ class IntegrationActionController extends BaseController
                     // Use EvolutionCMS Console for better integration
                     $console = app('Console');
                     $console->call('scommerce:task.worker');
-                    Log::channel('scommerce')->debug('TaskWorker executed via fallback');
                 } catch (\Throwable $e) {
                     Log::channel('scommerce')->error('TaskWorker failed to execute in shutdown function', [
                         'error' => $e->getMessage(),
@@ -403,50 +437,6 @@ class IntegrationActionController extends BaseController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-        }
-    }
-
-    /**
-     * Upload CSV file for import with chunked upload support.
-     *
-     * This method handles file uploads for CSV import operations, supporting both
-     * single file uploads and chunked uploads for large files. It creates a task
-     * to track the upload progress and returns the task information.
-     *
-     * @param string $key Integration key
-     * @param Request $request HTTP request containing file data
-     * @return JsonResponse JSON response with task information
-     * @throws \RuntimeException If integration not found or upload fails
-     */
-    public function upload(string $key, Request $request): JsonResponse
-    {
-        try {
-            // Resolve integration
-            $integration = $this->resolveIntegrationOrFail($key);
-
-            // Get server limits
-            $limitsResponse = $this->serverLimits();
-            $limits = $limitsResponse->getData(true);
-
-            // Check if this is a chunked upload
-            if ($request->has('chunk_index') && $request->has('total_chunks')) {
-                return $this->handleChunkedUpload($key, $request, $limits);
-            } else {
-                return $this->handleSingleUpload($key, $request, $limits);
-            }
-        } catch (\Exception $e) {
-            Log::channel('scommerce')->error('Upload failed', [
-                'key' => $key,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'code' => 500,
-                'message' => $e->getMessage(),
-                'rev' => time(),
-            ], 500);
         }
     }
 
@@ -528,7 +518,6 @@ class IntegrationActionController extends BaseController
                 'status' => 'finished',
                 'message' => __('sCommerce::global.upload_completed') . '. ' . __('sCommerce::global.temporary_file') . ': **' . basename($uploadPath) . '**',
                 'result' => $uploadPath,
-                'rev' => time(),
             ]);
         } else {
             return response()->json([
@@ -539,7 +528,6 @@ class IntegrationActionController extends BaseController
                 'status' => 'running',
                 'message' => __('sCommerce::global.uploading_file') . '... (' . ($chunkIndex + 1) . '/' . $totalChunks . ')',
                 'progress' => (int)(($chunkIndex + 1) * 100 / $totalChunks),
-                'rev' => time(),
             ]);
         }
     }
@@ -552,7 +540,7 @@ class IntegrationActionController extends BaseController
      * @return void
      * @throws \RuntimeException If validation fails
      */
-    private function validateUploadedFile($file, array $limits): void
+    private function validateUploadedFile($file, $key, array $limits): void
     {
         // Check file size
         if ($file->getSize() > $limits['maxFileSize']) {
@@ -560,7 +548,8 @@ class IntegrationActionController extends BaseController
         }
 
         // Check file extension
-        $allowedExtensions = ['csv'];
+        $integration = $this->resolveIntegrationOrFail($key);
+        $allowedExtensions = $integration::ALLOWED_EXTENSIONS ?? ['csv'];
         $extension = strtolower($file->getClientOriginalExtension());
         if (!in_array($extension, $allowedExtensions)) {
             throw new \RuntimeException(__('sCommerce::global.invalid_file_extension') . ' ' . implode(', ', $allowedExtensions));

@@ -49,7 +49,7 @@ class sCommerceController
             foreach ($products as $product) {
                 if (isset($categories[$product->id])) {
                     foreach ($categories[$product->id] as $category) {
-                        $link = str_replace(MODX_SITE_URL, '', $product->getLinkAttribute($category));
+                        $link = str_replace(EVO_SITE_URL, '', $product->getLinkAttribute($category));
                         $productsListing[$category][trim($link, '/')] = $product->id;
                     }
                 }
