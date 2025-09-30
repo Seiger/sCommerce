@@ -218,7 +218,9 @@ switch ($get) {
         $perpage = Cookie::get('scom_products_page_items', 50);
         $cat = request()->input('cat', 0);
         $allCats = DB::table('s_product_category')->groupBy('category')->get()->pluck('category')->toArray();
-        $allCats = array_merge([sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))], $allCats);
+        if (!evo()->getConfig('check_sMultisite', false)) {
+            $allCats = array_merge([sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))], $allCats);
+        }
         $cat = in_array($cat, $allCats) ? $cat : 0;
 
         if ($cat > 0) {
