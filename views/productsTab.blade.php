@@ -2,9 +2,6 @@
     use Seiger\sCommerce\Models\sAttribute;
     use Seiger\sCommerce\Models\sProduct;
     $order = request()->has('order') ? request()->input('order') : 'id';
-    if (evo()->getConfig('check_sMultisite', false)) {
-        $domains = \Seiger\sMultisite\Models\sMultisite::all();
-    }
 @endphp
 <div class="row form-row">
     <div class="row-col col-lg-4 col-md-12 pl-0 scom-conters">
@@ -32,11 +29,26 @@
         </div>
     </div>
 </div>
-<div class="row form-row mb-2 scom-btn-container">
-    <a @class(['btn', 'btn-info' => $cat == 0, 'btn-light' => $cat != 0]) href="{!!$moduleUrl!!}&get=products" class="btn btn-info">@lang('sCommerce::global.all_products')</a>
-    @foreach($resources as $id => $resource)
-        <a @class(['btn', 'btn-info' => $cat == $id, 'btn-light' => $cat != $id]) href="{!!$moduleUrl!!}&get=products&cat={{$id}}">{{$resource}}</a>
-    @endforeach
+<div class="mb-2 scom-btn-container">
+    @if($domains)
+        @foreach($domains as $domain)
+            <select style="flex:1;min-width:200px;" onchange="if(this.value) window.location.href=this.value;">
+                <option value="{!!$moduleUrl!!}&get=products">@lang('sCommerce::global.all_products')</option>
+                <optgroup label="{{$domain->site_name}}">
+                    @foreach($listCategories[$domain->key] as $key => $value)
+                        <option value="{!!$moduleUrl!!}&get=products&cat={{$key}}" @selected($cat == $key)>{{$value}}</option>
+                    @endforeach
+                </optgroup>
+            </select>
+        @endforeach
+    @else
+        <select style="flex:1;min-width: 200px;max-width:300px;" onchange="if(this.value) window.location.href=this.value;">
+            <option value="{!!$moduleUrl!!}&get=products">@lang('sCommerce::global.all_products')</option>
+            @foreach($listCategories as $key => $value)
+                <option value="{!!$moduleUrl!!}&get=products&cat={{$key}}" @selected($cat == $key)>{{$value}}</option>
+            @endforeach
+        </select>
+    @endif
 </div>
 <div class="table-responsive seiger__module-table">
     <table class="table table-condensed table-hover sectionTrans scom-table">
@@ -190,13 +202,15 @@
                 @endif
                 @if (sCommerce::config('products.show_field_category', 1) == 1)
                     <td>
-                        @if($item->category > 1)
-                            <a href="@makeUrl($item->category)" target="_blank">{{$resources[$item->category]}}</a>
-                        @elseif(evo()->getConfig('check_sMultisite', false))
+                        @if($domains)
                             @php($categories = $item->categories()->where('scope', 'LIKE', 'primary%')->get())
+                            @php($cts = [])
                             @foreach($categories as $category)
-                                <a href="@makeUrl($category->id){{$category->alias_visible == 1 ? '' : $category->alias . evo()->getConfig('friendly_url_suffix', '')}}" target="_blank">{{$category->pagetitle}}</a>
+                                @php($cts[] = '<a href="'.url($category?->id ?? 1) . ($category?->alias_visible == 1 ? '' : $category?->alias . evo()->getConfig('friendly_url_suffix', '')).'" target="_blank">'.($category?->pagetitle ?? '').'</a>')
                             @endforeach
+                            {!!implode(' || ', $cts)!!}
+                        @elseif($item->category > 1)
+                            <a href="@makeUrl($item->category)" target="_blank">{{$resources[$item->category]}}</a>
                         @else
                             <a href="@makeUrl(1)" target="_blank">{{evo()->getConfig('site_name')}}</a>
                         @endif
@@ -204,12 +218,14 @@
                 @endif
                 @if (evo()->getConfig('check_sMultisite', false) && sCommerce::config('products.show_field_websites', 1) == 1)
                     <td>
-                        @php($categories = $item->categories()->withPivot(['scope'])->wherePivot('scope', 'LIKE', 'primary%')->get())
+                        @php($categories = $categories ?? $item->categories()->withPivot(['scope'])->wherePivot('scope', 'LIKE', 'primary%')->get())
+                        @php($dms = [])
                         @foreach($categories as $category)
                             @php($scope = str_replace('primary_', '', $category->pivot->scope))
                             @php($website = $domains->where('key', $scope)->first())
-                            <a href="https://{{$website?->domain}}/" target="_blank">{{$website?->site_name}}</a>
+                            @php($dms[] = '<a href="https://'.$website?->domain.'" target="_blank">'.$website?->site_name.'</a>')
                         @endforeach
+                        {!!implode(' || ', $dms)!!}
                     </td>
                 @endif
                 @if (sCommerce::config('products.show_field_weight', 1) && sCommerce::config('product.show_field_weight', 1))

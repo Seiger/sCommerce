@@ -8,6 +8,7 @@ use EvolutionCMS\Facades\ManagerTheme;
 use EvolutionCMS\Models\SiteContent;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -215,7 +216,7 @@ switch ($get) {
     |--------------------------------------------------------------------------
     */
     case "products":
-        $perpage = Cookie::get('scom_products_page_items', 50);
+        $perpage = Cookie::get('scom_per_page', 50);
         $cat = request()->input('cat', 0);
         $allCats = DB::table('s_product_category')->groupBy('category')->get()->pluck('category')->toArray();
         if (!evo()->getConfig('check_sMultisite', false)) {
@@ -305,11 +306,51 @@ switch ($get) {
                 break;
         }
 
-        $data['items'] = $query->paginate($perpage);
+        $items = $query->paginate($perpage);
+        $resources = Cache::rememberForever(
+            'sCommerceProductsResourcesManager',
+            fn () => SiteContent::query()
+                ->select('id', 'pagetitle')
+                ->whereIn('id', $allCats)
+                ->orderBy('pagetitle')
+                ->pluck('pagetitle', 'id')
+                ->all()
+        );
+
+        $domains = null;
+        if (evo()->getConfig('check_sMultisite', false)) {
+            $domains = \Seiger\sMultisite\Models\sMultisite::all();
+        }
+
+        $listCategories = Cache::rememberForever(
+            'sCommerceListCategoriesManager',
+            function () use ($domains, $resources, $sCommerceController) {
+                if ($domains && count($domains)) {
+                    $out = [];
+                    foreach ($domains as $domain) {
+                        $root = sCommerce::config('basic.catalog_root' . $domain->key, $domain->site_start);
+                        $res = $sCommerceController->listCategories($root);
+                        foreach ($res as $key => $value) {
+                            if (isset($resources[$key])) {
+                                $out[$domain->key][$key] = $value;
+                            }
+                        }
+                    }
+                    return $out;
+                }
+
+                $root = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
+                return $sCommerceController->listCategories($root);
+            }
+        );
+
+        $data['items'] = $items;
         $data['total'] = sProduct::count();
         $data['active'] = sProduct::wherePublished(1)->count();
         $data['disactive'] = $data['total'] - $data['active'];
-        $data['resources'] = SiteContent::select('id', 'pagetitle')->whereIn('id', $allCats)->orderBy('pagetitle')->get()->pluck('pagetitle', 'id')->toArray();
+        $data['domains'] = $domains;
+        $data['resources'] = $resources;
+        $data['listCategories'] = $listCategories;
         $data['cat'] = $cat;
         $_SESSION['itemaction'] = 'Viewing a list of products';
         $_SESSION['itemname'] = __('sCommerce::global.title');

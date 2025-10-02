@@ -316,8 +316,6 @@
                             widgetProgressBar(result.slug, result.progress, result.eta);
                         }
 
-                        // Re-enable buttons after task completion
-                        console.log(`[widgetWatcher] Task completed, re-enabling buttons for widget: ${actualWidgetKey}`);
                         enableButtons(actualWidgetKey);
                         stopped = true;
                         return;
@@ -359,12 +357,9 @@
                                     lastMessage = currentMessage;
                                     // Only update lastResponse if message was successfully logged
                                     lastResponse = currentResponse;
-                                } else {
-                                    console.warn(`[widgetWatcher] Message "${currentMessage}" may not have been displayed properly`);
                                 }
                             } catch (e) {
                                 console.error(`[widgetWatcher] Failed to log message: ${e.message}`);
-                                // Don't update lastMessage or lastResponse if logging failed
                             }
                         } else {
                             // Message didn't change, but response did - still update lastResponse

@@ -9,7 +9,7 @@
     #preview.form-control{max-width:85px;background:#CECECF;}
     h3.sectionTrans .btn-group .btn{font-size:0.6772rem;}
     input[type=checkbox], input[type=radio]{padding:0.5em;}
-    table .product-thumbnail{width:70px;height:45px;}
+    table .product-thumbnail{width:70px;height:45px;float:left;margin-right:8px;}
     span[data-actual]::before{content:attr(data-actual);}
     ul.select2-selection__rendered{margin-left:unset;}
     .alertify .ajs-footer .ajs-buttons .ajs-button.ajs-ok{color:#fff;background-color:#d9534f;border-color:#d9534f;}
@@ -62,7 +62,7 @@
     .scom-progress{color:var(--brand-orange, #fd7e14);}
     .form-control.scom-input{height:42px;font-weight:400;line-height:120%;padding:16px 12px;}
     .scom-btn-container{display:flex;flex-flow:row wrap;justify-content:space-between;gap:5px;}
-    .scom-btn-container .btn:last-child {margin-right: auto;}
+    .scom-btn-container select:last-child, .scom-btn-container .btn:last-child {margin-right: auto;}
     .scom-clear-search{padding:5px;margin-left:-44px;z-index:10;cursor:pointer;}
     .scom-table thead th, .scom-table thead th button{color:var(--text-text-middle, #63666B);font-size:12px;font-weight:700;line-height:120%;padding-top:12px;padding-bottom:12px;}
     .scom-table thead th:first-of-type{padding-left:43px;}
