@@ -36,6 +36,7 @@ class sIntegration extends Model
         'class',      // Full class name for instantiation
         'active',     // Active status (boolean)
         'position',   // Display order in admin interface
+        'hidden',     // Hide visible in admin interface
     ];
 
     /**

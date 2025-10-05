@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Facades\sFilter;
+use Seiger\sCommerce\Integration\IntegrationActionController;
 
 /**
  * Catch the Product by alias
@@ -20,11 +21,14 @@ Event::listen('evolution.OnPageNotFound', function($params) {
     }
     $alias = implode('/', $aliasArr);
     $goTo = Arr::exists(sCommerce::documentListing(), $alias);
-    if (!$goTo) {
-        $alias = Arr::last($aliasArr);
-        $product = sCommerce::getProductByAlias($alias ?? '');
-        if ($product && isset($product->id) && (int)$product->id > 0) {
+    if ($goTo) {
+        evo()->setPlaceholder('product', (int)sCommerce::documentListing()[$alias]);
+    } else {
+        $pAlias = Arr::last($aliasArr);
+        $product = sCommerce::getProductByAlias($pAlias ?? '');
+        if ($product && trim($product->link, '/') == trim($alias, '/')) {
             if (evo()->getLoginUserID('mgr')) {
+                evo()->setPlaceholder('product', (int)$product?->id);
                 $goTo = true;
             }
         } else {
@@ -45,23 +49,10 @@ Event::listen('evolution.OnPageNotFound', function($params) {
  * Get document fields and add to array of resource fields
  */
 Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
-    $aliasArr = request()->segments();
-    if (isset($aliasArr[0]) && $aliasArr[0] == evo()->getConfig('lang', 'base')) {
-        unset($aliasArr[0]);
-    }
+    $requestId = (int)evo()->getPlaceholder('product');
 
-    $alias = implode('/', $aliasArr);
-    $document = sCommerce::documentListing()[$alias] ?? false;
-    if (!$document && evo()->getLoginUserID('mgr')) {
-        $alias = Arr::last($aliasArr);
-        $product = sCommerce::getProductByAlias($alias ?? '');
-        if ($product && isset($product->id) && (int)$product->id > 0) {
-            $document = (int)$product->id;
-        }
-    }
-
-    if ($document) {
-        $product = sCommerce::getProduct($document, evo()->getConfig('lang', 'base'));
+    if ($requestId) {
+        $product = sCommerce::getProduct($requestId, evo()->getConfig('lang', 'base'));
         $product->constructor = data_is_json($product->constructor, true);
         $product->tmplvars = data_is_json($product->tmplvars, true);
 

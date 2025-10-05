@@ -32,36 +32,6 @@ class sCommerceController
     protected $productIds = [];
 
     /**
-     * Set the products listing in the cache.
-     *
-     * @return void
-     */
-    public function setProductsListing(): void
-    {
-        $productsListing = [];
-        $categories = [];
-        $products = sProduct::active()->get();
-        if ($products) {
-            $scopes = DB::table('s_product_category')->where('scope', 'LIKE', 'primary%')->get();
-            foreach ($scopes as $scope) {
-                $categories[$scope->product][] = trim(str_replace('primary', '', $scope->scope), '_');
-            }
-            foreach ($products as $product) {
-                if (isset($categories[$product->id])) {
-                    foreach ($categories[$product->id] as $category) {
-                        $link = str_replace(EVO_SITE_URL, '', $product->getLinkAttribute($category));
-                        $productsListing[$category][trim($link, '/')] = $product->id;
-                    }
-                }
-            }
-        }
-        //evo()->clearCache('full');
-        foreach ($productsListing as $key => $array) {
-            Cache::forever('productsListing' . $key, $array);
-        }
-    }
-
-    /**
      * Update database configurations
      *
      * This method updates various database configurations based on the values provided in the request data.

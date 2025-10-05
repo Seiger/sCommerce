@@ -18,6 +18,7 @@ use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Controllers\TabProductController;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Integration\IntegrationActionController;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 use Seiger\sCommerce\Interfaces\IntegrationInterface;
 use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
@@ -474,6 +475,12 @@ switch ($get) {
         $product = sCommerce::getProduct($requestId);
         $prodCats = $product->categories->mapWithKeys(function ($value) {return [$value->id => $value->pivot->position];})->all();
 
+        // Get categories with primary scope before saving
+        $catsBefore = $product->categories()
+            ->wherePivot('scope', 'LIKE', 'primary%')
+            ->pluck('s_product_category.category')
+            ->toArray();
+
         $votes = data_is_json($product->votes ?? '', true);
         $cover = sGallery::first('product', $requestId);
 
@@ -577,9 +584,22 @@ switch ($get) {
             $text->update();
         }
 
+        // Get categories with primary scope after saving
+        $catsAfter = $product->categories()
+            ->wherePivot('scope', 'LIKE', 'primary%')
+            ->pluck('s_product_category.category')
+            ->toArray();
+
+        // Check if primary categories were changed
+        $primaryCategoriesChanged = count(array_diff($catsBefore, $catsAfter)) > 0 || count(array_diff($catsAfter, $catsBefore)) > 0;
+
+        if (isset($product->getChanges()['alias']) || $primaryCategoriesChanged) {
+            // Primary categories or alias changed - trigger cache rebuild
+            (new IntegrationActionController)->start('splc', 'make');
+        }
+
         $_SESSION['itemaction'] = 'Saving Product';
         $_SESSION['itemname'] = $product->title;
-        $sCommerceController->setProductsListing();
         $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=product'));
         evo()->invokeEvent('sCommerceAfterProductSave', compact('product', 'text'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
@@ -714,7 +734,7 @@ switch ($get) {
             $product->delete();
         }
 
-        $sCommerceController->setProductsListing();
+        (new IntegrationActionController)->start('splc', 'make');
         $back = '&get=products';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "modifications":
@@ -1063,6 +1083,7 @@ switch ($get) {
             if (!$product->id) {
                 $product->alias = $sCommerceController->validateAlias(trim($content->pagetitle) ?: 'new-product', $requestId);
                 $product->save();
+                (new IntegrationActionController)->start('splc', 'make');
             }
             $content->product = $product->id;
         }
@@ -1073,7 +1094,6 @@ switch ($get) {
 
         $_SESSION['itemaction'] = 'Saving a Product content' . ($requestLang != 'base' ? $requestLang : '');
         $_SESSION['itemname'] = $product->title;
-        $sCommerceController->setProductsListing();
         $back = str_replace('&i=0', '&i=' . $content->product, (request()->back ?? '&get=product'));
         evo()->invokeEvent('sCommerceAfterProductContentSave', compact('product', 'content'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);

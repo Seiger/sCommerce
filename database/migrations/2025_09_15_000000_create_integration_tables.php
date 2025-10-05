@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\Schema;
+use Seiger\sCommerce\Models\sIntegration;
 
 /**
  * Migration: integrations storage.
@@ -48,6 +49,32 @@ return new class extends Migration {
             $table->index('start_at')->comment('Index for scheduled task processing');
             $table->index('created_at')->comment('Index for chronological task ordering');
         });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Create a default Integrations
+        |--------------------------------------------------------------------------
+        */
+        $integrations = [
+            [
+                'key' => 'splc',
+                'class' => 'Seiger\sCommerce\Integration\ProductsListingCache',
+                'active' => true,
+                'position' => sIntegration::max('position') + 1,
+                'hidden' => true,
+            ],
+            [
+                'key' => 'simpexpcsv',
+                'class' => 'Seiger\sCommerce\Integration\ImportExportCSV',
+                'active' => true,
+                'position' => sIntegration::max('position') + 1,
+                'hidden' => false
+            ]
+        ];
+
+        foreach ($integrations as $integration) {
+            sIntegration::create($integration);
+        }
     }
 
     public function down(): void

@@ -167,7 +167,7 @@ class sCommerce
      */
     public function getProductByAlias(string $alias): object
     {
-        return sProduct::whereAlias($alias)->extractConstructor()->first() ?? new sProduct();
+        return sProduct::whereAlias(trim($alias, evo()->getConfig('friendly_url_suffix', '')))->extractConstructor()->first() ?? new sProduct();
     }
 
     /**
@@ -317,21 +317,26 @@ class sCommerce
     }
 
     /**
-     * Retrieves the products listing from cache or sets it if not found.
+     * Retrieves the products listing from cache files.
      *
-     * @return array The products listing retrieved from cache or an empty array if not found.
+     * @return array The products listing retrieved from cache files, or an empty array if not found or error occurs.
      */
     public function documentListing(): array
     {
-        $productsListing = Cache::get('productsListing' . evo()->getConfig('site_key', ''));
+        $siteKey = evo()->getConfig('site_key', '');
+        $scopeSuffix = trim($siteKey) ? '.' . $siteKey : '';
+        $cacheFile = evo()->getCachePath() . 'sCommerceProductsListing' . $scopeSuffix . '.php';
 
-        if (!$productsListing) {
-            $sCommerceController = new sCommerceController();
-            $sCommerceController->setProductsListing();
-            $productsListing = Cache::get('productsListing' . evo()->getConfig('site_key', ''));
+        if (file_exists($cacheFile)) {
+            try {
+                $data = include $cacheFile;
+                return is_array($data) ? $data : [];
+            } catch (\Throwable $e) {
+                @unlink($cacheFile);
+            }
         }
 
-        return $productsListing ?? [];
+        return [];
     }
 
     /**

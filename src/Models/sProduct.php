@@ -387,11 +387,16 @@ class sProduct extends Model
     /**
      * Retrieves the category attribute for the product.
      *
-     * @param string|null $key The key for the site scope. If null, the default site key is used.
+     * @param string|int|null $key The key for the site scope (string) or category ID (int). If null, the default site key is used.
      * @return int|null The category ID of the product or the catalog root ID.
      */
     public function getCategoryAttribute($key = null): int
     {
+        // If $key is an integer, it's a category ID - return it directly (optimization)
+        if (is_int($key) && $key > 0) {
+            return $key;
+        }
+
         if (evo()->getConfig('check_sMultisite', false)) {
             $key = $key ?? evo()->getConfig('site_key', 'default');
             $category = $this->categories()->whereScope('primary_' . $key)->first()->id ?? null;
@@ -420,6 +425,7 @@ class sProduct extends Model
      * If the link rule is set to "category", the URL is based on the current category or the catalog root URL.
      * Otherwise, the URL is based on the site start URL.
      *
+     * @param string|int $key The site scope (string) or category ID (int) for optimization
      * @return string The URL of the object.
      */
     public function getLinkAttribute($key = ''): string
@@ -430,7 +436,7 @@ class sProduct extends Model
                 $base_url = UrlProcessor::makeUrl($category);
                 break;
             case "category" :
-                $category = (int)$this->getCategoryAttribute(trim($key ?? '') ? $key : null) ?: sCommerce::config('basic.catalog_root' . $key, evo()->getConfig('site_start', 1));
+                $category = intval($this->getCategoryAttribute(trim($key ?? '') ? $key : null) ?: sCommerce::config('basic.catalog_root' . $key, evo()->getConfig('site_start', 1)));
                 $base_url = UrlProcessor::makeUrl($category);
                 break;
             default :
