@@ -68,13 +68,16 @@ class sCommerce
         $lang = !$lang ? evo()->getLocale() : $lang;
         $this->sort = empty($this->sort) ? [$this->controller->validateSort()] : $this->sort;
 
-        $query = sProduct::lang($lang)
+        $query = sProduct::lang($lang)->withCount('reviews')
             ->addSelect(['position' =>
                 DB::table('s_product_category')
                     ->select('position')
-                    ->where('s_product_category.category', $this->getCategoryId())
-                    ->orWhere('s_product_category.scope', 'primary')
                     ->whereColumn('s_product_category.product', 's_products.id')
+                    ->where(function($subQuery) {
+                        $subQuery
+                            ->where('s_product_category.category', $this->getCategoryId())
+                            ->orWhere('s_product_category.scope', 'primary');
+                    })
                     ->limit(1)
             ])
             ->whereIn('id', $productIds)

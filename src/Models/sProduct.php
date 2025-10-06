@@ -24,9 +24,12 @@ use Seiger\sGallery\sGallery;
  * @property-read string $attrValues The attributes associated with the product.
  * @property-read string $attribute The attribute associated with the product by alias.
  * @property-read string $title The Title of the product.
- * @property-read string $category The Category of the product.
+ * @property-read int $category The Category of the product.
  * @property-read string $link The URL of the product.
  * @property-read string $coverSrc The URL of the cover image source attribute.
+ * @property-read string $price The formatted price of the product.
+ * @property-read string $specialPrice The formatted special price of the product.
+ * @property-read int $reviewsCount The count of reviews for the product.
  */
 class sProduct extends Model
 {
@@ -41,7 +44,8 @@ class sProduct extends Model
         'link',
         'coverSrc',
         'price',
-        'specialPrice'
+        'specialPrice',
+        'reviewsCount',
     ];
 
     /**
@@ -378,6 +382,11 @@ class sProduct extends Model
                     $attribute->code = $value?->code ?? '';
                     $attribute->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
                     break;
+                case sAttribute::TYPE_ATTR_CUSTOM:
+                    $value = trim($attribute->pivot->value ?? '');
+                    $attribute->value = $value;
+                    $attribute->label = $value;
+                    break;
             }
         }
 
@@ -613,5 +622,28 @@ class sProduct extends Model
     {
         $oldPrice = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_regular : $this->price_special ?? 0;
         return sCommerce::convertPriceNumber($oldPrice, $this->currency, $currency);
+    }
+
+    /**
+     * Gets the reviews count attribute of the sProduct.
+     * Returns the total number of reviews associated with the product.
+     * Uses eager loading to avoid N+1 queries when possible.
+     *
+     * @return int The count of reviews for the product.
+     */
+    public function getReviewsCountAttribute(): int
+    {
+        // If reviews_count is already loaded via withCount(), use it
+        if (isset($this->attributes['reviews_count'])) {
+            return (int) $this->attributes['reviews_count'];
+        }
+
+        // Otherwise, count the loaded reviews or make a query
+        if ($this->relationLoaded('reviews')) {
+            return $this->reviews->count();
+        }
+
+        // Fallback to database query
+        return $this->reviews()->count();
     }
 }
