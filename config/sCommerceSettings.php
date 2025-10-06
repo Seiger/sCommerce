@@ -7,6 +7,7 @@
         ],
         "catalog_root" => 1,
         "deliveries_on" => 1,
+        "friendlyUrlSuffix" => "",
         "in_main_menu" => 1,
         "integrations_on" => 0,
         "main_currency" => "EUR",

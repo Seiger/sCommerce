@@ -159,4 +159,5 @@
         <input type="hidden" id="basic__wishlist_on" name="basic__wishlist_on" value="{{sCommerce::config('basic.wishlist_on', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
+<input type="hidden" id="basic__friendlyUrlSuffix" name="basic__friendlyUrlSuffix" value="{{evo()->getConfig('friendly_urls', false) && trim(evo()->getConfig('friendly_url_suffix', '')) ? evo()->getConfig('friendly_url_suffix', '') : ''}}">
 <div class="split my-3"></div>
