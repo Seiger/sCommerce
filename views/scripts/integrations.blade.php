@@ -273,10 +273,7 @@
         let changeCount = 0;
         let timer = null;
 
-        // Disable buttons when starting to watch
-        // Use provided widgetKey or try to extract from URL
-        const actualWidgetKey = widgetKey || (url.includes('simpexpcsv') ? 'simpexpcsv' : 'widget');
-        // Note: No activeButtonId here since we don't know which button triggered the action
+        const actualWidgetKey = widgetKey || 'widget';
         disableButtons(actualWidgetKey);
 
         const MIN_DELAY = 25;       // 25ms minimum
@@ -347,17 +344,9 @@
                                     widgetLogLine(root, `${currentMessage}`, 'error');
                                 }
 
-                                // Verify that the message was actually added to the log
-                                const logLines = root.querySelectorAll('.widget-log > div');
-                                const lastLogLine = logLines[logLines.length - 1];
-                                const messageDisplayed = lastLogLine && lastLogLine.textContent.includes(currentMessage);
-
-                                if (messageDisplayed) {
-                                    // Only update lastMessage if message was successfully displayed
-                                    lastMessage = currentMessage;
-                                    // Only update lastResponse if message was successfully logged
-                                    lastResponse = currentResponse;
-                                }
+                                // Always update lastMessage after calling widgetLogLine
+                                lastMessage = currentMessage;
+                                lastResponse = currentResponse;
                             } catch (e) {
                                 console.error(`[widgetWatcher] Failed to log message: ${e.message}`);
                             }
