@@ -130,8 +130,6 @@ class TaskProgress
             throw new \InvalidArgumentException('Progress payload must contain "id".');
         }
 
-        $payload['rev'] = (int)time();
-
         $dir  = self::dir();
         $file = self::file((string)$payload['id']);
         $tmp  = $dir . '/.~' . uniqid((string)$payload['id'] . '_', true) . '.json';

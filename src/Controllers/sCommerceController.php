@@ -480,17 +480,7 @@ class sCommerceController
      */
     public function validatePrice(mixed $price): float
     {
-        $validPrice = 0.00;
-        $price = str_replace(',', '.', $price);
-
-        if (is_int($price) || is_numeric($price)) {
-            $price = floatval($price);
-            $validPrice = floatval(number_format($price, 2, '.', ''));
-        } elseif (is_float($price)) {
-            $validPrice = floatval(number_format($price, 2, '.', ''));
-        }
-
-        return $validPrice;
+        return round(floatval(str_replace(',', '.', $price)), 2);
     }
 
     /**

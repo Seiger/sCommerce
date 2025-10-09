@@ -106,7 +106,7 @@ abstract class BaseIntegration implements IntegrationInterface
             'slug'       => $this->getKey(),
             'action'     => $action,
             'status'     => sIntegrationTask::TASK_STATUS_QUEUED,
-            'message'    => __('sCommerce::global.task_queued') . '...',
+            'message'    => '_' . __('sCommerce::global.task_queued') . '..._',
             'started_by' => $startedBy,
             'meta'       => $options,
         ]);

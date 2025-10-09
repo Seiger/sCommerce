@@ -60,14 +60,14 @@ return new class extends Migration {
                 'key' => 'splc',
                 'class' => 'Seiger\sCommerce\Integration\ProductsListingCache',
                 'active' => true,
-                'position' => sIntegration::max('position') + 1,
+                'position' => 0,
                 'hidden' => true,
             ],
             [
                 'key' => 'simpexpcsv',
                 'class' => 'Seiger\sCommerce\Integration\ImportExportCSV',
                 'active' => true,
-                'position' => sIntegration::max('position') + 1,
+                'position' => 1,
                 'hidden' => false
             ]
         ];

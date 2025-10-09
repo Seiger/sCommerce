@@ -388,12 +388,12 @@
                     widgetLogLine(root, `No response received`, 'error');
                 }
             } catch (e) {
-                console.log('[widgetWatcher] fetch/xhr error:', (e && e.message) || e);
+                console.error('[widgetWatcher] fetch/xhr error:', (e && e.message) || e);
                 delay = Math.min(MAX_DELAY, Math.round(delay * 1.5));
                 widgetLogLine(root, `Network error: ${e.message || 'Connection failed'}`, 'error');
 
                 // Re-enable buttons on network error
-                console.log(`[widgetWatcher] Network error, re-enabling buttons for widget: ${actualWidgetKey}`);
+                console.error(`[widgetWatcher] Network error, re-enabling buttons for widget: ${actualWidgetKey}`);
                 enableButtons(actualWidgetKey);
                 stopped = true;
             } finally {
