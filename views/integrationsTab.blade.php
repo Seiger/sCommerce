@@ -139,5 +139,5 @@
         </div>
     @endif
 </div>
-@include('sCommerce::scripts.integrations')
-@include('sCommerce::scripts.global')
+@include('sTask::scripts.task')
+@include('sTask::scripts.global')

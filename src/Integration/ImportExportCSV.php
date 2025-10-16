@@ -393,7 +393,7 @@ class ImportExportCSV extends BaseWorker
             fclose($fh);
 
             // Done - use helper method
-            $downloadUrl = route('sTask.tasks.download', ['id' => $task->id]);
+            $downloadUrl = route('sTask.task.download', ['id' => $task->id]);
             $downloadUrl = str_replace(['http://localhost', 'https://localhost', EVO_SITE_URL, EVO_CORE_PATH], '|', $downloadUrl);
             $downloadUrl = explode('|', $downloadUrl);
             $downloadUrl = end($downloadUrl);

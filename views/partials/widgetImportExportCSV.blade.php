@@ -213,8 +213,8 @@
         <div class="row g-2 align-items-center">
             <div class="col-auto">
                 <span id="{{$identifier ?? ''}}Export" class="btn btn-primary">
-                <i class="fa fa-file-export me-1"></i> @lang('sCommerce::global.export_products_csv')
-            </span>
+                    <i class="fa fa-file-export me-1"></i> @lang('sCommerce::global.export_products_csv')
+                </span>
                 <span id="{{$identifier ?? ''}}Import" class="btn btn-success">
                     <i class="fa fa-file-import me-1"></i> @lang('sCommerce::global.import_products_csv')
                 </span>
@@ -249,7 +249,7 @@
         @elseif($task->action == 'export')
         widgetLogLine(root, '_{{__('sCommerce::global.export_products_csv')}}..._');
         @endif
-        widgetWatcher(root, "{{route('sTask.tasks.progress', ['id' => $task->id])}}", '{{$identifier ?? ''}}');
+        widgetWatcher(root, "{{route('sTask.task.progress', ['id' => $task->id])}}", '{{$identifier ?? ''}}');
         @endif
         document.getElementById('{{$identifier ?? ''}}Export')?.addEventListener('click', async function() {
             let root = document.getElementById('{{$identifier ?? ''}}Log');
@@ -266,7 +266,7 @@
                 // Показуємо прогрес-бар одразу
                 widgetProgressBar('{{$identifier ?? ''}}', 0);
                 // Не показуємо дублікат повідомлення - widgetWatcher сам покаже прогрес
-                widgetWatcher(root, "{{route('sTask.tasks.progress', ['id' => '__ID__'])}}".replace('__ID__', result?.id||0), '{{$identifier ?? ''}}');
+                widgetWatcher(root, "{{route('sTask.task.progress', ['id' => '__ID__'])}}".replace('__ID__', result?.id||0), '{{$identifier ?? ''}}');
             } else {
                 widgetLogLine(root, '**{{__('sCommerce::global.error_at_startup')}}. _' + (result?.message || '') + '_**', 'error');
                 enableButtons('{{$identifier ?? ''}}');
@@ -302,7 +302,7 @@
                     if (result && result.success && result.id && result.id > 0) {
                         disableButtons('{{$identifier ?? ''}}', null, '{{$identifier ?? ''}}Import');
                         widgetLogLine(root, result.message);
-                        widgetWatcher(root, "{{route('sTask.tasks.progress', ['id' => '__ID__'])}}".replace('__ID__', result?.id||0), '{{$identifier ?? ''}}');
+                        widgetWatcher(root, "{{route('sTask.task.progress', ['id' => '__ID__'])}}".replace('__ID__', result?.id||0), '{{$identifier ?? ''}}');
                     } else {
                         throw new Error(result?.message || '{{__('sCommerce::global.import_failed')}}');
                     }
