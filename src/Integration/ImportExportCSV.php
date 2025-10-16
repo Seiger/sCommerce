@@ -15,6 +15,8 @@ use Seiger\sTask\Workers\BaseWorker;
 use Seiger\sTask\Contracts\TaskInterface;
 
 /**
+ * TODO Need redevelop this Class
+ *
  * ImportExportCSV - Integration for CSV import/export operations
  *
  * This class implements the CSV import/export integration for sCommerce products.
@@ -207,10 +209,9 @@ class ImportExportCSV extends BaseWorker
             ]);
             $this->pushProgress($task);
 
-            // Take the very first product (fail fast if none)
-            $products = sProduct::with('categories')->orderBy('id')->get();
-
-            if (!$products) {
+            // Get total count first
+            $total = sProduct::count();
+            if ($total === 0) {
                 throw new \RuntimeException('No products found to export.');
             }
 
@@ -237,7 +238,6 @@ class ImportExportCSV extends BaseWorker
             // Header
             $this->putCsv($fh, $this->headerRow(), $opt);
 
-            $total     = $products->count();
             $processed = 0;
             $headerRow = array_keys($this->headerRow());
 
@@ -256,106 +256,131 @@ class ImportExportCSV extends BaseWorker
             $lastPct  = -1;              // last emitted percent
             $lastBeat = microtime(true); // last heartbeat time
             $startTime = microtime(true); // start time for ETA calculation
+            $maxExecutionTime = 300; // 5 minutes max execution time
             $eta = '—'; // default ETA display
 
-            foreach ($products as $p) {
-                $a = [];
-                foreach ($headerRow as $field) {
-                    switch ($field) {
-                        case 'published':
-                        case 'availability':
-                        case 'inventory':
-                            $a[$field] = intval($p?->{$field});
-                            break;
-                        case 'price_regular':
-                        case 'price_special':
-                            if ((float)$p?->{$field} !== null && (float)$p?->{$field} > 0) {
-                                $a[$field] = number_format((float)$p?->{$field}, 2, '.', '');
-                            } else {
+            // Process products in chunks to avoid memory issues
+            sProduct::with(['categories'])->orderBy('id')->chunk(50, function ($products) use ($fh, $opt, $headerRow, &$processed, $total, $task, &$lastPct, &$lastBeat, $startTime, $maxExecutionTime, &$eta) {
+                foreach ($products as $p) {
+                    // Check execution time limit
+                    if ((microtime(true) - $startTime) > $maxExecutionTime) {
+                        Log::warning("Export timeout reached after {$maxExecutionTime} seconds. Processed {$processed}/{$total} products.");
+                        throw new \RuntimeException('Export timeout reached. Processed ' . $processed . ' out of ' . $total . ' products.');
+                    }
+
+                    try {
+                        $a = [];
+                        foreach ($headerRow as $field) {
+                            try {
+                                switch ($field) {
+                                    case 'published':
+                                    case 'availability':
+                                    case 'inventory':
+                                        $a[$field] = intval($p?->{$field});
+                                        break;
+                                    case 'price_regular':
+                                    case 'price_special':
+                                        if ((float)$p?->{$field} !== null && (float)$p?->{$field} > 0) {
+                                            $a[$field] = number_format((float)$p?->{$field}, 2, '.', '');
+                                        } else {
+                                            $a[$field] = '';
+                                        }
+                                        break;
+                                    case str_starts_with($field, 'attribute:'):
+                                        $alias = substr($field, strlen('attribute:'));
+                                        $value = $p?->attribute($alias)?->label ?? '';
+                                        $a[$field] = str_replace(['"', "'", "\n", "\r", "\t"], ['""', "''", ' ', ' ', ' '], $value);
+                                        break;
+                                    case 'category':
+                                        if (evo()->getConfig('check_sMultisite', false)) {
+                                            // Multisite mode: return domain:id format
+                                            $categories = [];
+                                            foreach ($p?->categories ?? [] as $category) {
+                                                $scope = $category->pivot->scope ?? 'primary';
+
+                                                if ($scope === 'primary') {
+                                                    $domain = 'default';
+                                                } else {
+                                                    $domain = str_replace('primary_', '', $scope);
+                                                }
+                                                $categories[] = $domain . ':' . $category->id;
+                                            }
+                                            $a[$field] = implode('||', $categories);
+                                        } else {
+                                            // Single site mode: return category IDs
+                                            $categoryIds = $p?->categories->pluck('id')->toArray();
+                                            $a[$field] = implode('||', $categoryIds);
+                                        }
+                                        break;
+                                    case 'categories':
+                                        // Cross-domain category list: always return simple IDs
+                                        $categoryIds = $p?->categories->pluck('id')->toArray();
+                                        $a[$field] = implode('||', $categoryIds);
+                                        break;
+                                    default:
+                                        $value = $p?->{$field} ?? '';
+                                        $a[$field] = str_replace(['"', "'", "\n", "\r", "\t"], ['""', "''", ' ', ' ', ' '], $value);
+                                        break;
+                                }
+                            } catch (\Exception $e) {
+                                Log::error("Error processing field '{$field}' for product ID {$p->id}: " . $e->getMessage());
                                 $a[$field] = '';
                             }
-                            break;
-                        case str_starts_with($field, 'attribute:'):
-                            $alias = substr($field, strlen('attribute:'));
-                            $value = $p?->attribute($alias)?->label ?? '';
-                            $a[$field] = str_replace(['"', "'", "\n", "\r", "\t"], ['""', "''", ' ', ' ', ' '], $value);
-                            break;
-                        case 'category':
-                            if (evo()->getConfig('check_sMultisite', false)) {
-                                // Multisite mode: return domain:id format
-                                $categories = [];
-                                foreach ($p?->categories ?? [] as $category) {
-                                    $scope = $category->pivot->scope ?? 'primary';
+                        }
 
-                                    if ($scope === 'primary') {
-                                        $domain = 'default';
-                                    } else {
-                                        $domain = str_replace('primary_', '', $scope);
-                                    }
-                                    $categories[] = $domain . ':' . $category->id;
-                                }
-                                $a[$field] = implode('||', $categories);
-                            } else {
-                                // Single site mode: return category IDs
-                                $categoryIds = $p?->categories->pluck('id')->toArray();
-                                $a[$field] = implode('||', $categoryIds);
-                            }
-                            break;
-                        case 'categories':
-                            // Cross-domain category list: always return simple IDs
-                            $categoryIds = $p?->categories->pluck('id')->toArray();
-                            $a[$field] = implode('||', $categoryIds);
-                            break;
-                        default:
-                            $value = $p?->{$field} ?? '';
-                            $a[$field] = str_replace(['"', "'", "\n", "\r", "\t"], ['""', "''", ' ', ' ', ' '], $value);
-                            break;
+                        if (count($a)) {
+                            $this->putCsv($fh, $a, $opt);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error("Error processing product ID {$p->id}: " . $e->getMessage());
+                        // Continue with next product
+                    }
+
+                    $processed++;
+                    $pct = (int)floor($processed * 100 / $total);
+
+                    // Calculate ETA if we have processed at least 1% and have some progress
+                    if ($processed > 0 && $pct > 0) {
+                        $elapsed = microtime(true) - $startTime;
+                        $rate = $processed / $elapsed; // items per second
+                        $remaining = $total - $processed;
+                        $etaSeconds = $remaining / $rate;
+
+                        if ($etaSeconds > 0 && $etaSeconds < 86400) { // less than 24 hours
+                            $eta = niceEta($etaSeconds);
+                        } else {
+                            $eta = '—';
+                        }
+                    }
+
+                    // Log progress every 10 products for debugging
+                    if ($processed % 10 === 0) {
+                        Log::info("Export progress: {$processed}/{$total} ({$pct}%) - Product ID: {$p->id}");
+                    }
+
+                    // Emit on each new percent (cap at 99 before the final "finished")
+                    if ($pct !== $lastPct) {
+                        $lastPct = $pct;
+                        $this->pushProgress($task, [
+                            'processed' => $processed,
+                            'total'     => $total,
+                            'progress'  => min($pct, 98),
+                            'eta'       => $eta,
+                        ]);
+                        $lastBeat = microtime(true);
+                    }
+                    // Heartbeat: refresh counters at least every 0.5s even if % didn't change
+                    elseif ((microtime(true) - $lastBeat) >= 0.5) {
+                        $this->pushProgress($task, [
+                            'processed' => $processed,
+                            'total'     => $total,
+                            'progress'  => min($pct, 98),
+                            'eta'       => $eta,
+                        ]);
+                        $lastBeat = microtime(true);
                     }
                 }
-
-                if (count($a)) {
-                    $this->putCsv($fh, $a, $opt);
-                }
-
-                $processed++;
-                $pct = (int)floor($processed * 100 / $total);
-
-                // Calculate ETA if we have processed at least 1% and have some progress
-                if ($processed > 0 && $pct > 0) {
-                    $elapsed = microtime(true) - $startTime;
-                    $rate = $processed / $elapsed; // items per second
-                    $remaining = $total - $processed;
-                    $etaSeconds = $remaining / $rate;
-
-                    if ($etaSeconds > 0 && $etaSeconds < 86400) { // less than 24 hours
-                        $eta = niceEta($etaSeconds);
-                    } else {
-                        $eta = '—';
-                    }
-                }
-
-                // Emit on each new percent (cap at 99 before the final "finished")
-                if ($pct !== $lastPct) {
-                    $lastPct = $pct;
-                    $this->pushProgress($task, [
-                        'processed' => $processed,
-                        'total'     => $total,
-                        'progress'  => min($pct, 98),
-                        'eta'       => $eta,
-                    ]);
-                    $lastBeat = microtime(true);
-                }
-                // Heartbeat: refresh counters at least every 0.5s even if % didn't change
-                elseif ((microtime(true) - $lastBeat) >= 0.5) {
-                    $this->pushProgress($task, [
-                        'processed' => $processed,
-                        'total'     => $total,
-                        'progress'  => min($pct, 98),
-                        'eta'       => $eta,
-                    ]);
-                    $lastBeat = microtime(true);
-                }
-            }
+            });
             // --- end 1% emitter ---
 
             // Saving
@@ -378,7 +403,7 @@ class ImportExportCSV extends BaseWorker
                 '**' . __('sCommerce::global.done') . '. [📥 ' . __('sCommerce::global.download') . '](' . ltrim($downloadUrl, '.') . ')**'
             );
 
-            self::maybePruneExports();
+            //self::maybePruneExports();
         } catch (\Throwable $e) {
             // Precise failure location in UI log
             $where = basename($e->getFile()) . ':' . $e->getLine();
@@ -437,8 +462,11 @@ class ImportExportCSV extends BaseWorker
 
             // Check file size and decide processing method
             $fileSize = filesize($filePath);
-            $response = (new IntegrationActionController)->serverLimits();
-            $serverLimits = $response->getData(true);
+            $serverLimits = [
+                'maxFileSize' => 100 * 1024 * 1024,      // 100 MB
+                'chunkSize' => 1024 * 1024,               // 1 MB
+                'singleUploadLimit' => 2 * 1024 * 1024,  // 2 MB
+            ];
             $useTempTable = $opt['use_temp_table'] || $fileSize > ($serverLimits['maxFileSize'] * 0.5); // 50% of max file size threshold
 
             if ($useTempTable) {
@@ -455,7 +483,10 @@ class ImportExportCSV extends BaseWorker
     /** CSV write helper. */
     protected function putCsv($fh, array $row, array $opt): void
     {
-        fputcsv($fh, $row, $opt['delimiter'], $opt['enclosure'], $opt['escape']);
+        $result = fputcsv($fh, $row, $opt['delimiter'], $opt['enclosure'], $opt['escape']);
+        if ($result === false) {
+            throw new \RuntimeException('Failed to write CSV row to file');
+        }
     }
 
     /**
@@ -789,14 +820,14 @@ class ImportExportCSV extends BaseWorker
 
         // Final status update
         $message = '**' . sprintf(
-            __('sCommerce::global.import_completed') . ': %d %s, %d %s, %d %s',
-            $created,
-            __('sCommerce::global.created'),
-            $updated,
-            __('sCommerce::global.updated'),
-            $errors,
-            __('sCommerce::global.errors')
-        ) . '**';
+                __('sCommerce::global.import_completed') . ': %d %s, %d %s, %d %s',
+                $created,
+                __('sCommerce::global.created'),
+                $updated,
+                __('sCommerce::global.updated'),
+                $errors,
+                __('sCommerce::global.errors')
+            ) . '**';
 
         $this->markFinished($task, null, $message);
     }
@@ -1030,14 +1061,14 @@ class ImportExportCSV extends BaseWorker
 
         // Final status update
         $message = '**' . sprintf(
-            __('sCommerce::global.import_completed') . ': %d %s, %d %s, %d %s',
-            $created,
-            __('sCommerce::global.created'),
-            $updated,
-            __('sCommerce::global.updated'),
-            $errors,
-            __('sCommerce::global.errors')
-        ) . '**';
+                __('sCommerce::global.import_completed') . ': %d %s, %d %s, %d %s',
+                $created,
+                __('sCommerce::global.created'),
+                $updated,
+                __('sCommerce::global.updated'),
+                $errors,
+                __('sCommerce::global.errors')
+            ) . '**';
 
         $this->markFinished($task, null, $message);
     }

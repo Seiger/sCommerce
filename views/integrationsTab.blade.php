@@ -98,9 +98,9 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center" @if($item->active)style="background-color:oklch(95.1% .026 236.824)"@endif>
                         <div>{!!$item->icon!!} {!!$item->title!!}</div>
-                        <a href="{!!sCommerce::moduleUrl()!!}&get=integration&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}" class="text-muted" data-tooltip="@lang('global.edit')"><i class="fas fa-cogs"></i></a>
+                        <a onclick="openWorkerSettings('{{$item->identifier}}')" class="text-muted" data-tooltip="@lang('global.edit')"><i class="fas fa-cogs"></i></a>
                     </div>
-                    <div class="card-block">{!!$item->widget!!}</div>
+                    @if($item->active)<div class="card-block">{!!$item->renderWidget()!!}</div>@endif
                 </div>
             </div>
         @endif

@@ -3,7 +3,6 @@
  * E-commerce management module sCommerce
  */
 
-use Carbon\Carbon;
 use EvolutionCMS\Facades\ManagerTheme;
 use EvolutionCMS\Models\SiteContent;
 use Illuminate\Database\Schema\Blueprint;
@@ -18,15 +17,12 @@ use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Controllers\TabProductController;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sCommerce;
-use Seiger\sCommerce\Integration\IntegrationActionController;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
-use Seiger\sCommerce\Interfaces\IntegrationInterface;
 use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sDeliveryMethod;
-use Seiger\sCommerce\Models\sIntegration;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
@@ -35,6 +31,8 @@ use Seiger\sCommerce\Models\sReview;
 use Seiger\sGallery\Facades\sGallery;
 use Seiger\sGallery\Models\sGalleryField;
 use Seiger\sGallery\Models\sGalleryModel;
+use Seiger\sTask\Facades\sTask;
+use Seiger\sTask\Models\sWorker;
 
 if (!defined('IN_MANAGER_MODE') || IN_MANAGER_MODE != 'true') die("No access");
 if (!file_exists(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerce.php')) {
@@ -595,7 +593,7 @@ switch ($get) {
 
         if (isset($product->getChanges()['alias']) || $primaryCategoriesChanged) {
             // Primary categories or alias changed - trigger cache rebuild
-            (new IntegrationActionController)->start('splc', 'make');
+            sTask::create('s_products_listing_cache', 'make');
         }
 
         $_SESSION['itemaction'] = 'Saving Product';
@@ -734,7 +732,7 @@ switch ($get) {
             $product->delete();
         }
 
-        (new IntegrationActionController)->start('splc', 'make');
+        sTask::create('s_products_listing_cache', 'make');
         $back = '&get=products';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "modifications":
@@ -1083,7 +1081,7 @@ switch ($get) {
             if (!$product->id) {
                 $product->alias = $sCommerceController->validateAlias(trim($content->pagetitle) ?: 'new-product', $requestId);
                 $product->save();
-                (new IntegrationActionController)->start('splc', 'make');
+                sTask::create('s_products_listing_cache', 'make');
             }
             $content->product = $product->id;
         }
@@ -1495,126 +1493,17 @@ switch ($get) {
     case "integrations":
         $perpage = Cookie::get('scom_per_page', 50);
 
-        $newIntegrations = [];
-        $allIntegrations = sIntegration::all()->pluck('class')->toArray();
-
-        $classMap = require base_path('vendor/composer/autoload_classmap.php');
-        $exdMaps = require base_path('vendor/seiger/scommerce/config/excluded_namespaces.php');
-
-        foreach ($classMap as $className => $path) {
-            foreach ($exdMaps as $exdMap) {
-                if (str_starts_with($className, $exdMap)) {
-                    continue 2;
-                }
-            }
-
-            try {
-                if (class_exists($className)) {
-                    $reflection = new ReflectionClass($className);
-
-                    if ($reflection->implementsInterface(IntegrationInterface::class) && !$reflection->isAbstract()) {
-                        $newIntegrations[] = $className;
-                    }
-                }
-            } catch (Throwable $e) {
-                continue;
-            }
+        $query = sWorker::query()->visible();
+        if (!evo()->hasPermission('stask')) {
+            $query->active();
         }
+        $query->ordered();
 
-        $needIntegrations = array_diff($newIntegrations, $allIntegrations);
-
-        if (!empty($needIntegrations)) {
-            foreach ($needIntegrations as $integrationClass) {
-                try {
-                    $instance = new $integrationClass();
-                    $key = $instance->getKey();
-
-                    sIntegration::create([
-                        'key' => $key,
-                        'class' => $integrationClass,
-                        'active' => false,
-                        'position' => sIntegration::max('position') + 1,
-                    ]);
-                } catch (Throwable $e) {
-                    Log::channel('scommerce')->error("Failed to register integration: {$integrationClass}", ['error' => $e->getMessage()]);
-                }
-            }
-        }
-
-        $query = sIntegration::query();
-        if (!evo()->hasPermission('settings')) {$query->active();}
-        $query->orderBy('position');
-        $items = $query->paginate($perpage);
-
-        $items->getCollection()->transform(function ($integration) {
-            $className = $integration->class;
-            if (class_exists($className)) {
-                $instance = new $className();
-                $integration->icon = '';
-                $integration->title = '';
-                $integration->widget = '';
-                if (method_exists($instance, 'getIcon')) {
-                    $integration->icon = $instance->getIcon();
-                }
-                if (method_exists($instance, 'getTitle')) {
-                    $integration->title = $instance->getTitle();
-                }
-                if (method_exists($instance, 'renderWidget')) {
-                    $integration->widget = $instance->renderWidget();
-                }
-                return $integration;
-            }
-        });
-
-        $data['items'] = $items;
+        $data['items'] = $query->paginate($perpage);
 
         $_SESSION['itemaction'] = 'Viewing a list of integrations';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
-    case "integration":
-        $tabs = ['integration'];
-        $requestId = request()->integer('i');
-        $item = sIntegration::find($requestId);
-
-        if ($requestId > 0 && $item) {
-            $className = $item->class;
-            if (class_exists($className)) {
-                $instance = new $className();
-                $item->instance = $instance;
-                $item->title = '';
-                if (method_exists($instance, 'getTitle')) {
-                    $item->title = $instance->getTitle();
-                }
-            }
-
-            $data['item'] = $item;
-
-            $_SESSION['itemaction'] = 'Editing Integration';
-            $_SESSION['itemname'] = $item->title;
-        } else {
-            return header('Location: ' . sCommerce::moduleUrl() . (request()->back ?? '&get=integrations'));
-        }
-        break;
-    case "integrationSave":
-        $requestId = request()->integer('i');
-        $item = sIntegration::find($requestId);
-
-        if ($requestId > 0 && $item) {
-            $className = $item->class;
-            if (class_exists($className)) {
-                $instance = new $className();
-
-                $item->active = request()->boolean('active');
-                $item->position = request()->integer('position');
-                $item->settings = $instance->prepareSettings(request()->all());
-                $item->update();
-            }
-        }
-
-        $_SESSION['itemaction'] = 'Saving Integration';
-        $_SESSION['itemname'] = $admintitle ?? '';
-        $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=integrations'));
-        return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------
     | Currencies
