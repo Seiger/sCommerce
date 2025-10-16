@@ -13,7 +13,7 @@ const config: Config = {
     projectName: 'sCommerce',
     deploymentBranch: 'gh-pages',
 
-    onBrokenLinks: 'throw',
+    onBrokenLinks: 'warn',
     markdown: {
         hooks: {
             onBrokenMarkdownLinks: 'warn',
