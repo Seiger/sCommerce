@@ -36,7 +36,7 @@ class sCart
      * @param int $quantity The quantity of the product to add.
      * @return void
      */
-    public function addProduct(int $productId = 0, int $optionId = 0, int $quantity = 1, string $trigger = null): array
+    public function addProduct(int $productId = 0, int $optionId = 0, int $quantity = 1, ?string $trigger = null): array
     {
         if ($productId === 0) {
             $productId = request()->integer('productId', $productId);

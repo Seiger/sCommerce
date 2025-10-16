@@ -5,12 +5,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
-use Seiger\sCommerce\Integration\BaseIntegration;
+use Seiger\sTask\Workers\BaseWorker;
+use Seiger\sTask\Models\sTaskModel;
 use Seiger\sCommerce\Integration\IntegrationActionController;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sIntegration;
-use Seiger\sCommerce\Models\sIntegrationTask;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sGallery\Facades\sGallery;
@@ -42,162 +42,86 @@ use Seiger\sGallery\Facades\sGallery;
  * @author Seiger IT Team
  * @since 1.0.0
  */
-class ProductsListingCache extends BaseIntegration
+class ProductsListingCache extends BaseWorker
 {
     /**
-     * Get the unique name of the BaseIntegration.
+     * Get the unique identifier for this worker.
      *
-     * The name is used as an identifier for this integration throughout the system.
-     *
-     * @return string The unique name of the integration.
+     * @return string The worker identifier
      */
-    public function getKey(): string
+    public function identifier(): string
     {
-        return 'splc';
+        return 's_products_listing_cache';
     }
 
     /**
-     * Get the admin display icon for the ProductsListingCache integration.
+     * Get the scope/module this worker belongs to.
      *
-     * Retrieves the icon for the integration to be displayed in the admin panel.
-     *
-     * @return string The formatted icon for admin display.
+     * @return string The module scope
      */
-    public function getIcon(): string
+    public function scope(): string
+    {
+        return 'sCommerce';
+    }
+
+    /**
+     * Get the icon for this worker.
+     *
+     * @return string The worker icon
+     */
+    public function icon(): string
     {
         return '<i class="fas fa-memory"></i>';
     }
 
     /**
-     * Get the admin display title for the ProductsListingCache integration.
+     * Get the title for this worker.
      *
-     * Retrieves the title for the integration to be displayed in the admin panel.
-     *
-     * @return string The formatted title for admin display.
+     * @return string The worker title
      */
-    public function getTitle(): string
+    public function title(): string
     {
         return __('sCommerce::global.cache_products_listing');
     }
 
     /**
-     * Get the widget for the integration.
+     * Get the description for this worker.
      *
-     * Retrieves the widget of the integration.
+     * @return string The worker description
+     */
+    public function description(): string
+    {
+        return __('sCommerce::global.cache_products_listing_desc');
+    }
+
+    /**
+     * Render the worker widget for the administrative interface.
      *
-     * @return string The widget of the integration.
+     * This method renders a custom widget for the ProductsListingCache worker
+     * that includes integration-specific progress tracking and controls.
+     *
+     * @return string HTML content for the worker widget
      */
     public function renderWidget(): string
     {
-        return view('sCommerce::partials.widgetProductsListingCache', [
-            'instance' => $this,
-            'key'      => $this->getKey(),
-            'title'    => $this->getTitle(),
-            'icon'     => $this->getIcon(),
-            'class'    => static::class,
-        ])->render();
+        return '';
     }
 
     /**
-     * Get validation rules for the integration.
-     *
-     * This method defines specific validation rules for fields related to the current integration.
-     * The rules ensure that all required fields are filled and properly formatted.
-     *
-     * @return array An associative array of validation rules, where the key is the field name,
-     *               and the value is the validation rule.
-     *
-     * Example Output:
-     * [
-     *     'delivery.address' => 'string|max:255',
-     * ]
-     */
-    public function getValidationRules(): array
-    {
-        return [];
-    }
-
-    /**
-     * Define the fields configuration for the integration.
-     *
-     * Specifies the configurable fields for the "ProductsListingCache" integration.
-     *
-     * @return array Configuration of fields grouped by sections or tabs.
-     */
-    public function defineFields(): array
-    {
-        return [];
-    }
-
-    /**
-     * Prepare the settings data for storage.
-     *
-     * Validates and formats the settings data provided by the admin panel.
-     * Converts the settings into a JSON-compatible format for database storage.
-     *
-     * @param array $data The input data to validate and prepare.
-     * @return string A JSON string of the validated and prepared settings data.
-     * @throws ValidationException If validation fails.
-     */
-    public function prepareSettings(array $data): string
-    {
-        $preparedData = [];
-        $fieldNames =  $this->extractFieldNames($this->defineFields());
-
-        foreach ($fieldNames as $fieldName) {
-            $key = preg_split('/\]\[|\[|\]/', rtrim($fieldName, ']'))[0];
-            if (isset($data[$key])) {
-                $preparedData[$key] = $data[$key];
-            }
-        }
-
-        return json_encode($preparedData, JSON_UNESCAPED_UNICODE);
-    }
-
-    /**
-     * Run 'cache' action using optimized cursor pagination with memory control.
+     * Execute the cache action.
      *
      * Processes products in batches using composite cursor pagination (product_id, category, scope)
-     * to handle large datasets (130k+ records) efficiently. The method achieves optimal performance
-     * by combining several optimization techniques:
-     * 
-     * Performance Features:
-     * - Cursor pagination prevents memory exhaustion on large datasets
-     * - Automatic memory usage control with dynamic batch size adjustment
-     * - Garbage collection between batches to free memory
-     * - Atomic file operations using temporary files and rename()
-     * - Direct PHP file generation for fastest cache access
-     * - Real-time progress tracking with ETA calculation
-     * - Support for multisite scopes and domain-specific caching
-     * 
-     * Cache Strategy:
-     * - Creates separate cache files for each scope (domain)
-     * - Uses atomic file replacement to prevent cache corruption
-     * - Generates optimized PHP arrays for maximum performance
-     * - Provides fallback error handling for file operations
+     * to handle large datasets (130k+ records) efficiently.
      *
-     * @param sIntegrationTask $task  Task model for progress tracking and status updates
-     * @param array            $opt   Action options:
-     *                                - batch_size: Number of records per batch (default: 5000)
-     *                                - max_memory_mb: Memory limit per batch in MB (default: 128)
+     * @param sTaskModel $task The task model for progress tracking
+     * @param array $opt Action parameters:
+     *                   - batch_size: Number of records per batch (default: 5000)
+     *                   - max_memory_mb: Memory limit per batch in MB (default: 512)
      * @return void
      * @throws \RuntimeException If no products found to cache or file operation fails
      * @throws \Throwable For any other errors during processing
-     * 
-     * @example
-     * ```php
-     * // Basic usage with default settings
-     * $cache = new ProductsListingCache();
-     * $cache->taskMake($task);
-     * 
-     * // Custom batch size and memory limit
-     * $cache->taskMake($task, [
-     *     'batch_size' => 3000,
-     *     'max_memory_mb' => 256
-     * ]);
-     * ```
      */
-    public function taskMake(sIntegrationTask $task, array $opt = []): void
+    public function taskMake(sTaskModel $task, array $opt = []): void
     {
         @ini_set('auto_detect_line_endings', '1');
         @ini_set('output_buffering', '0');
@@ -205,10 +129,9 @@ class ProductsListingCache extends BaseIntegration
         try {
             // Preparing
             $task->update([
-                'status'  => sIntegrationTask::TASK_STATUS_PREPARING,
+                'status' => sTaskModel::TASK_STATUS_PREPARING,
                 'message' => __('sCommerce::global.task_running') . '...',
             ]);
-            $this->pushProgress($task);
 
             // Get total count for progress tracking
             $total = sProduct::active()
@@ -231,7 +154,7 @@ class ProductsListingCache extends BaseIntegration
             $startTime = microtime(true);
 
             $task->update([
-                'status'  => sIntegrationTask::TASK_STATUS_RUNNING,
+                'status' => sTaskModel::TASK_STATUS_RUNNING,
                 'message' => __('sCommerce::global.cache_products_listing') . '...',
             ]);
             $this->pushProgress($task, [
@@ -249,10 +172,9 @@ class ProductsListingCache extends BaseIntegration
                 if (function_exists('gc_collect_cycles')) {
                     gc_collect_cycles();
                 }
-                
-                $batchStartTime = microtime(true);
+
                 $batchStartMemory = memory_get_usage();
-                
+
                 $products = sProduct::active()
                     ->join('s_product_category', 's_products.id', '=', 's_product_category.product')
                     ->where('s_product_category.scope', 'LIKE', 'primary%')
@@ -260,12 +182,12 @@ class ProductsListingCache extends BaseIntegration
                         $query->where('s_products.id', '>', $lastProductId)
                             ->orWhere(function($q) use ($lastProductId, $lastCategory, $lastScope) {
                                 $q->where('s_products.id', '=', $lastProductId)
-                                ->where('s_product_category.category', '>', $lastCategory);
+                                    ->where('s_product_category.category', '>', $lastCategory);
                             })
                             ->orWhere(function($q) use ($lastProductId, $lastCategory, $lastScope) {
                                 $q->where('s_products.id', '=', $lastProductId)
-                                  ->where('s_product_category.category', '=', $lastCategory)
-                                  ->where('s_product_category.scope', '>', $lastScope);
+                                    ->where('s_product_category.category', '=', $lastCategory)
+                                    ->where('s_product_category.scope', '>', $lastScope);
                             });
                     })
                     ->select(
@@ -284,17 +206,16 @@ class ProductsListingCache extends BaseIntegration
                     $scope = trim(str_replace('primary', '', $product->scope), '_');
                     $link = str_replace([EVO_SITE_URL, EVO_CORE_PATH], '|', $product->getLinkAttribute(intval($product->catId)));
                     $link = explode('|', $link);
-                    $productsListing[$scope][end($link)] = $product->id;
+                    $link = end($link);
+                    $productsListing[$scope][ltrim($link, '.')] = $product->id;
                 }
-                
+
                 $totalProcessed += $products->count();
                 $lastProductId = $products->last()?->id ?? 0;
                 $lastCategory = $products->last()?->category ?? 0;
                 $lastScope = $products->last()?->scope ?? '';
-                
-                $batchTime = microtime(true) - $batchStartTime;
+
                 $batchMemory = (memory_get_usage() - $batchStartMemory) / 1024 / 1024;
-                $peakMemory = memory_get_peak_usage() / 1024 / 1024;
 
                 if ($batchMemory > $maxMemoryMB) {
                     $newBatchSize = max(100, intval($batchSize * 0.8));
@@ -303,15 +224,15 @@ class ProductsListingCache extends BaseIntegration
 
                 // Progress calculation and ETA
                 $pct = (int)floor($totalProcessed * 100 / $total);
-                
+
                 if ($totalProcessed > 0 && $pct > 0) {
                     $elapsed = microtime(true) - $startTime;
                     $rate = $totalProcessed / $elapsed; // items per second
                     $remaining = $total - $totalProcessed;
                     $etaSeconds = $remaining / $rate;
-                    
+
                     if ($etaSeconds > 0 && $etaSeconds < 86400) { // less than 24 hours
-                        $eta = $this->formatEta($etaSeconds);
+                        $eta = niceEta((float)$etaSeconds);
                     } else {
                         $eta = '—';
                     }
@@ -340,7 +261,7 @@ class ProductsListingCache extends BaseIntegration
 
             // Saving to cache
             $task->update([
-                'status'  => sIntegrationTask::TASK_STATUS_SAVING,
+                'status' => sTaskModel::TASK_STATUS_RUNNING,
                 'message' => __('sCommerce::global.preparing_file') . '...',
             ]);
             $this->pushProgress($task, ['progress' => 99]);
@@ -349,13 +270,13 @@ class ProductsListingCache extends BaseIntegration
                 $scopeSuffix = trim($scope) ? '.' . $scope : '';
                 $tmpFile = evo()->getCachePath() . 'sCommerceProductsListing' . $scopeSuffix . '.tmp';
                 $phpFile = evo()->getCachePath() . 'sCommerceProductsListing' . $scopeSuffix . '.php';
-                
+
                 // Creating a temporary file
                 $handle = fopen($tmpFile, 'w');
                 if ($handle === false) {
                     throw new \RuntimeException("Cannot create temporary file: {$tmpFile}");
                 }
-                
+
                 fwrite($handle, "<?php return [\r\n");
                 foreach ($products ?? [] as $link => $id) {
                     fwrite($handle, "\t'{$link}' => {$id},\r\n");
@@ -367,26 +288,48 @@ class ProductsListingCache extends BaseIntegration
                     throw new \RuntimeException("Cannot rename temporary file to cache file: {$tmpFile} -> {$phpFile}");
                 }
             }
-            
+
             $totalTime = microtime(true) - $startTime;
-            $totalMemory = memory_get_usage() / 1024 / 1024;
-            $finalPeakMemory = memory_get_peak_usage() / 1024 / 1024;
 
             // Done
-            $this->pushProgress($task, ['progress' => 100]);
-            $this->markFinished(
-                $task,
-                null,
-                '**' . __('sCommerce::global.done') . '. ' . 
-                __('sCommerce::global.cache_products_listing') . ': ' . 
-                number_format($totalProcessed, 0, '.', ' ') . ' ' . __('sCommerce::global.products') . 
-                ' (' . round($totalTime, 2) . 's)**'
-            );
+            $task->update([
+                'status' => sTaskModel::TASK_STATUS_FINISHED,
+                'progress' => 100,
+                'message' => '**' . __('sCommerce::global.done') . '. ' .
+                    __('sCommerce::global.cache_products_listing') . ': ' .
+                    number_format($totalProcessed, 0, '.', ' ') . ' ' . __('sCommerce::global.products') .
+                    ' (' . round($totalTime, 2) . 's)**',
+                'finished_at' => now(),
+            ]);
+
+            $this->pushProgress($task, [
+                'status' => 'finished',
+                'progress' => 100,
+                'message' => '**' . __('sCommerce::global.done') . '. ' .
+                    __('sCommerce::global.cache_products_listing') . ': ' .
+                    number_format($totalProcessed, 0, '.', ' ') . ' ' . __('sCommerce::global.products') .
+                    ' (' . round($totalTime, 2) . 's)**',
+            ]);
         } catch (\Throwable $e) {
             $where = basename($e->getFile()) . ':' . $e->getLine();
             $message = 'Failed @ ' . $where . ' — ' . $e->getMessage();
 
-            $this->markFailed($task, $message);
+            $task->update([
+                'status' => sTaskModel::TASK_STATUS_FAILED,
+                'message' => $message,
+                'finished_at' => now(),
+            ]);
+
+            $this->pushProgress($task, [
+                'status' => 'failed',
+                'message' => $message,
+            ]);
+
+            Log::error('ProductsListingCache failed: ' . $e->getMessage(), [
+                'task_id' => $task->id,
+                'exception' => $e,
+            ]);
+
             throw $e;
         }
     }

@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Integration;
 
 /**
+ * @deprecated
  * TaskProgress - Filesystem-based task progress tracking system
  *
  * This class provides a lightweight, configuration-free service for tracking

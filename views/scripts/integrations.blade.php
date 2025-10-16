@@ -59,15 +59,15 @@
     /**
      * Get button IDs for a specific widget.
      *
-     * @param {string} widgetKey - Widget key (e.g., 'simpexpcsv')
+     * @param {string} widgetIdentifier - Widget key (e.g., 'simpexpcsv')
      * @returns {Array<string>} Array of button IDs for the widget, empty array if widget not found
      */
-    function getWidgetButtons(widgetKey) {
+    function getWidgetButtons(widgetIdentifier) {
         // Look for buttons within the widget container
-        const widgetContainer = document.getElementById(`${widgetKey}Widget`);
+        const widgetContainer = document.getElementById(`${widgetIdentifier}Widget`);
         if (!widgetContainer) {
             // No fallback - if widget not found, return empty array (don't block any buttons)
-            console.warn(`Widget container '${widgetKey}Widget' not found. No buttons will be blocked.`);
+            console.warn(`Widget container '${widgetIdentifier}Widget' not found. No buttons will be blocked.`);
             return [];
         }
 
@@ -79,7 +79,7 @@
     /**
      * Disable buttons within a specific widget to prevent multiple simultaneous operations.
      *
-     * @param {string} widgetKey - Widget key (e.g., 'simpexpcsv', 'mywidget')
+     * @param {string} widgetIdentifier - Widget key (e.g., 'simpexpcsv', 'mywidget')
      * @param {Array<string>} buttonIds - Array of button IDs to disable (optional, auto-detects if not provided)
      * @param {string} activeButtonId - ID of the button that triggered the action (will get spinner)
      *
@@ -93,12 +93,12 @@
      * // Use with custom widget
      * disableButtons('customWidget', ['customExportBtn'], 'customExportBtn');
      */
-    function disableButtons(widgetKey, buttonIds = null, activeButtonId = null) {
-        const buttonsToDisable = buttonIds || getWidgetButtons(widgetKey);
+    function disableButtons(widgetIdentifier, buttonIds = null, activeButtonId = null) {
+        const buttonsToDisable = buttonIds || getWidgetButtons(widgetIdentifier);
 
         // If no buttons found, don't do anything
         if (buttonsToDisable.length === 0) {
-            console.warn(`No buttons found for widget '${widgetKey}'. Nothing to disable.`);
+            console.warn(`No buttons found for widget '${widgetIdentifier}'. Nothing to disable.`);
             return;
         }
 
@@ -124,7 +124,7 @@
     /**
      * Enable buttons within a specific widget after operation completion.
      *
-     * @param {string} widgetKey - Widget key (e.g., 'simpexpcsv', 'mywidget')
+     * @param {string} widgetIdentifier - Widget key (e.g., 'simpexpcsv', 'mywidget')
      * @param {Array<string>} buttonIds - Array of button IDs to enable (optional, auto-detects if not provided)
      *
      * @example
@@ -137,12 +137,12 @@
      * // Use with custom widget
      * enableButtons('customWidget', ['customExportBtn']);
      */
-    function enableButtons(widgetKey, buttonIds = null) {
-        const buttonsToEnable = buttonIds || getWidgetButtons(widgetKey);
+    function enableButtons(widgetIdentifier, buttonIds = null) {
+        const buttonsToEnable = buttonIds || getWidgetButtons(widgetIdentifier);
 
         // If no buttons found, don't do anything
         if (buttonsToEnable.length === 0) {
-            console.warn(`No buttons found for widget '${widgetKey}'. Nothing to enable.`);
+            console.warn(`No buttons found for widget '${widgetIdentifier}'. Nothing to enable.`);
             return;
         }
 
@@ -262,10 +262,10 @@
      *
      * @param {HTMLElement} root - Log container element for displaying progress
      * @param {string} url - API endpoint URL to poll for progress updates
-     * @param {string} widgetKey - Widget key for button management (optional)
+     * @param {string} widgetIdentifier - Widget key for button management (optional)
      * @returns {Function} stop() - Function to stop watching and cleanup timers
      */
-    function widgetWatcher(root, url, widgetKey = null) {
+    function widgetWatcher(root, url, widgetIdentifier = null) {
         let stopped = false;
         let inFlight = false;
         let lastResponse = null;
@@ -273,8 +273,8 @@
         let changeCount = 0;
         let timer = null;
 
-        const actualWidgetKey = widgetKey || 'widget';
-        disableButtons(actualWidgetKey);
+        const actualWidgetIdentifier = widgetIdentifier || 'widget';
+        disableButtons(actualWidgetIdentifier);
 
         const MIN_DELAY = 25;       // 25ms minimum
         const MAX_DELAY = 25000;    // 25s maximum
@@ -313,7 +313,7 @@
                             widgetProgressBar(result.slug, result.progress, result.eta);
                         }
 
-                        enableButtons(actualWidgetKey);
+                        enableButtons(actualWidgetIdentifier);
                         stopped = true;
                         return;
                     }
@@ -393,8 +393,8 @@
                 widgetLogLine(root, `Network error: ${e.message || 'Connection failed'}`, 'error');
 
                 // Re-enable buttons on network error
-                console.error(`[widgetWatcher] Network error, re-enabling buttons for widget: ${actualWidgetKey}`);
-                enableButtons(actualWidgetKey);
+                console.error(`[widgetWatcher] Network error, re-enabling buttons for widget: ${actualWidgetIdentifier}`);
+                enableButtons(actualWidgetIdentifier);
                 stopped = true;
             } finally {
                 inFlight = false;
@@ -430,7 +430,7 @@
      *
      * @param {File} file - The file object to upload
      * @param {HTMLElement} root - Log container element for displaying progress and messages
-     * @param {string} widgetKey - Widget identifier for button state management
+     * @param {string} widgetIdentifier - Widget identifier for button state management
      * @param {string} uploadUrl - API endpoint URL for file upload
      * @returns {Promise<string>} Resolves with uploaded filename when upload completes successfully
      * @throws {Error} Throws error if upload fails or file is too large
@@ -443,7 +443,7 @@
      * // With custom URLs
      * await uploadFile(file, document.getElementById('log'), 'csvImport', '{{route('sCommerce.integrations.upload', ['key' => 'simpexpcsv'])}}');
      */
-    async function uploadFile(file, root, widgetKey, uploadUrl) {
+    async function uploadFile(file, root, widgetIdentifier, uploadUrl) {
         try {
             // Get server limits
             const result = await callApi("{{route('sCommerce.integrations.serverLimits')}}", null, 'GET');
@@ -454,8 +454,8 @@
             // Validate file size
             if (file.size > maxSize) {
                 widgetLogLine(root, `**{{__('sCommerce::global.file_too_large')}}** (max: ${niceSize(maxSize)})`, 'error');
-                enableButtons(widgetKey);
-                widgetProgressBar(widgetKey, 0);
+                enableButtons(widgetIdentifier);
+                widgetProgressBar(widgetIdentifier, 0);
                 throw new Error('File too large');
             }
 
@@ -491,18 +491,18 @@
                     const result = await response.json();
 
                     if (!result.success) {
-                        widgetProgressBar(widgetKey, 0);
+                        widgetProgressBar(widgetIdentifier, 0);
                         throw new Error(result.message || '{{__('sCommerce::global.upload_failed')}}');
                     }
 
                     // Update progress
                     const progress = Math.round(((i + 1) / totalChunks) * 100);
-                    widgetProgressBar(widgetKey, progress, `{{__('sCommerce::global.uploading_file')}} ${progress}%`);
+                    widgetProgressBar(widgetIdentifier, progress, `{{__('sCommerce::global.uploading_file')}} ${progress}%`);
 
                     // If this is the last chunk, upload is complete
                     if (i === totalChunks - 1) {
-                        widgetProgressBar(widgetKey, 100);
-                        enableButtons(widgetKey);
+                        widgetProgressBar(widgetIdentifier, 100);
+                        enableButtons(widgetIdentifier);
                         return result;
                     }
                 }
@@ -522,18 +522,18 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    widgetProgressBar(widgetKey, 100);
-                    enableButtons(widgetKey);
+                    widgetProgressBar(widgetIdentifier, 100);
+                    enableButtons(widgetIdentifier);
                     return result;
                 } else {
-                    widgetProgressBar(widgetKey, 0);
+                    widgetProgressBar(widgetIdentifier, 0);
                     throw new Error(result.message || '{{__('sCommerce::global.upload_failed')}}');
                 }
             }
         } catch (error) {
             widgetLogLine(root, '**{{__('sCommerce::global.upload_failed')}}:** _' + error.message + '_', 'error');
-            enableButtons(widgetKey);
-            widgetProgressBar(widgetKey, 0);
+            enableButtons(widgetIdentifier);
+            widgetProgressBar(widgetIdentifier, 0);
         }
     }
 </script>

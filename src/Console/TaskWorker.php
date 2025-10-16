@@ -9,6 +9,7 @@ use Seiger\sCommerce\Models\sIntegrationTask;
 use Seiger\sCommerce\Integration\TaskProgress;
 
 /**
+ * @deprecated
  * TaskWorker - Console command for processing sCommerce background tasks
  *
  * This command processes queued sIntegrationTask jobs from the database queue.

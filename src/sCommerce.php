@@ -147,7 +147,7 @@ class sCommerce
      * @param string $lang (optional) The language to retrieve the product in. Default is an empty string.
      * @return object The product object matching the given ID and language, or a new empty product object if no match found.
      */
-    public function getProduct(int $productId, string $lang = null): object
+    public function getProduct(int $productId, ?string $lang = null): object
     {
         $lang = !$lang ? $this->controller->langDefault() : $lang;
         $product = sProduct::lang($lang)->whereId($productId)->extractConstructor()->first();
@@ -231,7 +231,7 @@ class sCommerce
      * @param string $lang The language code to use. Defaults to an empty string.
      * @return object The attribute object if found, otherwise a new sAttribute object.
      */
-    public function getAttribute(int $attributeId, string $lang = null): object
+    public function getAttribute(int $attributeId, ?string $lang = null): object
     {
         $lang = !$lang ? $this->controller->langDefault() : $lang;
         return sAttribute::lang($lang)->whereAttribute($attributeId)->first() ?? new sAttribute();

@@ -321,7 +321,7 @@ class sCommerceController
      *
      * @return array An array of product IDs related to the specified category and its subcategories.
      */
-    public function productIds(int $category = null, int $dept = 10): array
+    public function productIds(?int $category = null, int $dept = 10): array
     {
         $category = $category ? $category : evo()->documentIdentifier;
         $filters = sFilter::getValidatedFiltersIds() ?? [];
@@ -574,7 +574,7 @@ class sCommerceController
      *               - 'order' (string|null): The sorting direction ('asc' or 'desc').
      *               - 'table' (string|null): The related table for advanced sorting, if applicable.
      */
-    public function validateSort(array|string $params = null): array|null
+    public function validateSort(array|string|null $params = null): array|null
     {
         $sort = null;
         $order = null;

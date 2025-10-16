@@ -4,6 +4,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
+ * @deprecated
  * sIntegration - Model for integration configurations
  *
  * This model represents integration configurations in the sCommerce system.

@@ -4,6 +4,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
+ * @deprecated
  * sIntegrationTask - Model for integration task management
  *
  * This model represents individual background tasks in the sCommerce integration system.

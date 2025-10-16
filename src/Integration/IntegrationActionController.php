@@ -13,6 +13,7 @@ use Seiger\sCommerce\Models\sIntegrationTask;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
+ * @deprecated
  * IntegrationActionController - Controller for integration task management
  *
  * This controller handles the complete lifecycle of integration tasks from creation

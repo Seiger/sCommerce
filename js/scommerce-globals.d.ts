@@ -67,7 +67,7 @@ declare function widgetWatcher(root: HTMLElement, url: string): () => void;
  *
  * @param file - The file object to upload
  * @param root - Log container element for displaying progress and messages
- * @param widgetKey - Widget identifier for button state management
+ * @param widgetIdentifier - Widget identifier for button state management
  * @param uploadUrl - API endpoint URL for file upload
  * @returns Promise that resolves when upload completes successfully
  * @throws Error if upload fails or file is too large
@@ -80,7 +80,7 @@ declare function widgetWatcher(root: HTMLElement, url: string): () => void;
  * // With custom URLs
  * await uploadFile(file, document.getElementById('log'), 'csvImport', '{{route('sCommerce.integrations.upload', ['key' => 'simpexpcsv'])}}');
  */
-declare function uploadFile(file: File, root: HTMLElement, widgetKey: string, uploadUrl: string): Promise<void>;
+declare function uploadFile(file: File, root: HTMLElement, widgetIdentifier: string, uploadUrl: string): Promise<void>;
 
 /*
 |--------------------------------------------------------------------------

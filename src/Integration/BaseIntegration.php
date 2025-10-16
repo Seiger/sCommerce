@@ -5,6 +5,7 @@ use Seiger\sCommerce\Models\sIntegration;
 use Seiger\sCommerce\Models\sIntegrationTask;
 
 /**
+ * @deprecated
  * BaseIntegration - Abstract base class for sCommerce integrations
  *
  * This abstract class provides a comprehensive foundation for all sCommerce integrations.

@@ -4,21 +4,21 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
-use Seiger\sCommerce\Integration\BaseIntegration;
-use Seiger\sCommerce\Integration\IntegrationActionController;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sIntegration;
-use Seiger\sCommerce\Models\sIntegrationTask;
+use Seiger\sTask\Models\sTaskModel;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sGallery\Facades\sGallery;
+use Seiger\sTask\Workers\BaseWorker;
+use Seiger\sTask\Contracts\TaskInterface;
 
 /**
  * ImportExportCSV - Integration for CSV import/export operations
  *
  * This class implements the CSV import/export integration for sCommerce products.
- * It extends BaseIntegration and provides comprehensive functionality for exporting
+ * It extends BaseWorker (sTask) and provides comprehensive functionality for exporting
  * product data to CSV format and importing product data from CSV files.
  *
  * Features:
@@ -41,26 +41,36 @@ use Seiger\sGallery\Facades\sGallery;
  * @author Seiger IT Team
  * @since 1.0.0
  */
-class ImportExportCSV extends BaseIntegration
+class ImportExportCSV extends BaseWorker
 {
     const ALLOWED_EXTENSIONS = ['csv'];
     /** Directory where this integration puts its CSV exports. */
-    private const EXPORT_DIR = 'scommerce/exports';
+    private const EXPORT_DIR = 'stask/uploads';
+    /** Directory where uploaded CSV files are stored for import. */
+    private const IMPORT_DIR = 'stask/uploads';
     /** Keep export files for N days. */
     private const EXPORT_TTL_DAYS = 7;
     /** Run export GC at most once per hour. */
     private const EXPORT_GC_MIN_INTERVAL = 3600;
 
     /**
-     * Get the unique name of the BaseIntegration.
+     * Get the unique identifier for this worker.
      *
-     * The name is used as an identifier for this integration throughout the system.
-     *
-     * @return string The unique name of the integration.
+     * @return string The worker identifier
      */
-    public function getKey(): string
+    public function identifier(): string
     {
-        return 'simpexpcsv';
+        return 's_import_export_csv';
+    }
+
+    /**
+     * Get the scope/module this worker belongs to.
+     *
+     * @return string The module scope
+     */
+    public function scope(): string
+    {
+        return 'sCommerce';
     }
 
     /**
@@ -70,7 +80,7 @@ class ImportExportCSV extends BaseIntegration
      *
      * @return string The formatted icon for admin display.
      */
-    public function getIcon(): string
+    public function icon(): string
     {
         return '<i class="fas fa-file-csv"></i>';
     }
@@ -82,9 +92,19 @@ class ImportExportCSV extends BaseIntegration
      *
      * @return string The formatted title for admin display.
      */
-    public function getTitle(): string
+    public function title(): string
     {
         return __('sCommerce::global.import') . ' / ' . __('sCommerce::global.export') . ' CSV';
+    }
+
+    /**
+     * Get the description for this worker.
+     *
+     * @return string The worker description
+     */
+    public function description(): string
+    {
+        return __('sCommerce::global.cache_products_listing_desc');
     }
 
     /**
@@ -96,13 +116,7 @@ class ImportExportCSV extends BaseIntegration
      */
     public function renderWidget(): string
     {
-        return view('sCommerce::partials.widgetImportExportCSV', [
-            'instance'  => $this,
-            'key'       => $this->getKey(),
-            'title'     => $this->getTitle(),
-            'icon'      => $this->getIcon(),
-            'class'     => static::class,
-        ])->render();
+        return view('sCommerce::partials.widgetImportExportCSV', ['identifier' => $this->identifier()])->render();
     }
 
     /**
@@ -168,11 +182,11 @@ class ImportExportCSV extends BaseIntegration
      *   every ~0.5s to refresh the "processed/total" counters in the UI.
      * - Final snapshot sets 100% and download URL.
      *
-     * @param sIntegrationTask $task  Task model.
+     * @param sTaskModel $task  Task model.
      * @param array            $opt   Action options (CSV formatting, etc.)
      * @return void
      */
-    public function taskExport(sIntegrationTask $task, array $opt = []): void
+    public function taskExport(sTaskModel $task, array $opt = []): void
     {
         @ini_set('auto_detect_line_endings', '1');
         @ini_set('output_buffering', '0');
@@ -188,7 +202,7 @@ class ImportExportCSV extends BaseIntegration
 
             // Preparing
             $task->update([
-                'status'  => sIntegrationTask::TASK_STATUS_PREPARING,
+                'status'  => sTaskModel::TASK_STATUS_PREPARING,
                 'message' => __('sCommerce::global.task_running') . '...',
             ]);
             $this->pushProgress($task);
@@ -228,7 +242,7 @@ class ImportExportCSV extends BaseIntegration
             $headerRow = array_keys($this->headerRow());
 
             $task->update([
-                'status'  => sIntegrationTask::TASK_STATUS_RUNNING,
+                'status'  => sTaskModel::TASK_STATUS_RUNNING,
                 'message' => __('sCommerce::global.exporting') . '...',
             ]);
             $this->pushProgress($task, [
@@ -272,7 +286,7 @@ class ImportExportCSV extends BaseIntegration
                                 $categories = [];
                                 foreach ($p?->categories ?? [] as $category) {
                                     $scope = $category->pivot->scope ?? 'primary';
-                                    
+
                                     if ($scope === 'primary') {
                                         $domain = 'default';
                                     } else {
@@ -312,9 +326,9 @@ class ImportExportCSV extends BaseIntegration
                     $rate = $processed / $elapsed; // items per second
                     $remaining = $total - $processed;
                     $etaSeconds = $remaining / $rate;
-                    
+
                     if ($etaSeconds > 0 && $etaSeconds < 86400) { // less than 24 hours
-                        $eta = $this->formatEta($etaSeconds);
+                        $eta = niceEta($etaSeconds);
                     } else {
                         $eta = '—';
                     }
@@ -346,7 +360,7 @@ class ImportExportCSV extends BaseIntegration
 
             // Saving
             $task->update([
-                'status'  => sIntegrationTask::TASK_STATUS_SAVING,
+                'status'  => sTaskModel::TASK_STATUS_RUNNING,
                 'message' => __('sCommerce::global.preparing_file') . '...',
             ]);
             $this->pushProgress($task, ['progress' => 99]);
@@ -354,11 +368,14 @@ class ImportExportCSV extends BaseIntegration
             fclose($fh);
 
             // Done - use helper method
-            $downloadUrl = '/' . str_replace(['https://localhost', EVO_CORE_PATH], '', route('sCommerce.integrations.download', ['id' => $task->id]));
+            $downloadUrl = route('sTask.tasks.download', ['id' => $task->id]);
+            $downloadUrl = str_replace(['http://localhost', 'https://localhost', EVO_SITE_URL, EVO_CORE_PATH], '|', $downloadUrl);
+            $downloadUrl = explode('|', $downloadUrl);
+            $downloadUrl = end($downloadUrl);
             $this->markFinished(
                 $task,
                 $path,
-                '**' . __('sCommerce::global.done') . '. [📥 ' . __('sCommerce::global.download') . '](' . $downloadUrl . ')**'
+                '**' . __('sCommerce::global.done') . '. [📥 ' . __('sCommerce::global.download') . '](' . ltrim($downloadUrl, '.') . ')**'
             );
 
             self::maybePruneExports();
@@ -366,7 +383,7 @@ class ImportExportCSV extends BaseIntegration
             // Precise failure location in UI log
             $where = basename($e->getFile()) . ':' . $e->getLine();
             $message = 'Failed @ ' . $where . ' — ' . $e->getMessage();
-            
+
             // Use helper method
             $this->markFailed($task, $message);
             throw $e;
@@ -380,12 +397,12 @@ class ImportExportCSV extends BaseIntegration
      * It handles both creating new products and updating existing ones based on ID or SKU.
      * For large files, it uses streaming processing or temporary database table approach.
      *
-     * @param sIntegrationTask $task The task instance containing execution context
+     * @param sTaskModel $task The task instance containing execution context
      * @param array $opt Additional options for import process
      * @return void
      * @throws \RuntimeException If file cannot be opened or processed
      */
-    public function taskImport(sIntegrationTask $task, array $opt = []): void
+    public function taskImport(sTaskModel $task, array $opt = []): void
     {
         @ini_set('auto_detect_line_endings', '1');
         @ini_set('output_buffering', '0');
@@ -478,10 +495,10 @@ class ImportExportCSV extends BaseIntegration
 
         // Clean stale DB pointers (best-effort)
         try {
-            $tasks = sIntegrationTask::query()
-                ->where('slug', (new static)->getKey())
+            $tasks = sTaskModel::query()
+                ->where('identifier', (new static)->identifier())
                 ->whereNotNull('result')
-                ->where('status', sIntegrationTask::TASK_STATUS_FINISHED)
+                ->where('status', sTaskModel::TASK_STATUS_FINISHED)
                 ->orderByDesc('id')
                 ->limit(500)
                 ->get();
@@ -533,24 +550,24 @@ class ImportExportCSV extends BaseIntegration
             'inventory' => __('sCommerce::global.inventory'),
             // 'views' => __('sCommerce::global.views'),
             // 'rating' => __('sCommerce::global.rating'),
-            
+
             // Pricing information
             'price_regular' => __('sCommerce::global.price'),
             'price_special' => __('sCommerce::global.price_special'),
             // 'price_opt_regular' => __('sCommerce::global.price_opt'),
             // 'price_opt_special' => __('sCommerce::global.price_opt_special'),
             'currency' => __('sCommerce::global.currency'),
-            
+
             // Physical properties
             // 'weight' => __('sCommerce::global.weight'),
             // 'width' => __('sCommerce::global.width'),
             // 'height' => __('sCommerce::global.height'),
             // 'length' => __('sCommerce::global.length'),
             // 'volume' => __('sCommerce::global.volume'),
-            
+
             // Media and content
             'cover' => __('sCommerce::global.cover'),
-            
+
             // Categories and relationships
             'category' => __('sCommerce::global.category'),
             // 'categories' => __('sCommerce::global.categories'),
@@ -562,7 +579,7 @@ class ImportExportCSV extends BaseIntegration
             'longtitle' => __('global.long_title'),
             'introtext' => __('global.resource_summary'),
             'content' => __('sCommerce::global.content'),
-            
+
             // Additional data
             // 'tmplvars' => __('sCommerce::global.additional_fields_main_product_tab'),
             // 'additional' => __('sCommerce::global.additional_fields_to_products_tab'),
@@ -590,15 +607,15 @@ class ImportExportCSV extends BaseIntegration
     /**
      * Import using streaming processing for medium-sized files.
      *
-     * @param sIntegrationTask $task The task instance
+     * @param sTaskModel $task The task instance
      * @param string $filePath Path to CSV file
      * @param array $opt Import options
      * @return void
      */
-    private function importWithStreaming(sIntegrationTask $task, string $filePath, array $opt): void
+    private function importWithStreaming(sTaskModel $task, string $filePath, array $opt): void
     {
         $task->update([
-            'status'  => sIntegrationTask::TASK_STATUS_PREPARING,
+            'status'  => sTaskModel::TASK_STATUS_PREPARING,
             'message' => __('sCommerce::global.preparing') . '...',
         ]);
         $this->pushProgress($task);
@@ -627,7 +644,7 @@ class ImportExportCSV extends BaseIntegration
             $totalLines++;
         }
         rewind($fh);
-        
+
         // Skip BOM and header again
         $bom = fread($fh, 3);
         if ($bom !== "\xEF\xBB\xBF") {
@@ -647,7 +664,7 @@ class ImportExportCSV extends BaseIntegration
         $eta = '—';
 
         $task->update([
-            'status'  => sIntegrationTask::TASK_STATUS_RUNNING,
+            'status'  => sTaskModel::TASK_STATUS_RUNNING,
             'message' => __('sCommerce::global.importing') . '...',
         ]);
         $this->pushProgress($task, [
@@ -687,25 +704,25 @@ class ImportExportCSV extends BaseIntegration
 
                     // Update progress with ETA calculation
                     $pct = (int)floor($processed * 100 / $totalLines);
-                    
+
                     // Calculate ETA if we have processed at least 1% and have some progress
                     if ($processed > 0 && $pct > 0) {
                         $elapsed = microtime(true) - $startTime;
                         $rate = $processed / $elapsed; // items per second
                         $remaining = $totalLines - $processed;
                         $etaSeconds = $remaining / $rate;
-                        
+
                         if ($etaSeconds > 0 && $etaSeconds < 86400) { // less than 24 hours
-                            $eta = $this->formatEta($etaSeconds);
+                            $eta = niceEta($etaSeconds);
                         } else {
                             $eta = '—';
                         }
                     }
-                    
+
                     // Update progress if percentage changed
                     if ($pct !== $lastPct) {
                         $lastPct = $pct;
-                        
+
                         $this->pushProgress($task, [
                             'processed' => $processed,
                             'total'     => $totalLines,
@@ -727,37 +744,37 @@ class ImportExportCSV extends BaseIntegration
             $updated += $result['updated'];
             $errors += $result['errors'];
             $processed += count($batch);
-            
+
             // Update progress for final batch
             $pct = (int)floor($processed * 100 / $totalLines);
-            
+
             // Calculate ETA if we have processed at least 1% and have some progress
             if ($processed > 0 && $pct > 0) {
                 $elapsed = microtime(true) - $startTime;
                 $rate = $processed / $elapsed; // items per second
                 $remaining = $totalLines - $processed;
                 $etaSeconds = $remaining / $rate;
-                
+
                 if ($etaSeconds > 0 && $etaSeconds < 86400) { // less than 24 hours
-                    $eta = $this->formatEta($etaSeconds);
+                    $eta = niceEta($etaSeconds);
                 } else {
                     $eta = '—';
                 }
             }
-            
+
             // Update progress if percentage changed
             if ($pct !== $lastPct) {
                 $lastPct = $pct;
-                
+
                 // Update task message to reflect current progress
                 $message = sprintf(
                     __('sCommerce::global.importing') . '... (%d/%d)',
                     $processed,
                     $totalLines
                 );
-                
+
                 $task->update(['message' => $message]);
-                
+
                 $this->pushProgress($task, [
                     'processed' => $processed,
                     'total'     => $totalLines,
@@ -787,15 +804,15 @@ class ImportExportCSV extends BaseIntegration
     /**
      * Import using temporary table for very large files.
      *
-     * @param sIntegrationTask $task The task instance
+     * @param sTaskModel $task The task instance
      * @param string $filePath Path to CSV file
      * @param array $opt Import options
      * @return void
      */
-    private function importWithTempTable(sIntegrationTask $task, string $filePath, array $opt): void
+    private function importWithTempTable(sTaskModel $task, string $filePath, array $opt): void
     {
         $task->update([
-            'status'  => sIntegrationTask::TASK_STATUS_PREPARING,
+            'status'  => sTaskModel::TASK_STATUS_PREPARING,
             'message' => __('sCommerce::global.preparing') . ' (temp table)...',
         ]);
 
@@ -841,7 +858,7 @@ class ImportExportCSV extends BaseIntegration
             $table->longText('content')->nullable();
             $table->json('attributes')->nullable();
             $table->boolean('processed')->default(0);
-            
+
             // Add indexes
             $table->index('sku', 'idx_sku');
             $table->index('id', 'idx_id');
@@ -935,7 +952,7 @@ class ImportExportCSV extends BaseIntegration
     private function prepareAttributesForTempTable(array $data): ?string
     {
         $attributes = [];
-        
+
         foreach ($data as $key => $value) {
             if (str_starts_with($key, 'Атрибут ')) {
                 $attributeName = substr($key, 9); // Remove "Атрибут " prefix
@@ -951,12 +968,12 @@ class ImportExportCSV extends BaseIntegration
     /**
      * Process data from temporary table.
      *
-     * @param sIntegrationTask $task The task instance
+     * @param sTaskModel $task The task instance
      * @param string $tableName Name of temporary table
      * @param array $opt Import options
      * @return void
      */
-    private function processFromTempTable(sIntegrationTask $task, string $tableName, array $opt): void
+    private function processFromTempTable(sTaskModel $task, string $tableName, array $opt): void
     {
         $totalRows = \DB::table($tableName)->count();
         $processed = 0;
@@ -965,7 +982,7 @@ class ImportExportCSV extends BaseIntegration
         $errors = 0;
 
         $task->update([
-            'status'  => sIntegrationTask::TASK_STATUS_RUNNING,
+            'status'  => sTaskModel::TASK_STATUS_RUNNING,
             'message' => __('sCommerce::global.importing') . '...',
         ]);
 
@@ -1080,10 +1097,10 @@ class ImportExportCSV extends BaseIntegration
         foreach ($batch as $row) {
             try {
                 $data = (array) $row;
-                
+
                 // Data from temp table already has correct field names
                 $result = $this->processProductRow($data);
-                
+
                 if ($result['action'] === 'created') {
                     $created++;
                 } elseif ($result['action'] === 'updated') {
@@ -1153,13 +1170,13 @@ class ImportExportCSV extends BaseIntegration
             $lang = $sCommerceController->langDefault();
             $translate = sProductTranslate::whereProduct($product->id)->whereLang($lang)->first();
             \View::getFinder()->setPaths([EVO_BASE_PATH . 'assets/modules/scommerce/builder']);
-            
+
             if (!$translate) {
                 $translate = new sProductTranslate();
                 $translate->product = $product->id;
                 $translate->lang = $lang;
             }
-            
+
             if (isset($data['pagetitle'])) $translate->pagetitle = trim($data['pagetitle'] ?? '');
             if (isset($data['longtitle'])) $translate->longtitle = trim($data['longtitle'] ?? '');
             if (isset($data['introtext'])) $translate->introtext = trim($data['introtext'] ?? '');
@@ -1170,20 +1187,20 @@ class ImportExportCSV extends BaseIntegration
                 $translate->content = $contentField;
                 $translate->builder = json_encode([["richtext" => $contentField]], JSON_UNESCAPED_UNICODE);
             }
-            
+
             $translate->save();
         }
 
         // Process category field (domain:id format for multisite, simple IDs for single site)
         $categoryData = $data['category'] ?? '';
         $categories = [];
-        
+
         if (!empty($categoryData)) {
             $inputCats = explode('||', $categoryData);
             foreach ($inputCats as $cat) {
                 $cat = trim($cat);
                 if (empty($cat)) continue;
-                
+
                 if (evo()->getConfig('check_sMultisite', false)) {
                     // Multisite mode: parse domain:id format
                     if (strpos($cat, ':') !== false) {
@@ -1208,7 +1225,7 @@ class ImportExportCSV extends BaseIntegration
                 }
             }
         }
-        
+
         // Process categories field (always simple IDs, cross-domain)
         $categoriesData = $data['categories'] ?? '';
         if (!empty($categoriesData)) {
@@ -1216,7 +1233,7 @@ class ImportExportCSV extends BaseIntegration
             foreach ($inputCats as $cat) {
                 $cat = trim($cat);
                 if (empty($cat)) continue;
-                
+
                 $catId = intval($cat);
                 if ($catId > 0) {
                     $categories[$catId] = ['position' => ($prodCats[$catId] ?? 0)];
@@ -1237,7 +1254,7 @@ class ImportExportCSV extends BaseIntegration
                 $categories[$parent] = ['scope' => 'primary', 'position' => ($prodCats[$parent] ?? 0)];
             }
         }
-        
+
         // Process attributes
         foreach ($data as $key => $value) {
             if (str_starts_with($key, 'attribute:')) {
@@ -1247,10 +1264,10 @@ class ImportExportCSV extends BaseIntegration
                 }
             }
         }
-        
+
         $product->categories()->sync([]);
         $product->categories()->sync($categories);
-        
+
         if ($requestId) {
             return ['action' => 'updated', 'product' => $product];
         } else {
@@ -1338,13 +1355,13 @@ class ImportExportCSV extends BaseIntegration
                         $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => json_encode($vals, JSON_UNESCAPED_UNICODE)]);
                     }
                     break;
-                    case sAttribute::TYPE_ATTR_CUSTOM : // 15
-                        if (is_array($value) && count($value)) {
-                            $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => json_encode($value, JSON_UNESCAPED_UNICODE)]);
-                        } elseif (is_string($value) && trim($value)) {
-                            $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => trim($value)]);
-                        }
-                        break;
+                case sAttribute::TYPE_ATTR_CUSTOM : // 15
+                    if (is_array($value) && count($value)) {
+                        $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => json_encode($value, JSON_UNESCAPED_UNICODE)]);
+                    } elseif (is_string($value) && trim($value)) {
+                        $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => trim($value)]);
+                    }
+                    break;
             }
         }
     }
@@ -1361,24 +1378,24 @@ class ImportExportCSV extends BaseIntegration
             $exportDir = storage_path(self::EXPORT_DIR);
             $importDir = storage_path(self::IMPORT_DIR);
             $logDir = storage_path('logs');
-            
+
             $cutoffTime = time() - (24 * 60 * 60); // 24 hours ago
-            
+
             // Clean export files
             if (is_dir($exportDir)) {
                 $this->cleanupDirectory($exportDir, $cutoffTime);
             }
-            
+
             // Clean import files
             if (is_dir($importDir)) {
                 $this->cleanupDirectory($importDir, $cutoffTime);
             }
-            
+
             // Clean log files (sCommerce specific)
             if (is_dir($logDir)) {
                 $this->cleanupDirectory($logDir, $cutoffTime, ['scommerce.log']);
             }
-            
+
             Log::channel('scommerce')->info('Old files cleanup completed');
         } catch (\Exception $e) {
             Log::channel('scommerce')->error('Failed to cleanup old files', ['error' => $e->getMessage()]);
@@ -1396,11 +1413,11 @@ class ImportExportCSV extends BaseIntegration
     private function cleanupDirectory(string $directory, int $cutoffTime, array $allowedExtensions = []): void
     {
         $files = glob($directory . '/*');
-        
+
         foreach ($files as $file) {
             if (is_file($file)) {
                 $fileTime = filemtime($file);
-                
+
                 // Check if file is older than cutoff time
                 if ($fileTime < $cutoffTime) {
                     // If allowedExtensions is specified, check file extension
@@ -1410,12 +1427,26 @@ class ImportExportCSV extends BaseIntegration
                             continue;
                         }
                     }
-                    
+
                     // Delete the file
                     unlink($file);
                     Log::channel('scommerce')->debug('Deleted old file', ['file' => basename($file)]);
                 }
             }
         }
+    }
+
+    /**
+     * Get settings for this worker
+     *
+     * @return array
+     */
+    public function settings(): array
+    {
+        return [
+            'export_dir' => self::EXPORT_DIR,
+            'max_file_age_days' => 7,
+            'allowed_extensions' => self::ALLOWED_EXTENSIONS,
+        ];
     }
 }

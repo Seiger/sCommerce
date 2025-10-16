@@ -89,6 +89,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
 - [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.
 - [x] **[sSeo](https://github.com/Seiger/sSeo)** Integration.
+- [x] **[sTask](https://github.com/Seiger/sTask)** Integration.
 - [ ] Personalized Recommendations.
 - [ ] Social Media Integration.
 - [ ] Automated Email Marketing.
@@ -97,7 +98,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 ## Minimum requirements
 
 - Evolution CMS 3.2.0
-- PHP 8.2.0
+- PHP 8.3.0
 - Composer 2.2.0
 - PostgreSQL 10.23.0
 - MySQL 8.0.3

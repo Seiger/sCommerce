@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Interfaces;
 
 /**
+ * @deprecated
  * IntegrationInterface - Contract for sCommerce integrations
  *
  * This interface defines the standard contract that all sCommerce integrations
