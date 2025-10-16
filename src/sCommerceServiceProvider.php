@@ -70,13 +70,6 @@ class sCommerceServiceProvider extends ServiceProvider
         // Register the sWishlist class as a singleton
         $this->app->singleton(sWishlist::class);
         $this->app->alias(sWishlist::class, 'sWishlist');
-
-        // Setup console schedule for commands
-        if (count($this->commands)) {
-            $this->app->booted(function () {
-                $this->defineConsoleSchedule();
-            });
-        }
     }
 
     /**
