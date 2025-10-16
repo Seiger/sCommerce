@@ -4,7 +4,6 @@ use EvolutionCMS\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Seiger\sCommerce\Cart\sCart;
 use Seiger\sCommerce\Checkout\sCheckout;
-use Seiger\sCommerce\Console\TaskWorker;
 
 /**
  * sCommerceServiceProvider - Service Provider for sCommerce package
@@ -20,10 +19,6 @@ use Seiger\sCommerce\Console\TaskWorker;
  */
 class sCommerceServiceProvider extends ServiceProvider
 {
-    protected $commands = [
-        TaskWorker::class,
-    ];
-
     /**
      * Bootstrap the application services.
      *
@@ -115,11 +110,6 @@ class sCommerceServiceProvider extends ServiceProvider
                 'days' => env('LOG_DAILY_DAYS', 14),
                 'replace_placeholders' => true,
             ]);
-        }
-
-        // Register console commands
-        if (count($this->commands)) {
-            $this->commands($this->commands);
         }
     }
 
@@ -244,39 +234,5 @@ class sCommerceServiceProvider extends ServiceProvider
         }
         $lang = include_once dirname(__DIR__) . '/lang/' . $lang . '/global.php';
         $this->app->registerModule($lang['title'], dirname(__DIR__) . '/module/sCommerceModule.php', $lang['icon']);
-    }
-
-    /**
-     * Define the application's command schedule.
-     *
-     * Sets up the Laravel scheduler singleton with timezone support.
-     * This enables scheduled execution of console commands.
-     *
-     * @note Check available timezones using timezone_identifiers_list()
-     * @return void
-     */
-    protected function defineConsoleSchedule()
-    {
-        $this->app->singleton(Schedule::class, function ($app) {
-            return tap(new Schedule(now()->timezoneName), function ($schedule) {
-                $this->schedule($schedule->useCache('file'));
-            });
-        });
-    }
-
-    /**
-     * Define the application's command schedule.
-     *
-     * Iterates through all registered commands and calls their schedule
-     * method to define when each command should be executed.
-     *
-     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
-     * @return void
-     */
-    public function schedule(Schedule $schedule)
-    {
-        foreach ($this->commands as $command) {
-            (new $command)->schedule($schedule);
-        }
     }
 }
