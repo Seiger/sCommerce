@@ -10,7 +10,7 @@ when adding or editing, the Attribute configuration page is available to you.
 
 ## Links
 
-- [Custom Attribute](./custom.md)
+- [Custom Attribute](custom.md)
 
 ## Visibility
 
@@ -51,7 +51,7 @@ included in the child Categories.
 In the Type of input field, the type of data input that is available for this Attribute is configured.
 
 If the Custom type is selected, you need to additionally configure the
-[view for the field](./custom.md).
+[view for the field](custom.md).
 
 ## Help text
 
