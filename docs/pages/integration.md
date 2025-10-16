@@ -1,8 +1,7 @@
 ---
-layout: page
+id: integration
 title: Integration
-description: Integration sCommerce methods to You code
-permalink: /integration/
+sidebar_position: 6
 ---
 
 Integrate sCommerce capabilities into your code using the examples below.
@@ -193,7 +192,7 @@ Illuminate\Database\Eloquent\Collection {#1422 ▼
 
 ## Product attribute
 
-You can get the value of a product attribute by passing its [key]({{site.baseurl}}/attributes/attributes/#key).
+You can get the value of a product attribute by passing its [key](./attributes/index.md#key).
 
 #### Result of the attribute() call
 

@@ -371,4 +371,3 @@ If you encounter issues:
 
 - **[Developer Guide](./developers.md)** - Advanced configuration and customization
 - **[Admin Guide](./admin.md)** - Managing your store through the admin panel
-- **[API Documentation](./api.md)** - Using the REST API for integrations

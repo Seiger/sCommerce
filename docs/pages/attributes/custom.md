@@ -1,8 +1,7 @@
 ---
-layout: page
+id: custom
 title: Custom Attribute
-description: sCommerce the Product Custom Attribute
-permalink: /attributes/custom/
+sidebar_position: 1
 ---
 
 ## About
@@ -17,7 +16,7 @@ To create a presentation, you need to place the Blade template in the
 
 All representations for Attributes of type Custom must be stored in the directory
 `../assets/modules/scommerce/attribute/`, the template file name must be as the
-[key field]({{site.baseurl}}/attributes/#key) of the Attribute.
+[key field](./index.md#key) of the Attribute.
 
 ## Agreements
 
@@ -88,7 +87,7 @@ For example `/var/www/html/my-site.com/assets/modules/scommerce/attribute/`.
 ### Name
 
 All custom field template files must be Blade templates and named as an Attribute
-[key field]({{site.baseurl}}/attributes/#key).
+[key field](./index.md#key).
 
 For example, for the Attribute named **Dates**, which has the key **dates**,
 the file will be named `dates.blade.php`.
