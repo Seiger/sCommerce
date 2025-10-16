@@ -258,7 +258,7 @@ $order = sCommerce::createOrder([
 - PHP **8.3+**
 - Composer **2.2+**
 - One of: **MySQL 8.0+** / **MariaDB 10.5+** / **PostgreSQL 10+** / **SQLite 3.25+**
-- **sTask** package for background processing (optional)
+- **sTask** package for background processing (required for import/export and cache generation)
 
 ## Installation
 
