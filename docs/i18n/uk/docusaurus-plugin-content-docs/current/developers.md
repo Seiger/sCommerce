@@ -30,55 +30,230 @@ sCommerce/
 
 ### Модель sProduct
 
-Основна модель товару з відносинами та атрибутами.
+Основна модель товару з відносинами та атрибутами:
+
+```php
+use Seiger\sCommerce\Models\sProduct;
+
+// Створення товару
+$product = sProduct::create([
+    'name' => 'Назва товару',
+    'alias' => 'nazva-tovaru',
+    'price_regular' => 999.99,
+    'category' => 1,
+    'published' => 1
+]);
+
+// Відносини
+$product->category;           // BelongsTo sCategory
+$product->images;             // HasMany sProductImage
+$product->attributes;         // HasMany sProductAttribute
+$product->translates;         // HasMany sProductTranslate
+$product->reviews;            // HasMany sProductReview
+
+// Scope запити
+sProduct::published();        // Тільки опубліковані товари
+sProduct::inStock();          // Тільки товари в наявності
+sProduct::byCategory(1);      // Товари певної категорії
+
+// Атрибути
+$product->link;               // URL товару
+$product->reviewsCount;       // Кількість відгуків
+$product->averageRating;      // Середній рейтинг
+```
 
 ### Модель sCategory
 
-Управління категоріями з ієрархічною структурою.
+Управління категоріями з ієрархічною структурою:
+
+```php
+use Seiger\sCommerce\Models\sCategory;
+
+// Створення категорії
+$category = sCategory::create([
+    'pagetitle' => 'Електроніка',
+    'alias' => 'elektronika',
+    'parent' => 0,
+    'published' => 1
+]);
+
+// Відносини
+$category->children;          // HasMany sCategory (підкатегорії)
+$category->parent;            // BelongsTo sCategory
+$category->products;          // HasMany sProduct
+```
 
 ### Модель sOrder
 
-Управління та обробка замовлень.
+Управління та обробка замовлень:
+
+```php
+use Seiger\sCommerce\Models\sOrder;
+
+// Створення замовлення
+$order = sOrder::create([
+    'customer_id' => 1,
+    'status' => 'pending',
+    'total' => 1999.98,
+    'currency' => 'UAH'
+]);
+```
 
 ## Сервіси
 
 ### Сервіс sCommerce
 
-Основний сервісний клас для операцій електронної комерції.
+Основний сервісний клас для операцій електронної комерції:
+
+```php
+use Seiger\sCommerce\Facades\sCommerce;
+
+// Операції з товарами
+$products = sCommerce::getProducts($filters);
+$product = sCommerce::getProduct($id);
+
+// Операції з категоріями
+$categories = sCommerce::getCategories();
+$category = sCommerce::getCategory($id);
+
+// Операції з кошиком
+sCommerce::addToCart($productId, $quantity);
+sCommerce::removeFromCart($itemId);
+$cart = sCommerce::getCart();
+
+// Операції із замовленнями
+$order = sCommerce::createOrder($data);
+```
 
 ## Розробка API
 
 ### REST API ендпоінти
 
-sCommerce надає комплексний REST API для інтеграцій.
+sCommerce надає комплексний REST API:
+
+```php
+// API товарів
+GET    /api/products              # Список товарів
+GET    /api/products/{id}         # Деталі товару
+POST   /api/products              # Створення товару
+PUT    /api/products/{id}         # Оновлення товару
+DELETE /api/products/{id}         # Видалення товару
+
+// API категорій
+GET    /api/categories            # Список категорій
+GET    /api/categories/{id}       # Деталі категорії
+
+// API кошика
+GET    /api/cart                  # Отримати кошик
+POST   /api/cart/items            # Додати товар
+DELETE /api/cart/items/{id}       # Видалити товар
+
+// API замовлень
+GET    /api/orders                # Список замовлень
+POST   /api/orders                # Створити замовлення
+```
 
 ## Користувацькі інтеграції
 
 ### Інтеграція платіжних шлюзів
 
-Створюйте власні платіжні шлюзи для sCommerce.
+Створення власного платіжного шлюзу:
+
+```php
+<?php namespace App\Payments;
+
+use Seiger\sCommerce\Contracts\PaymentGatewayInterface;
+
+class CustomPaymentGateway implements PaymentGatewayInterface
+{
+    public function processPayment(array $data): array
+    {
+        // Логіка обробки платежу
+        $result = $this->callPaymentAPI($data);
+        
+        return [
+            'success' => $result['status'] === 'success',
+            'transaction_id' => $result['transaction_id'],
+            'message' => $result['message']
+        ];
+    }
+}
+```
 
 ### Інтеграція провайдерів доставки
 
-Створюйте власних провайдерів доставки.
+Створення власного провайдера доставки:
+
+```php
+<?php namespace App\Shipping;
+
+use Seiger\sCommerce\Contracts\ShippingProviderInterface;
+
+class CustomShippingProvider implements ShippingProviderInterface
+{
+    public function calculateShipping(array $data): array
+    {
+        // Розрахунок вартості доставки
+        $cost = $this->calculateCost($data);
+        
+        return [
+            'success' => true,
+            'cost' => $cost,
+            'delivery_time' => '3-5 робочих днів'
+        ];
+    }
+}
+```
 
 ## Система подій
 
-sCommerce надає систему подій для розширення функціональності.
+sCommerce надає систему подій для розширення функціональності:
 
-## Користувацькі поля
+```php
+use Seiger\sCommerce\Events\ProductCreated;
+use Seiger\sCommerce\Events\OrderCreated;
 
-Розширюйте товари та замовлення користувацькими полями.
+// Прослуховування подій
+Event::listen(ProductCreated::class, function ($event) {
+    // Надіслати сповіщення
+    // Оновити індекс пошуку
+});
+
+Event::listen(OrderCreated::class, function ($event) {
+    // Надіслати email підтвердження
+    // Оновити інвентар
+});
+```
 
 ## Оптимізація продуктивності
 
 ### Оптимізація бази даних
 
-Використовуйте eager loading для уникнення N+1 запитів.
+```php
+// Використовуйте eager loading для уникнення N+1 запитів
+$products = sProduct::with(['category', 'images', 'attributes'])
+    ->published()
+    ->get();
+
+// Використовуйте індекси бази даних
+Schema::table('s_products', function (Blueprint $table) {
+    $table->index(['published', 'category']);
+    $table->index('alias');
+});
+```
 
 ### Кешування
 
-Кешуйте дані товарів та категорій для швидкого завантаження.
+```php
+use Illuminate\Support\Facades\Cache;
+
+// Кешування даних товарів
+$products = Cache::remember('products.category.1', 3600, function () {
+    return sProduct::published()
+        ->byCategory(1)
+        ->get();
+});
+```
 
 ## Найкращі практики
 
@@ -87,4 +262,8 @@ sCommerce надає систему подій для розширення фу�
 3. **Використовуйте належну обробку помилок** та логування
 4. **Оптимізуйте запити до бази даних** та використовуйте індекси
 5. **Тестуйте ретельно** перед розгортанням
-
+6. **Використовуйте кешування** для часто використовуваних даних
+7. **Слідкуйте за продуктивністю** та метриками помилок
+8. **Тримайте залежності оновленими** для безпеки
+9. **Документуйте ваші налаштування** для подальшого обслуговування
+10. **Використовуйте контроль версій** для всіх змін

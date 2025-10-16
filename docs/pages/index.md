@@ -252,8 +252,8 @@ $order = sCommerce::createOrder([
 
 ## Requirements
 
-- Evolution CMS **3.2.0+**
-- PHP **8.2+**
+- Evolution CMS **3.7+**
+- PHP **8.3+**
 - Composer **2.2+**
 - One of: **MySQL 8.0+** / **MariaDB 10.5+** / **PostgreSQL 10+** / **SQLite 3.25+**
 - **sTask** package for background processing (optional)

@@ -97,13 +97,10 @@ of Evolution CMS for seamless and efficient **online commerce**.
 
 ## Minimum requirements
 
-- Evolution CMS 3.2.0
-- PHP 8.3.0
-- Composer 2.2.0
-- PostgreSQL 10.23.0
-- MySQL 8.0.3
-- MariaDB 10.5.2
-- SQLite 3.25.0
+- Evolution CMS **3.7+**
+- PHP **8.3+**
+- Composer **2.2+**
+- One of: **MySQL 8.0+** / **MariaDB 10.5+** / **PostgreSQL 10+** / **SQLite 3.25+**
 
 ## Install by artisan package installer
 

@@ -12,8 +12,8 @@ This guide will help you install and configure sCommerce for your Evolution CMS 
 
 Before installing sCommerce, ensure you have:
 
-- Evolution CMS **3.2.0** or higher
-- PHP **8.2** or higher
+- Evolution CMS **3.7+**
+- PHP **8.3** or higher
 - Composer **2.2** or higher
 - One of the supported databases:
   - MySQL **8.0+**
