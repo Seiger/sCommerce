@@ -13,23 +13,20 @@ sidebar_position: 2
 Перед установкой sCommerce убедитесь, что у вас есть:
 
 - Evolution CMS **3.7+**
-- PHP **8.3** или выше
-- Composer **2.2** или выше
-- Одна из поддерживаемых баз данных:
-  - MySQL **8.0+**
-  - MariaDB **10.5+**
-  - PostgreSQL **10+**
-  - SQLite **3.25+**
+- PHP **8.3+**
+- Composer **2.2+**
+- Одна из поддерживаемых баз данных: **MySQL 8.0+** / **MariaDB 10.5+** / **PostgreSQL 10+** / **SQLite 3.25+**
 
 ## Установка
 
-### Шаг 1: Установка через Composer
+### Шаг 1: Обновление Composer и установка
 
-Перейдите в директорию `core` вашего Evolution CMS и установите sCommerce:
+Перейдите в директорию `core` вашего Evolution CMS, обновите composer и установите sCommerce:
 
 ```bash
 cd core
-composer require seiger/scommerce
+composer update
+php artisan package:installrequire seiger/scommerce "*"
 ```
 
 ### Шаг 2: Публикация ресурсов
@@ -48,22 +45,12 @@ php artisan vendor:publish --tag=scommerce
 php artisan migrate
 ```
 
-### Шаг 4: Очистка кеша
-
-Очистите кеш приложения:
-
-```bash
-php artisan cache:clear
-php artisan config:clear
-php artisan view:clear
-```
-
 ## Базовая конфигурация
 
 ### Шаг 1: Доступ к админ-панели
 
 1. Войдите в менеджер Evolution CMS
-2. Перейдите в **Инструменты** → **sCommerce**
+2. Перейдите в **Модули** → **sCommerce**
 3. Вы увидите панель управления sCommerce
 
 ### Шаг 2: Настройка базовых параметров

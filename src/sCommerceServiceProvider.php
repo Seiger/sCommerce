@@ -186,7 +186,7 @@ class sCommerceServiceProvider extends ServiceProvider
             dirname(__DIR__) . '/builder/richtext/config.php' => public_path('assets/modules/scommerce/builder/richtext/config.php'),
             dirname(__DIR__) . '/builder/richtext/render.blade.php' => public_path('assets/modules/scommerce/builder/richtext/render.blade.php'),
             dirname(__DIR__) . '/builder/richtext/template.blade.php' => public_path('assets/modules/scommerce/builder/richtext/template.blade.php'),
-        ]);
+        ], 'scommerce');
     }
 
     /**

@@ -13,23 +13,20 @@ This guide will help you install and configure sCommerce for your Evolution CMS 
 Before installing sCommerce, ensure you have:
 
 - Evolution CMS **3.7+**
-- PHP **8.3** or higher
-- Composer **2.2** or higher
-- One of the supported databases:
-  - MySQL **8.0+**
-  - MariaDB **10.5+**
-  - PostgreSQL **10+**
-  - SQLite **3.25+**
+- PHP **8.3+**
+- Composer **2.2+**
+- One of the supported databases: **MySQL 8.0+** / **MariaDB 10.5+** / **PostgreSQL 10+** / **SQLite 3.25+**
 
 ## Installation
 
-### Step 1: Install via Composer
+### Step 1: Update Composer and Install
 
-Navigate to your Evolution CMS `core` directory and install sCommerce:
+Navigate to your Evolution CMS `core` directory, update composer and install sCommerce:
 
 ```bash
 cd core
-composer require seiger/scommerce
+composer update
+php artisan package:installrequire seiger/scommerce "*"
 ```
 
 ### Step 2: Publish Assets
@@ -48,46 +45,15 @@ Create the necessary database tables:
 php artisan migrate
 ```
 
-### Step 4: Clear Cache
-
-Clear the application cache:
-
-```bash
-php artisan cache:clear
-php artisan config:clear
-php artisan view:clear
-```
-
 ## Basic Configuration
 
 ### Step 1: Access Admin Panel
 
 1. Log in to your Evolution CMS manager
-2. Navigate to **Tools** → **sCommerce**
+2. Navigate to **Модулі** → **sCommerce**
 3. You should see the sCommerce dashboard
 
-### Step 2: Configure Basic Settings
-
-1. Go to **Settings** in the sCommerce admin panel
-2. Configure the following basic settings:
-
-#### Store Information
-- **Store Name**: Your store's name
-- **Store Email**: Contact email address
-- **Store Phone**: Contact phone number
-- **Store Address**: Physical address
-
-#### Currency Settings
-- **Default Currency**: USD, EUR, GBP, etc.
-- **Currency Symbol**: $, €, £, etc.
-- **Currency Position**: Before or after price
-
-#### General Settings
-- **Enable Guest Checkout**: Allow customers to checkout without registration
-- **Require Email Verification**: Require email verification for new accounts
-- **Enable Product Reviews**: Allow customers to review products
-
-### Step 3: Create Your First Category
+### Step 2: Create Your First Category
 
 1. Go to **Products** → **Categories**
 2. Click **Add Category**
@@ -98,7 +64,7 @@ php artisan view:clear
    - **Parent Category**: Leave empty for root category
    - **Published**: Check to make it visible
 
-### Step 4: Create Your First Product
+### Step 3: Create Your First Product
 
 1. Go to **Products** → **Products**
 2. Click **Add Product**

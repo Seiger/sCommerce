@@ -270,11 +270,6 @@ php artisan vendor:publish --tag=scommerce
 php artisan migrate
 ```
 
-Setup cron for background tasks:
-```cron
-* * * * * cd /path/to/your/project && php artisan schedule:run >> /dev/null 2>&1
-```
-
 See **[Getting Started](./getting-started.md)** for detailed installation instructions.
 
 ## Performance

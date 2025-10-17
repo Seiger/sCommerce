@@ -1,7 +1,7 @@
 ---
 id: admin
 title: Административное руководство
-sidebar_position: 4
+sidebar_position: 3
 ---
 
 # Административное руководство

@@ -80,7 +80,7 @@
             </div>
             <div class="col">
                 @foreach($sCommerceController->langList() as $lang)
-                    <div class="input-group mb-3 col">
+                    <div class="input-group mb-1">
                         <div class="input-group-prepend">@if($lang != 'base')<span class="input-group-text"><span class="badge bg-seigerit">{{$lang}}</span></span>@endif</div>
                         <input type="text" id="{{$lang}}_title" class="form-control" name="title[{{$lang}}]" value="{{$item->instance->getTitle($lang)}}" onchange="documentDirty=true;">
                     </div>
@@ -95,7 +95,7 @@
             </div>
             <div class="col">
                 @foreach($sCommerceController->langList() as $lang)
-                    <div class="input-group mb-3 col">
+                    <div class="input-group mb-1">
                         <div class="input-group-prepend">@if($lang != 'base')<span class="input-group-text"><span class="badge bg-seigerit">{{$lang}}</span></span>@endif</div>
                         <input type="text" id="{{$lang}}_description" class="form-control" name="description[{{$lang}}]" value="{{$item->instance->getDescription($lang)}}" onchange="documentDirty=true;">
                     </div>

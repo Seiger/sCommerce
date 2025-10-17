@@ -1,7 +1,7 @@
 ---
 id: admin
 title: Admin Guide
-sidebar_position: 4
+sidebar_position: 3
 ---
 
 # Admin Guide

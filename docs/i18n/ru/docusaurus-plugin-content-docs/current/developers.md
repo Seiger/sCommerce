@@ -1,7 +1,7 @@
 ---
 id: developers
 title: Руководство разработчика
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Руководство разработчика

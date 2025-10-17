@@ -1,7 +1,7 @@
 ---
 id: developers
 title: Посібник розробника
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Посібник розробника
