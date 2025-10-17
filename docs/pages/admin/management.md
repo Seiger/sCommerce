@@ -1,8 +1,7 @@
 ---
-layout: page
+id: management
 title: Management
-description: Management tabs sCommerce
-permalink: /management/
+sidebar_position: 10
 ---
 
 After installing the module, you can use it immediately. Path to the module in the 

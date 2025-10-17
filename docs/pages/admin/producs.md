@@ -1,8 +1,7 @@
 ---
-layout: page
-title: Product Types
-description: sCommerce Product Types
-permalink: /product-types/
+id: producs
+title: Products
+sidebar_position: 3
 ---
 
 # Product Types in sCommerce

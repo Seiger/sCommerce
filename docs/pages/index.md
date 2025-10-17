@@ -1,9 +1,11 @@
 ---
 id: intro
-title: sCommerce for Evolution CMS
+title: About sCommerce
 slug: /
 sidebar_position: 1
 ---
+
+# sCommerce for Evolution CMS
 
 ![List of Products](https://github.com/user-attachments/assets/8dd1127c-5055-4795-954c-95eb75eadf31)
 ![Products by Category](https://github.com/user-attachments/assets/c6d9a6e3-aad4-4efd-b775-0ee626a4714c)

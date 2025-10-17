@@ -1,7 +1,7 @@
 ---
-id: product-types
-title: Типи товарів
-sidebar_position: 12
+id: producs
+title: Товари
+sidebar_position: 3
 ---
 
 # Типи товарів в sCommerce

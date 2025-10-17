@@ -192,7 +192,7 @@ Illuminate\Database\Eloquent\Collection {#1422 ▼
 
 ## Product attribute
 
-You can get the value of a product attribute by passing its [key](./attributes/index.md#key).
+You can get the value of a product attribute by passing its [key](../attributes/index.md#key).
 
 #### Result of the attribute() call
 

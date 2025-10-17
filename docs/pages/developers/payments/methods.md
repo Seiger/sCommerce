@@ -768,7 +768,7 @@ Cash and Bank Invoice payment methods are just the beginning. You can extend sCo
 ### Creating Custom Payment Methods
 
 To integrate with other payment gateways or create custom payment logic, see:
-- [Creating Custom Payment Methods](../payments.md) - Developer guide
+- [Creating Custom Payment Methods](index.md) - Developer guide
 
 ## Links
 
