@@ -260,7 +260,7 @@
             // Disable buttons immediately when starting, with this button as active
             disableButtons('{{$identifier ?? ''}}', null, '{{$identifier ?? ''}}Export');
 
-            let result = await callApi("{{route('sTask.workers.tasks.run', ['identifier' => ($identifier ?? ''), 'action' => 'export'])}}");
+            let result = await callApi("{{route('sTask.worker.task.run', ['identifier' => ($identifier ?? ''), 'action' => 'export'])}}");
 
             if (result.success == true) {
                 // Показуємо прогрес-бар одразу
@@ -297,7 +297,7 @@
                 if (upload && upload.success == true) {
                     widgetLogLine(root, upload.message);
 
-                    let result = await callApi("{{route('sTask.workers.tasks.run', ['identifier' => ($identifier ?? ''), 'action' => 'import'])}}", {filename: upload.result});
+                    let result = await callApi("{{route('sTask.worker.task.run', ['identifier' => ($identifier ?? ''), 'action' => 'import'])}}", {filename: upload.result});
 
                     if (result && result.success && result.id && result.id > 0) {
                         disableButtons('{{$identifier ?? ''}}', null, '{{$identifier ?? ''}}Import');
