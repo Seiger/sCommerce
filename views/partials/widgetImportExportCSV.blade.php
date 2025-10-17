@@ -292,7 +292,7 @@
 
             // Upload file with automatic chunking and server limits validation
             try {
-                const upload = await uploadFile(file, root, '{{$identifier ?? ''}}', '{{route('sTask.workers.upload', ['identifier' => $identifier ?? ''])}}');
+                const upload = await uploadFile(file, root, '{{$identifier ?? ''}}', '{{route('sTask.worker.upload', ['identifier' => $identifier ?? ''])}}');
 
                 if (upload && upload.success == true) {
                     widgetLogLine(root, upload.message);
