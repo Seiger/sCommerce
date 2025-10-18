@@ -121,16 +121,6 @@
 </div>
 <div class="row form-row">
     <div class="col-auto">
-        <label for="basic__integrations_on">@lang('sCommerce::global.integrations')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.integrations_on_help')"></i>
-    </div>
-    <div class="col">
-        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.basic__integrations_on);" @if(sCommerce::config('basic.integrations_on', 1) == 1) checked @endif>
-        <input type="hidden" id="basic__integrations_on" name="basic__integrations_on" value="{{sCommerce::config('basic.integrations_on', 1)}}" onchange="documentDirty=true;">
-    </div>
-</div>
-<div class="row form-row">
-    <div class="col-auto">
         <label for="basic__deliveries_on">@lang('sCommerce::global.deliveries')</label>
         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.deliveries_on_help')"></i>
     </div>

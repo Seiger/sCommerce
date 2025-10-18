@@ -320,6 +320,7 @@
     "product_title_is_out_of_stock" => "Продукт :title недостатня кількість на складі.",
     "product_type" => "Тип товару",
     "product_with_id" => "Товар із ID :id",
+    "product_with_title" => "Товар :title",
     "products" => "Товари",
     "products_help" => "Перелік всіх товарів магазину.",
     "products_icon" => "fa fa-store-alt",

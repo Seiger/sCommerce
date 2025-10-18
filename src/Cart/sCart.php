@@ -89,7 +89,7 @@ class sCart
                 $message = __('sCommerce::global.product_with_id', ['id' => $productId]) . ' ' . __('sCommerce::global.changed_quantity') . '.';
                 break;
             default:
-                $message = __('sCommerce::global.product_with_id', ['id' => $productId]) . ' ' . __('sCommerce::global.added_to_cart') . '.';
+                $message = __('sCommerce::global.product_with_title', ['title' => $product->title]) . ' ' . __('sCommerce::global.added_to_cart') . '.';
                 break;
         }
 
@@ -111,7 +111,18 @@ class sCart
     public function removeProduct(int $productId = 0): array
     {
         if ($productId === 0) {
-            $productId = request()->integer('productId');
+            $productId = request()->input('productId', 0);
+
+            if ($productId === 'all') {
+                $this->cartData = [];
+                $this->saveCartData();
+
+                return [
+                    'success' => true,
+                    'message' => __('sCommerce::global.removed_from_cart'),
+                    'miniCart' => $this->getMiniCart(),
+                ];
+            }
         }
 
         unset($this->cartData[$productId]);

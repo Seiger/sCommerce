@@ -600,6 +600,158 @@ $queries = DB::getQueryLog();
 Log::info('Database Queries', $queries);
 ```
 
+## Frontend Integration
+
+### Data Attributes Convention
+
+sCommerce uses a consistent naming convention for frontend data attributes to handle user interactions. All attributes follow the `data-sc-{action}` pattern.
+
+#### Action Attributes
+
+- `data-sc-buy` — Add product to cart
+- `data-sc-remove` — Remove product from cart
+- `data-sc-wishlist` — Add/remove product to/from wishlist
+- `data-sc-compare` — Add product to comparison
+- `data-sc-fast-buy` — One-click purchase
+- `data-sc-increment` — Increase quantity by 1
+- `data-sc-decrement` — Decrease quantity by 1
+
+#### Parameter Attributes
+
+- `data-sc-quantity` — Product quantity
+- `data-sc-price` — Price (for client-side calculations)
+- `data-sc-variant` — Variant/modification ID
+
+### Events API
+
+sCommerce provides a simple event system to handle cart actions. Use callbacks to respond to user interactions:
+
+```javascript
+// Listen to add to cart event
+sCommerce.onAddedToCart = (data) => {
+    console.log('Product added:', data.product);
+    // Update mini cart
+    document.querySelector('.mini-cart-count').textContent = data.miniCart.count;
+    document.querySelector('.mini-cart-total').textContent = data.miniCart.total;
+};
+
+// Listen to remove from cart event
+sCommerce.onRemovedFromCart = (data) => {
+    console.log('Product removed:', data.product);
+    // Update mini cart
+    document.querySelector('.mini-cart-count').textContent = data.miniCart.count;
+};
+
+// Listen to quantity update event
+sCommerce.onUpdatedCart = (data) => {
+    console.log('Quantity updated:', data);
+};
+
+// Listen to fast order event
+sCommerce.onFastOrder = (data) => {
+    if (data.success) {
+        alert('Thank you! We will contact you soon.');
+    }
+};
+```
+
+#### Available Events
+
+- `sCommerce.onAddedToCart` — Triggered when product is added to cart
+- `sCommerce.onRemovedFromCart` — Triggered when product is removed from cart
+- `sCommerce.onUpdatedCart` — Triggered when cart quantity is updated
+- `sCommerce.onFastOrder` — Triggered when fast order is submitted
+
+#### Event Data Structure
+
+All events receive a `data` object with the following structure:
+
+```javascript
+{
+    success: true,
+    product: {
+        id: 123,
+        title: "Product Name",
+        price: "99.99",
+        // ... other product data
+    },
+    miniCart: {
+        count: 3,
+        total: "299.97",
+        // ... other cart data
+    }
+}
+```
+
+### Usage Examples
+
+#### Product Card (Catalog)
+
+```html
+<div class="product-card">
+    <button data-sc-wishlist="{{$product->id}}">♥</button>
+    
+    <input type="number" class="qty-input" value="1" min="1" max="{{$product->inventory}}">
+    
+    <button data-sc-buy="{{$product->id}}">
+        @lang('Buy')
+    </button>
+    
+    <button data-sc-fast-buy="{{$product->id}}">
+        @lang('Buy in 1 click')
+    </button>
+</div>
+```
+
+#### Shopping Cart
+
+```html
+<div class="cart-item" data-item-id="{{$product->id}}">
+    <svg data-sc-remove="{{$product->id}}">...</svg>
+    
+    <div class="quantity-control">
+        <button data-sc-decrement="{{$product->id}}">-</button>
+        <input type="number" class="qty-input" value="{{$quantity}}" data-sc-quantity="{{$product->id}}">
+        <button data-sc-increment="{{$product->id}}">+</button>
+    </div>
+</div>
+```
+
+### Deprecated API
+
+:::warning Deprecated
+The following approaches are deprecated and will be removed in version 1.5. Please migrate to the new Events API.
+:::
+
+#### Old CustomEvent API (Deprecated)
+
+```javascript
+// ❌ Deprecated - Will be removed in v1.5
+document.addEventListener('sCommerceAddedToCart', (event) => {
+    const data = event.detail;
+    console.log(data);
+});
+```
+
+**Migration:** Use `sCommerce.onAddedToCart = (data) => {}` instead.
+
+#### Old Attribute Names (Deprecated)
+
+- ❌ `data-s-buy` → ✅ Use `data-sc-buy`
+- ❌ `data-s-fast-buy` → ✅ Use `data-sc-fast-buy`
+- ❌ `data-s-remove` → ✅ Use `data-sc-remove`
+- ❌ `data-s-quantity` → ✅ Use `data-sc-quantity`
+
+### Benefits
+
+- ✅ **W3C Valid** — All attributes follow HTML5 standards
+- ✅ **Simple API** — Easy to use callbacks: `sCommerce.onEventName = (data) => {}`
+- ✅ **Consistent** — Unified naming convention across the package
+- ✅ **Readable** — Easy to understand and maintain
+- ✅ **Extensible** — Simple to add new actions
+- ✅ **Dataset API** — Automatically converts to camelCase in JavaScript (`dataset.scBuy`)
+- ✅ **No dependencies** — Pure vanilla JavaScript
+
 ## Best Practices
 
 1. **Always use transactions** for critical operations

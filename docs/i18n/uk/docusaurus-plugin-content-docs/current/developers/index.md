@@ -255,6 +255,158 @@ $products = Cache::remember('products.category.1', 3600, function () {
 });
 ```
 
+## Інтеграція фронтенду
+
+### Конвенція Data-атрибутів
+
+sCommerce використовує послідовну конвенцію іменування для фронтенд data-атрибутів для обробки взаємодії користувачів. Всі атрибути слідують шаблону `data-sc-{action}`.
+
+#### Атрибути дій
+
+- `data-sc-buy` — Додати товар у кошик
+- `data-sc-remove` — Видалити товар з кошика
+- `data-sc-wishlist` — Додати/видалити товар до/з списку бажаного
+- `data-sc-compare` — Додати товар до порівняння
+- `data-sc-fast-buy` — Швидка покупка в один клік
+- `data-sc-increment` — Збільшити кількість на 1
+- `data-sc-decrement` — Зменшити кількість на 1
+
+#### Атрибути параметрів
+
+- `data-sc-quantity` — Кількість товару
+- `data-sc-price` — Ціна (для клієнтських розрахунків)
+- `data-sc-variant` — ID варіанту/модифікації
+
+### API подій
+
+sCommerce надає просту систему подій для обробки дій з кошиком. Використовуйте callbacks для реагування на дії користувача:
+
+```javascript
+// Прослуховування події додавання в кошик
+sCommerce.onAddedToCart = (data) => {
+    console.log('Товар додано:', data.product);
+    // Оновити міні-кошик
+    document.querySelector('.mini-cart-count').textContent = data.miniCart.count;
+    document.querySelector('.mini-cart-total').textContent = data.miniCart.total;
+};
+
+// Прослуховування події видалення з кошика
+sCommerce.onRemovedFromCart = (data) => {
+    console.log('Товар видалено:', data.product);
+    // Оновити міні-кошик
+    document.querySelector('.mini-cart-count').textContent = data.miniCart.count;
+};
+
+// Прослуховування події оновлення кількості
+sCommerce.onUpdatedCart = (data) => {
+    console.log('Кількість оновлено:', data);
+};
+
+// Прослуховування події швидкого замовлення
+sCommerce.onFastOrder = (data) => {
+    if (data.success) {
+        alert('Дякуємо! Ми зв\'яжемось з вами найближчим часом.');
+    }
+};
+```
+
+#### Доступні події
+
+- `sCommerce.onAddedToCart` — Спрацьовує при додаванні товару в кошик
+- `sCommerce.onRemovedFromCart` — Спрацьовує при видаленні товару з кошика
+- `sCommerce.onUpdatedCart` — Спрацьовує при оновленні кількості в кошику
+- `sCommerce.onFastOrder` — Спрацьовує при відправці швидкого замовлення
+
+#### Структура даних події
+
+Всі події отримують об'єкт `data` з наступною структурою:
+
+```javascript
+{
+    success: true,
+    product: {
+        id: 123,
+        title: "Назва товару",
+        price: "99.99",
+        // ... інші дані товару
+    },
+    miniCart: {
+        count: 3,
+        total: "299.97",
+        // ... інші дані кошика
+    }
+}
+```
+
+### Приклади використання
+
+#### Картка товару (Каталог)
+
+```html
+<div class="product-card">
+    <button data-sc-wishlist="{{$product->id}}">♥</button>
+    
+    <input type="number" class="qty-input" value="1" min="1" max="{{$product->inventory}}">
+    
+    <button data-sc-buy="{{$product->id}}">
+        @lang('Купити')
+    </button>
+    
+    <button data-sc-fast-buy="{{$product->id}}">
+        @lang('Купити в 1 клік')
+    </button>
+</div>
+```
+
+#### Кошик покупок
+
+```html
+<div class="cart-item" data-item-id="{{$product->id}}">
+    <svg data-sc-remove="{{$product->id}}">...</svg>
+    
+    <div class="quantity-control">
+        <button data-sc-decrement="{{$product->id}}">-</button>
+        <input type="number" class="qty-input" value="{{$quantity}}" data-sc-quantity="{{$product->id}}">
+        <button data-sc-increment="{{$product->id}}">+</button>
+    </div>
+</div>
+```
+
+### Застарілий API
+
+:::warning Застаріло
+Наступні підходи застаріли і будуть видалені у версії 1.5. Будь ласка, мігруйте на новий API подій.
+:::
+
+#### Старий CustomEvent API (Застаріло)
+
+```javascript
+// ❌ Застаріло - Буде видалено у v1.5
+document.addEventListener('sCommerceAddedToCart', (event) => {
+    const data = event.detail;
+    console.log(data);
+});
+```
+
+**Міграція:** Використовуйте `sCommerce.onAddedToCart = (data) => {}` замість цього.
+
+#### Старі назви атрибутів (Застаріло)
+
+- ❌ `data-s-buy` → ✅ Використовуйте `data-sc-buy`
+- ❌ `data-s-fast-buy` → ✅ Використовуйте `data-sc-fast-buy`
+- ❌ `data-s-remove` → ✅ Використовуйте `data-sc-remove`
+- ❌ `data-s-quantity` → ✅ Використовуйте `data-sc-quantity`
+
+### Переваги
+
+- ✅ **W3C Валідний** — Усі атрибути відповідають стандартам HTML5
+- ✅ **Простий API** — Легко використовувати callbacks: `sCommerce.onEventName = (data) => {}`
+- ✅ **Послідовний** — Єдина конвенція іменування в усьому пакеті
+- ✅ **Читабельний** — Легко зрозуміти та підтримувати
+- ✅ **Розширюваний** — Просто додавати нові дії
+- ✅ **Dataset API** — Автоматично конвертується в camelCase в JavaScript (`dataset.scBuy`)
+- ✅ **Без залежностей** — Чистий vanilla JavaScript
+
 ## Найкращі практики
 
 1. **Завжди використовуйте транзакції** для критичних операцій

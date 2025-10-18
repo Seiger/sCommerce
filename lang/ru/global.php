@@ -320,6 +320,7 @@
     "product_title_is_out_of_stock" => "Продукт :title недостаточное количество на складе.",
     "product_type" => "Тип товара",
     "product_with_id" => "Товар с ID :id",
+    "product_with_title" => "Товар :title",
     "products" => "Товары",
     "products_help" => "Перечень всех товаров магазина.",
     "products_icon" => "fa fa-store-alt",

@@ -491,30 +491,25 @@ class sCheckout
             'email' => 'nullable|email|max:255',
         ]);
 
-        if (empty($data['phone']) && empty($data['email'])) {
-            return [
-                'success' => false,
-                'message' => 'Either phone number or email is required.',
-            ];
-        }
-
         if ($validator->fails()) {
             return [
                 'success' => false,
+                'product' => (int)$data['productId'],
                 'message' => 'Invalid data provided.',
                 'errors' => $validator->errors(),
             ];
         }
 
+        $product = sCommerce::getProduct($data['productId']);
         $userId = evo()->getLoginUserID('web') ?: evo()->getLoginUserID('mgr'); // Checking if the user is authorized
         $user = evo()->getUserInfo($userId ?: 0) ?: [];
         $user = array_merge($user, evo()->getUserSettings());
 
         $userData = [
             'id' => $user['id'] ?? 0,
-            'first_name' => $user['first_name'] ?? '',
-            'middle_name' => $user['middle_name'] ?? '',
-            'last_name' => $user['last_name'] ?? '',
+            'first_name' => $data['first_name'] ?? ($user['first_name'] ?? ''),
+            'middle_name' => $data['middle_name'] ?? ($user['middle_name'] ?? ''),
+            'last_name' => $data['last_name'] ?? ($user['last_name'] ?? ''),
             'email' => $data['email'] ?? ($user['email'] ?? ''),
             'phone' => $data['phone'] ?? ($user['phone'] ?? ''),
             'address' => [
@@ -525,6 +520,15 @@ class sCheckout
                 'zip' => $user['zip'] ?? '',
             ],
         ];
+
+        if (empty($userData['phone']) && empty($userData['email'])) {
+            return [
+                'success' => false,
+                'product' => $product?->toArray() ?? [],
+                'message' => 'Either phone number or email is required.',
+                'errors' => ['User is undefined'],
+            ];
+        }
 
         if (empty($data['productId']) || $data['productId'] == 0) {
             $cartData = sCart::getMiniCart();
@@ -538,7 +542,6 @@ class sCheckout
             $productsData = $cartData['items'];
             $cost = $cartData['totalSum'];
         } else {
-            $product = sCommerce::getProduct($data['productId']);
             if (!$product) {
                 return [
                     'success' => false,
@@ -572,7 +575,14 @@ class sCheckout
 
         $adminNotes = [
             [
-                'comment' => "Quick order created by user " . implode(' ', [trim($userData['name']), trim($userData['phone']), trim($userData['email'])]) . '.',
+                'comment' => "Quick order created by user " . implode(' ',
+                    [
+                        trim($userData['first_name']),
+                        trim($userData['middle_name']),
+                        trim($userData['last_name']),
+                        trim($userData['phone']),
+                        trim($userData['email']),
+                    ]) . '.',
                 'timestamp' => now()->toDateTimeString(),
                 'user_id' => (int)$userData['id'],
             ]

@@ -1,38 +1,129 @@
 @php use Seiger\sCommerce\Facades\sCommerce; @endphp
 <script>
-    document.addEventListener("click", function(e) {
-        if (e.target) {
-            switch(true) {
-                case Boolean(e.target.closest('[data-sBuy]')?.hasAttribute("data-sBuy")):
-                    productId = parseInt(e.target.closest('[data-sBuy]').getAttribute('data-sBuy'));
-                    quantity = 1;
-                    trigger = 'buy';
-                    addToCart(e, productId, quantity, trigger);
-                    break;
-                case Boolean(e.target.closest('[data-sFastBuy]')?.hasAttribute("data-sFastBuy")):
-                    productId = parseInt(e.target.closest('[data-sFastBuy]').getAttribute('data-sFastBuy'));
-                    inputs = e.target.closest('[data-sFastBuy]').parentNode.querySelectorAll('input');
-                    quickOrder(e, productId, inputs);
-                    break;
-                case Boolean(e.target.closest('[data-sRemove]')?.hasAttribute("data-sRemove")):
-                    productId = parseInt(e.target.closest('[data-sRemove]').getAttribute('data-sRemove'));
-                    removeFromCart(e, productId);
-                    break;
+    if (!window.sCommerce) {
+        window.sCommerce = {};
+    }
+
+    window.sCommerce.trigger = function(event, data) {
+        const callback = this[`on${event}`];
+        if (typeof callback === 'function') {
+            try {
+                callback(data);
+            } catch (error) {
+                console.error(`sCommerce.on${event} error:`, error);
             }
         }
-    });
-    document.addEventListener("change", function(e) {
-        if (e.target) {
-            switch(true) {
-                case Boolean(e.target?.hasAttribute("data-sQuantity")):
-                    productId = parseInt(e.target.getAttribute('data-sQuantity'));
-                    quantity = parseInt(e.target.value);
-                    trigger = 'quantity';
-                    addToCart(e, productId, quantity, trigger);
-                    break;
+
+        // ============================================
+        // @deprecated since 1.0
+        // TODO: REMOVE IN v1.5
+        // Backward compatibility for CustomEvent API
+        // Migration: Use sCommerce.onEventName = (data) => {}
+        // instead of document.addEventListener('sCommerceEventName', ...)
+        // ============================================
+        if (typeof console !== 'undefined' && console.warn) {
+            const eventMap = {
+                'AddedToCart': 'sCommerceAddedToCart',
+                'RemovedFromCart': 'sCommerceRemovedFromCart',
+                'UpdatedCart': 'sCommerceUpdatedCart',
+                'FastOrder': 'sCommerceAddedFastOrder'
+            };
+            const oldEventName = eventMap[event];
+            if (oldEventName) {
+                const listeners = document._customEventListeners?.[oldEventName];
+                if (listeners && listeners.length > 0) {
+                    console.warn(
+                        `[sCommerce Deprecation Warning] CustomEvent '${oldEventName}' is deprecated and will be removed in v1.5. ` +
+                        `Use sCommerce.on${event} = (data) => {} instead.`
+                    );
+                }
             }
         }
+        try {
+            document.dispatchEvent(new CustomEvent(`sCommerce${event}`, { detail: data }));
+        } catch (error) {
+            console.error(`CustomEvent sCommerce${event} error:`, error);
+        }
+        // ============================================
+        // END DEPRECATED CODE - REMOVE IN v1.5
+        // ============================================
+    };
+
+    // ============================================
+    // Event Listeners
+    // ============================================
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest(
+            '[data-sc-buy], [data-sc-fast-buy], [data-sc-remove], ' +
+            // TODO: REMOVE IN v1.5 - Deprecated camelCase attributes (data-s*)
+            '[data-sBuy], [data-sFastBuy], [data-sRemove], [data-sbuy], [data-sfastbuy], [data-sremove]'
+        );
+        if (!target) return;
+
+        const ds = target.dataset;
+        let pId;
+
+        // TODO: REMOVE IN v1.5 - Deprecated: Check for old camelCase attributes and warn
+        const {scBuy, sBuy, scFastBuy, sFastBuy, scRemove, sRemove, sbuy, sfastbuy, sremove} = ds;
+        if (typeof console !== 'undefined' && console.warn) {
+            const deprecatedMap = {
+                sBuy:{old:'data-sBuy', new:'data-sc-buy'},
+                sbuy:{old:'data-sBuy', new:'data-sc-buy'},
+                sFastBuy:{old:'data-sFastBuy', new:'data-sc-fast-buy'},
+                sfastbuy:{old:'data-sFastBuy', new:'data-sc-fast-buy'},
+                sRemove:{old:'data-sRemove', new:'data-sc-remove'},
+                sremove:{old:'data-sRemove', new:'data-sc-remove'}
+            };
+
+            for (const [key, {old, new: newAttr}] of Object.entries(deprecatedMap)) {
+                if (ds[key]) {
+                    console.warn(
+                        `[sCommerce Deprecation Warning] Attribute '${old}' is deprecated and will be removed in v1.5. ` +
+                        `Use '${newAttr}' instead.`
+                    );
+                    break;
+                }
+            }
+        }
+
+        // Buy
+        if (pId = ds.scBuy ?? ds.sBuy ?? ds.sbuy) {
+            const quantity = parseInt(target.parentElement?.querySelector('[type="number"]')?.value || 1);
+            return addToCart(e, parseInt(pId), quantity, 'buy');
+        }
+
+        // Fast Buy
+        if (pId = ds.scFastBuy ?? ds.sFastBuy ?? ds.sfastbuy) {
+            const inputs = target.parentElement?.querySelectorAll('input');
+            return fastOrder(e, parseInt(pId), inputs);
+        }
+
+        // Remove
+        if (pId = ds.scRemove ?? ds.sRemove ?? ds.sremove) {
+            return removeFromCart(e, pId);
+        }
     });
+
+    document.addEventListener('change', (e) => {
+        const {scQuantity, sQuantity, squantity} = e.target.dataset;
+        const pId = scQuantity ?? sQuantity;
+
+        // TODO: REMOVE IN v1.5 - Deprecated: Check for old camelCase attribute and warn
+        if (typeof console !== 'undefined' && console.warn && sQuantity && !scQuantity) {
+            console.warn(
+                `[sCommerce Deprecation Warning] Attribute 'data-s-quantity' is deprecated and will be removed in v1.5. ` +
+                `Use 'data-sc-quantity' instead.`
+            );
+        }
+
+        if (pId) {
+            return addToCart(e, parseInt(pId), parseInt(e.target.value), 'quantity');
+        }
+    });
+
+    // ============================================
+    // Cart Functions
+    // ============================================
     function addToCart(e, productId, quantity, trigger) {
         e.preventDefault();
         e.target.disabled = true;
@@ -50,7 +141,7 @@
         }).then((response) => {
             return response.json();
         }).then((data) => {
-            document.dispatchEvent(new CustomEvent('sCommerceAddedToCart', {detail: data}));
+            sCommerce.trigger(trigger === 'quantity' ? 'UpdatedCart' : 'AddedToCart', data);
             e.target.disabled = false;
         }).catch(function(error) {
             if (error === 'SyntaxError: Unexpected token < in JSON at position 0') {
@@ -61,7 +152,7 @@
             e.target.disabled = false;
         });
     }
-    function quickOrder(e, productId, inputs) {
+    function fastOrder(e, productId, inputs) {
         e.preventDefault();
         e.target.disabled = true;
 
@@ -79,7 +170,7 @@
         }).then((response) => {
             return response.json();
         }).then((data) => {
-            document.dispatchEvent(new CustomEvent('sCommerceAddedQuickOrder', {detail: data}));
+            sCommerce.trigger('FastOrder', data);
             e.target.disabled = false;
         }).catch(function(error) {
             if (error === 'SyntaxError: Unexpected token < in JSON at position 0') {
@@ -105,7 +196,7 @@
         }).then((response) => {
             return response.json();
         }).then((data) => {
-            document.dispatchEvent(new CustomEvent('sCommerceRemovedFromCart', {detail: data}));
+            sCommerce.trigger('RemovedFromCart', data);
             e.target.disabled = false;
         }).catch(function(error) {
             if (error === 'SyntaxError: Unexpected token < in JSON at position 0') {

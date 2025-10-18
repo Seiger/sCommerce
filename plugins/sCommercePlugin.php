@@ -88,6 +88,58 @@ Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
 });
 
 /**
+ * Event handler for 'OnWebPagePrerender'.
+ *
+ * - Skips manager area
+ * - Skips non-HTML outputs and empty buffers
+ * - Injects meta fragment before the last </head>
+ *
+ * @return void
+ */
+Event::listen('evolution.OnWebPagePrerender', function() {
+    // Front-end only
+    if (!evo()->isFrontend()) {
+        return;
+    }
+
+    // Current output snapshot
+    $out = evo()->documentOutput ?? '';
+    if ($out === '' || stripos($out, '<head') === false || stripos($out, '</head>') === false) {
+        return;
+    }
+
+    // Cheap JSON guard
+    $trim = ltrim($out);
+    if (($trim !== '' && ($trim[0] === '{' || $trim[0] === '['))
+        && stripos($trim, '<!doctype') === false
+        && stripos($trim, '<html') === false) {
+        return;
+    }
+
+    // Avoid double injection if somehow called twice
+    if (strpos($out, '<script>window.sCommerce') !== false) {
+        return;
+    }
+
+    // Build once per request
+    static $built = false, $headHtml = '';
+    if (!$built) {
+        $jsCode = "window.sCommerce={onAddedToCart:null,onRemovedFromCart:null,onUpdatedCart:null,onFastOrder:null,setCallback:function(event,callback){this[`on" . '${event}' . "`]=callback},trigger:function(event,data){const callback=this[`on" . '${event}' . "`];if(typeof callback==='function'){try{callback(data)}catch(error){console.error(`sCommerce.on" . '${event}' . " error:`,error)}}}};function setSCommerceCallback(event,callback){if(window.sCommerce&&window.sCommerce.setCallback){window.sCommerce.setCallback(event,callback)}}";
+        $headHtml = "<script>{$jsCode}</script>";
+        $built = true;
+    }
+    if ($headHtml === '') {
+        return;
+    }
+
+    // Inject before the last </head>
+    $pos = strripos($out, '</head>');
+    if ($pos !== false) {
+        evo()->documentOutput = substr($out, 0, $pos) . $headHtml . substr($out, $pos);
+    }
+});
+
+/**
  * Add Menu item
  */
 Event::listen('evolution.OnManagerMenuPrerender', function($params) {

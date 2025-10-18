@@ -320,6 +320,7 @@
     "product_title_is_out_of_stock" => "Product :title is out of stock.",
     "product_type" => "Product Type",
     "product_with_id" => "Product with ID :id",
+    "product_with_title" => "Product :title",
     "products" => "Products",
     "products_help" => "List of all store products.",
     "products_icon" => "fa fa-store-alt",

@@ -655,4 +655,17 @@ class sProduct extends Model
         // Fallback to database query
         return $this->reviews()->count();
     }
+
+    public function getInventoryAttribute()
+    {
+        if (sCommerce::config('product.inventory_on', 0) < 1) {
+            return 99999;
+        }
+
+        if ($this->inventory <= 0) {
+            return 0;
+        }
+
+        return $this->inventory;
+    }
 }
