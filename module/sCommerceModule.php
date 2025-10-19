@@ -57,11 +57,11 @@ if (sCommerce::config('basic.integrations_on', 1) == 1) {
 if (count(sCommerce::config('basic.available_currencies', [])) > 1 && trim(sCommerce::config('basic.main_currency', ''))) {
     $tabs[] = 'currencies';
 }
-if (sCommerce::config('basic.deliveries_on', 1) == 1) {
-    $tabs[] = 'deliveries';
-}
 if (sCommerce::config('basic.payments_on', 1) == 1) {
     $tabs[] = 'payments';
+}
+if (sCommerce::config('basic.deliveries_on', 1) == 1) {
+    $tabs[] = 'deliveries';
 }
 if (evo()->hasPermission('settings')) {
     $tabs[] = 'settings';
@@ -1563,7 +1563,7 @@ switch ($get) {
                 try {
                     $instance = new $methodClass();
                     $name = $instance->getName();
-                    $title = ['base' => $instance->getAdminTitle()];
+                    $title = ['base' => $instance->getTitle()];
                     $description = ['base' => ''];
 
                     sDeliveryMethod::create([

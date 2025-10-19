@@ -11,11 +11,14 @@ class sCart
     protected $cartData;
     protected $productDetails = [
         'id',
-        'title',
+        'sku',
         'link',
+        'title',
+        'introtext',
         'coverSrc',
         'category',
-        'sku',
+        'rating',
+        'reviewsCount',
         'inventory',
         'price',
         'priceAsFloat',
