@@ -75,7 +75,7 @@ class sCheckout
             'user.middle_name' => 'nullable|string|max:255',
             'user.last_name' => 'nullable|string|max:255',
             'user.email' => 'required|email|max:255',
-            'user.phone' => 'required|string|max:20',
+            'user.phone' => 'nullable|string|max:20|regex:/^\+?[1-9]\d{7,14}$/',
             'user.vat' => 'sometimes|string|max:32',
             'user.address.country' => 'sometimes|string|max:255',
             'user.address.state' => 'sometimes|string|max:255',
@@ -347,6 +347,11 @@ class sCheckout
      */
     public function setOrderData(array $data): array
     {
+        if (isset($data['user']['phone'])) {
+            $phone = preg_replace('/[^\d+]/', '', $data['user']['phone']);
+            $data['user']['phone'] = $phone;
+        }
+
         $flattenedData = \Illuminate\Support\Arr::dot($data);
 
         $rules = $this->getValidationRules($data);
@@ -576,13 +581,13 @@ class sCheckout
         $adminNotes = [
             [
                 'comment' => "Quick order created by user " . implode(' ',
-                    [
-                        trim($userData['first_name']),
-                        trim($userData['middle_name']),
-                        trim($userData['last_name']),
-                        trim($userData['phone']),
-                        trim($userData['email']),
-                    ]) . '.',
+                        [
+                            trim($userData['first_name']),
+                            trim($userData['middle_name']),
+                            trim($userData['last_name']),
+                            trim($userData['phone']),
+                            trim($userData['email']),
+                        ]) . '.',
                 'timestamp' => now()->toDateTimeString(),
                 'user_id' => (int)$userData['id'],
             ]
@@ -801,6 +806,8 @@ class sCheckout
         $order->identifier = $identifier;
         $order->history = $history;
         $order->save();
+
+        $_SESSION['orderNumber'] = $order->id;
 
         return $order;
     }

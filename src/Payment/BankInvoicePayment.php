@@ -1,7 +1,7 @@
 <?php namespace Seiger\sCommerce\Payment;
 
-use Seiger\sCommerce\Payment\BasePaymentMethod;
 use Seiger\sCommerce\Models\sOrder;
+use Seiger\sCommerce\Payment\BasePaymentMethod;
 
 /**
  * Class BankInvoicePayment
@@ -84,52 +84,40 @@ class BankInvoicePayment extends BasePaymentMethod
                         'type' => 'text',
                         'label' => __('sCommerce::global.account_holder'),
                         'name' => 'account_holder',
-                        'value' => $this->credentials['account_holder'] ?? '',
+                        'value' => $this->getSettings()['account_holder'] ?? '',
                         'placeholder' => __('sCommerce::global.account_holder_placeholder'),
                     ],
                     'bank_name' => [
                         'type' => 'text',
                         'label' => __('sCommerce::global.bank_name'),
                         'name' => 'bank_name',
-                        'value' => $this->credentials['bank_name'] ?? '',
+                        'value' => $this->getSettings()['bank_name'] ?? '',
                         'placeholder' => __('sCommerce::global.bank_name_placeholder'),
                     ],
                     'account_number' => [
                         'type' => 'text',
                         'label' => __('sCommerce::global.account_number'),
                         'name' => 'account_number',
-                        'value' => $this->credentials['account_number'] ?? '',
+                        'value' => $this->getSettings()['account_number'] ?? '',
                         'placeholder' => 'UA123456789012345678901234567',
                     ],
                     'bank_code' => [
                         'type' => 'text',
                         'label' => __('sCommerce::global.bank_code'),
                         'name' => 'bank_code',
-                        'value' => $this->credentials['bank_code'] ?? '',
+                        'value' => $this->getSettings()['bank_code'] ?? '',
                         'placeholder' => __('sCommerce::global.bank_code_placeholder'),
                     ],
                     'tax_id' => [
                         'type' => 'text',
                         'label' => __('sCommerce::global.tax_id'),
                         'name' => 'tax_id',
-                        'value' => $this->credentials['tax_id'] ?? '',
+                        'value' => $this->getSettings()['tax_id'] ?? '',
                         'placeholder' => __('sCommerce::global.tax_id_placeholder'),
                     ],
                 ],
             ],
             'general' => [
-                'label' => __('sCommerce::global.general_settings'),
-                'fields' => [
-                    'payment_terms' => [
-                        'type' => 'number',
-                        'label' => __('sCommerce::global.payment_terms_days'),
-                        'name' => 'payment_terms',
-                        'value' => $this->getSettings()['payment_terms'] ?? 7,
-                        'placeholder' => '7',
-                        'min' => 1,
-                        'max' => 30,
-                    ],
-                ],
                 'label' => __('sCommerce::global.message'),
                 'fields' => [
                     'info' => [
@@ -151,7 +139,7 @@ class BankInvoicePayment extends BasePaymentMethod
      * Template resolution order:
      * 1. Custom template: assets/modules/scommerce/payment/bank_invoice.blade.php
      * 2. Default template: core/vendor/seiger/scommerce/payment/bank_invoice.blade.php
-     * 
+     *
      * To customize the template, create a copy at:
      * assets/modules/scommerce/payment/bank_invoice.blade.php
      *
@@ -170,7 +158,7 @@ class BankInvoicePayment extends BasePaymentMethod
         } elseif (is_string($data)) {
             $order = sOrder::whereKey($data)->first();
         } else {
-            $order = (object) $data;
+            $order = (object)$data;
         }
 
         if (!$order) {
@@ -180,12 +168,12 @@ class BankInvoicePayment extends BasePaymentMethod
         // Prepare template variables
         $viewData = [
             'title' => $this->getTitle(),
-            'account_holder' => $this->credentials['account_holder'] ?? '',
-            'bank_name' => $this->credentials['bank_name'] ?? '',
-            'account_number' => $this->credentials['account_number'] ?? '',
-            'bank_code' => $this->credentials['bank_code'] ?? '',
-            'tax_id' => $this->credentials['tax_id'] ?? '',
-            'amount' => $order->total ?? 0,
+            'account_holder' => $this->getSettings()['account_holder'] ?? '',
+            'bank_name' => $this->getSettings()['bank_name'] ?? '',
+            'account_number' => $this->getSettings()['account_number'] ?? '',
+            'bank_code' => $this->getSettings()['bank_code'] ?? '',
+            'tax_id' => $this->getSettings()['tax_id'] ?? '',
+            'cost' => $order->cost ?? 0,
             'currency' => $order->currency ?? 'UAH',
             'order_id' => $order->id ?? 0,
             'payment_terms' => $this->getSettings()['payment_terms'] ?? 7,
@@ -195,7 +183,7 @@ class BankInvoicePayment extends BasePaymentMethod
         // Check if custom Blade template exists
         $customTemplatePath = EVO_BASE_PATH . 'assets/modules/scommerce/payment/bank_invoice.blade.php';
         $defaultTemplatePath = __DIR__ . '/../payment/bank_invoice.blade.php';
-        
+
         if (file_exists($customTemplatePath)) {
             // Render custom Blade template
             return $this->renderBladeTemplate($customTemplatePath, $viewData);
@@ -222,12 +210,12 @@ class BankInvoicePayment extends BasePaymentMethod
                 'template' => $templatePath,
                 'error' => $e->getMessage()
             ]);
-            
+
             // Return empty string if template rendering fails
             return '';
         }
     }
-    
+
     /**
      * Process the bank invoice payment.
      *

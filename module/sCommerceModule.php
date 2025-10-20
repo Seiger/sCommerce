@@ -1794,6 +1794,32 @@ switch ($get) {
         $_SESSION['itemname'] = $admintitle ?? '';
         $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=payments'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
+    case "paymentCheck":
+        $requestId = request()->integer('i');
+        $item = sPaymentMethod::find($requestId);
+
+        $response = ['success' => false, 'message' => 'Payment not found'];
+        if ($requestId > 0 && $item) {
+            $className = $item->class;
+            if (class_exists($className)) {
+                try {
+                    $instance = new $className($item->identifier);
+                    if (method_exists($instance, 'checkConnection')) {
+                        $response = (array)$instance->checkConnection($item);
+                    } else {
+                        $response = ['success' => false, 'message' => 'checkConnection() is not implemented'];
+                    }
+                } catch (Throwable $e) {
+                    $response = ['success' => false, 'message' => $e->getMessage()];
+                }
+            } else {
+                $response = ['success' => false, 'message' => 'Class not found'];
+            }
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
     /*
     |--------------------------------------------------------------------------
     | Settings

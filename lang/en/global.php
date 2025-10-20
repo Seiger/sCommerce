@@ -99,6 +99,7 @@
     "cover" => "Cover",
     "created" => "Created",
     "credentials" => "Credentials",
+    "check_connection" => "Check connection",
     "credentials_help" => "This block specifies all the necessary parameters for the correct operation of the payment gateway.",
     "currencies" => "Currencies",
     "currencies_help" => "List of available store currencies and their relationship to each other",

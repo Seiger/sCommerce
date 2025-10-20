@@ -18,6 +18,21 @@
                     </div>
                 </div>
             </div>
+            @if(method_exists($item->instance, 'checkConnection'))
+                <div class="row-col col-lg-2 col-md-4 col-6">
+                    <div class="row form-row">
+                        <div class="col-auto">
+                            <label>&nbsp;</label>
+                        </div>
+                        <div class="col">
+                            <a class="btn btn-info w-100" href="javascript:void(0);" onclick="checkPaymentConnection({{request()->integer('i')}});">
+                                <i class="fa fa-plug"></i>
+                                <span>@lang('sCommerce::global.check_connection')</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endif
             @if(count($item->instance->defineAvailableModes()))
                 <div class="row-col col-lg-2 col-md-4 col-6">
                     <div class="row form-row">
@@ -137,4 +152,16 @@
             </a>
         </div>
     </div>
+@endpush
+
+@push('scripts.top')
+    <script>
+        function checkPaymentConnection(id){
+            const url = '{!!sCommerce::moduleUrl()!!}&get=paymentCheck&i=' + id;
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(r => r.json()).then(data => {
+                alert((data.success ? 'OK: ' : 'ERROR: ') + (data.message||''));
+            }).catch(err => alert('ERROR: ' + err));
+        }
+    </script>
 @endpush
