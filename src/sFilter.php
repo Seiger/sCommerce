@@ -82,7 +82,7 @@ class sFilter
      *
      * @return object|Collection A collection of filters for the specified category.
      */
-    public function byCategory(int $category = null, string $lang = null, int $dept = 10): object
+    public function byCategory(?int $category = null, ?string $lang = null, int $dept = 10): object
     {
         if (empty($category)) {
             $category = static::$isValidated ? (int)static::$cachedResult['category'] : evo()->documentIdentifier;

@@ -55,13 +55,13 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
     // Routes with suffix (for frontend calls with friendly URLs)
     $suffix = sCommerce::config('basic.friendlyUrlSuffix', evo()->getConfig('friendly_url_suffix', ''));
     if ($suffix) {
-        Route::post('add-to-cart' . $suffix, $addToCartHandler);
-        Route::post('remove-from-cart' . $suffix, $removeFromCartHandler);
-        Route::post('set-order-data' . $suffix, $setOrderDataHandler);
-        Route::post('process-order' . $suffix, $processOrderHandler);
-        Route::post('pay-order/{method?}' . $suffix, $payOrderHandler);
-        Route::post('quick-order' . $suffix, $quickOrderHandler);
-        Route::post('wishlist' . $suffix, $wishlistHandler);
+        Route::post('add-to-cart' . $suffix, $addToCartHandler)->name('addToCart');
+        Route::post('remove-from-cart' . $suffix, $removeFromCartHandler)->name('removeFromCart');
+        Route::post('set-order-data' . $suffix, $setOrderDataHandler)->name('setOrderData');
+        Route::post('process-order' . $suffix, $processOrderHandler)->name('processOrder');
+        Route::post('pay-order/{method?}' . $suffix, $payOrderHandler)->name('payOrder');
+        Route::post('quick-order' . $suffix, $quickOrderHandler)->name('quickOrder');
+        Route::post('wishlist' . $suffix, $wishlistHandler)->name('wishlist');
     }
 });
 

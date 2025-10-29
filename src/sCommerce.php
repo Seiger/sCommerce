@@ -219,7 +219,7 @@ class sCommerce
      * @return object|Collection A collection of filters for the specified category.
      *                            Each filter includes attribute details and value counts.
      */
-    public function getCategoryFilters(int $category = null, string $lang = null, int $dept = 10): object
+    public function getCategoryFilters(?int $category = null, ?string $lang = null, int $dept = 10): object
     {
         return sFilter::byCategory($category, $lang, $dept);
     }
