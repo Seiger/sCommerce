@@ -73,7 +73,7 @@ class sAttribute extends Model
                         ->from('s_attribute_translates')
                         ->whereRaw(DB::getTablePrefix() . 's_attribute_translates.attribute = ' . DB::getTablePrefix() . 's_attributes.id')
                         ->whereIn('lang', [$locale, 'base'])
-                        ->orderByRaw('FIELD(lang, "' . $locale . '", "base")')
+                        ->orderByRaw("CASE lang WHEN ? THEN 0 WHEN 'base' THEN 1 ELSE 2 END", [$locale])
                         ->limit(1);
                 });
         });
@@ -147,7 +147,9 @@ class sAttribute extends Model
     public function text($locale = '')
     {
         $locale = trim($locale) ? $locale : config('app.locale');
-        return $this->hasOne(sAttributeTranslate::class, 'attribute', 'id')->whereIn('lang', [$locale, 'base']);
+        return $this->hasOne(sAttributeTranslate::class, 'attribute', 'id')
+            ->whereIn('lang', [$locale, 'base'])
+            ->orderByRaw("CASE lang WHEN ? THEN 0 WHEN 'base' THEN 1 ELSE 2 END", [$locale]);
     }
 
     /**

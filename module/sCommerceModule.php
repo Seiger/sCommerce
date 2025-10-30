@@ -484,7 +484,8 @@ switch ($get) {
 
         if (empty($alias) || str_starts_with($alias, 'new-product')) {
             $translate = sProductTranslate::whereProduct($requestId)
-                ->whereIn('lang', ['en', $sCommerceController->langDefault()])->orderByRaw('FIELD(lang, "en", "' . $sCommerceController->langDefault() . '")')
+                ->whereIn('lang', ['en', $sCommerceController->langDefault()])
+                ->orderByRaw("CASE lang WHEN 'en' THEN 0 WHEN ? THEN 1 ELSE 2 END", [$sCommerceController->langDefault()])
                 ->first();
             if ($translate) {
                 $alias = trim($translate->pagetitle) ?: 'new-product';

@@ -306,7 +306,9 @@ class sProduct extends Model
     public function text($locale = '')
     {
         $locale = trim($locale) ? $locale : config('app.locale');
-        return $this->hasOne(sProductTranslate::class, 'product', 'id')->whereIn('lang', [$locale, 'base']);
+        return $this->hasOne(sProductTranslate::class, 'product', 'id')
+            ->whereIn('lang', [$locale, 'base'])
+            ->orderByRaw("CASE lang WHEN ? THEN 0 WHEN 'base' THEN 1 ELSE 2 END", [$locale]);
     }
 
     /**
