@@ -656,16 +656,28 @@ class sProduct extends Model
         return $this->reviews()->count();
     }
 
+    /**
+     * Gets the inventory attribute of the sProduct.
+     * Returns the product inventory quantity based on inventory management settings.
+     *
+     * If inventory management is disabled (inventory_on < 1), returns a high number (99999)
+     * to indicate unlimited availability. Otherwise, returns the actual inventory value
+     * from the database, with a minimum of 0 for non-positive values.
+     *
+     * @return int The inventory quantity of the product.
+     */
     public function getInventoryAttribute()
     {
         if (sCommerce::config('product.inventory_on', 0) < 1) {
             return 99999;
         }
 
-        if ($this->inventory <= 0) {
+        $inventory = $this->attributes['inventory'] ?? 0;
+
+        if ($inventory <= 0) {
             return 0;
         }
 
-        return $this->inventory;
+        return $inventory;
     }
 }
