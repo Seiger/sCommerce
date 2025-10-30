@@ -116,7 +116,7 @@ class sCommerceServiceProvider extends ServiceProvider
      */
     protected function loadRoutes()
     {
-        include(__DIR__.'/Http/routes.php');
+        include(__DIR__ . '/Http/routes.php');
     }
 
     /**

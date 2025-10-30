@@ -75,7 +75,7 @@ abstract class BaseDeliveryMethod implements DeliveryMethodInterface
      * This method renders the HTML widget for the delivery method by loading a Blade template.
      * Templates are searched in the following priority order:
      * 1. views/delivery/{name}.blade.php (project customization - highest priority)
-     * 2. core/custom/packages/seiger/scommerce/views/delivery/{name}.blade.php (custom package)
+     * 2. core/custom/packages/seiger/views/sCommercePro/Delivery/{name}.blade.php (custom package)
      * 3. core/vendor/seiger/scommerce/views/delivery/{name}.blade.php (vendor default - lowest priority)
      *
      * To customize a delivery widget, copy the vendor template to your project's views/delivery/ directory.
@@ -105,8 +105,8 @@ abstract class BaseDeliveryMethod implements DeliveryMethodInterface
         // Template search paths in priority order
         $paths = [
             resource_path("views/delivery/{$deliveryName}.blade.php"),
-            base_path("core/custom/packages/seiger/scommerce/views/delivery/{$deliveryName}.blade.php"),
-            base_path("core/vendor/seiger/scommerce/views/delivery/{$deliveryName}.blade.php"),
+            base_path("custom/packages/seiger/views/sCommercePro/Delivery/{$deliveryName}.blade.php"),
+            base_path("vendor/seiger/scommerce/views/delivery/{$deliveryName}.blade.php"),
         ];
 
         foreach ($paths as $templatePath) {

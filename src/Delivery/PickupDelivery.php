@@ -84,6 +84,19 @@ class PickupDelivery extends BaseDeliveryMethod
     public function defineFields(): array
     {
         return [
+            'message' => [
+                'label' => __('sCommerce::global.message'),
+                'fields' => [
+                    'info' => [
+                        'type' => 'textarea',
+                        'label' => __('sCommerce::global.info_message'),
+                        'name' => 'info',
+                        'value' => $this->getSettings()['info'] ?? '',
+                        'placeholder' => __('sCommerce::global.delivery_info_placeholder'),
+                        'helptext' => __('sCommerce::global.delivery_info_helptext'),
+                    ],
+                ],
+            ],
             'locations' => [
                 'label' => __('sCommerce::global.pickup_locations'),
                 'fields' => [

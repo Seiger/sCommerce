@@ -117,11 +117,12 @@ class CourierDelivery extends BaseDeliveryMethod
                 'label' => __('sCommerce::global.message'),
                 'fields' => [
                     'info' => [
-                        'type' => 'text',
-                        'label' => '',
+                        'type' => 'textarea',
+                        'label' => __('sCommerce::global.info_message'),
                         'name' => 'info',
                         'value' => $this->getSettings()['info'] ?? '',
-                        'placeholder' => __('sCommerce::global.info_message'),
+                        'placeholder' => __('sCommerce::global.delivery_info_placeholder'),
+                        'helptext' => __('sCommerce::global.delivery_info_helptext'),
                     ],
                 ],
             ],
