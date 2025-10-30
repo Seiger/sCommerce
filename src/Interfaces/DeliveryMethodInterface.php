@@ -105,4 +105,20 @@ interface DeliveryMethodInterface
      * @return array An associative array of settings for the delivery method.
      */
     public function getSettings(): array;
+
+    /**
+     * Render delivery widget for checkout or other contexts.
+     *
+     * This method renders the HTML widget for the delivery method, which can be used
+     * in various contexts such as checkout pages, order details, admin panel, or email notifications.
+     *
+     * The widget template is resolved in the following priority order:
+     * 1. views/delivery/{name}.blade.php (project customization)
+     * 2. core/custom/packages/seiger/scommerce/views/delivery/{name}.blade.php (custom package)
+     * 3. core/vendor/seiger/scommerce/views/delivery/{name}.blade.php (vendor default)
+     *
+     * @param array $data Context data to pass to the widget template (e.g., checkout data, order data).
+     * @return string The rendered HTML widget.
+     */
+    public function renderWidget(array $data): string;
 }

@@ -70,6 +70,65 @@ abstract class BaseDeliveryMethod implements DeliveryMethodInterface
     }
 
     /**
+     * Render delivery widget for checkout or other contexts.
+     *
+     * This method renders the HTML widget for the delivery method by loading a Blade template.
+     * Templates are searched in the following priority order:
+     * 1. views/delivery/{name}.blade.php (project customization - highest priority)
+     * 2. core/custom/packages/seiger/scommerce/views/delivery/{name}.blade.php (custom package)
+     * 3. core/vendor/seiger/scommerce/views/delivery/{name}.blade.php (vendor default - lowest priority)
+     *
+     * To customize a delivery widget, copy the vendor template to your project's views/delivery/ directory.
+     *
+     * Template variables available in Blade:
+     * - $delivery: Array with 'name', 'title', 'description' of the delivery method
+     * - $checkout: Checkout or order data passed to the widget
+     * - $settings: Delivery method settings from admin panel
+     *
+     * @param array $data Context data to pass to the widget template (checkout data, order data, etc.).
+     * @return string The rendered HTML widget, or empty string if no template found.
+     */
+    public function renderWidget(array $data): string
+    {
+        $viewData = [
+            'delivery' => [
+                'name' => $this->getName(),
+                'title' => $this->getTitle(),
+                'description' => $this->getDescription(),
+            ],
+            'checkout' => $data,
+            'settings' => $this->getSettings(),
+        ];
+
+        $deliveryName = $this->getName();
+
+        // Template search paths in priority order
+        $paths = [
+            resource_path("views/delivery/{$deliveryName}.blade.php"),
+            base_path("core/custom/packages/seiger/scommerce/views/delivery/{$deliveryName}.blade.php"),
+            base_path("core/vendor/seiger/scommerce/views/delivery/{$deliveryName}.blade.php"),
+        ];
+
+        foreach ($paths as $templatePath) {
+            if (file_exists($templatePath)) {
+                try {
+                    return view()->file($templatePath, $viewData)->render();
+                } catch (\Exception $e) {
+                    \Log::channel('scommerce')->error('Delivery widget render failed', [
+                        'delivery' => $deliveryName,
+                        'template' => $templatePath,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
+            }
+        }
+
+        // No template found - return empty string (delivery may not require additional fields)
+        return '';
+    }
+
+    /**
      * Extract a localized string based on the specified or current language.
      *
      * @param string $json The JSON-encoded string containing translations.

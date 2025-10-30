@@ -152,21 +152,22 @@ class sCheckout
      * Retrieve all available delivery methods.
      *
      * This method returns a list of all registered delivery methods with their details.
-     * The returned array includes the name, title, description, additional details,
-     * and settings for each delivery method.
+     * The returned array includes the name, title, description, rendered widget HTML,
+     * and additional settings for each delivery method.
      *
      * @return array An array of delivery methods, where each method includes:
      *               - `name` (string): The unique identifier of the delivery method.
      *               - `title` (string): The localized title of the delivery method.
      *               - `description` (string): The localized description of the delivery method.
-     *               - `settings` (array): Configuration settings specific to the delivery method.
+     *               - `widget` (string): The rendered HTML widget for the delivery method.
+     *               - Additional settings specific to each delivery method.
      */
     public function getDeliveries(): array
     {
         $methods = [];
 
         if (sCommerce::config('basic.deliveries_on', 1) == 1) {
-            $reservedKeys = ['name', 'title', 'description'];
+            $reservedKeys = ['name', 'title', 'description', 'widget'];
 
             foreach ($this->deliveryMethods as $methodName => $methodInstance) {
                 $settings = $methodInstance->getSettings();
@@ -191,6 +192,7 @@ class sCheckout
                     'name' => $methodInstance->getName(),
                     'title' => $methodInstance->getTitle(),
                     'description' => $methodInstance->getDescription(),
+                    'widget' => $methodInstance->renderWidget($this->orderData),
                 ], $filteredSettings);
             }
         }
