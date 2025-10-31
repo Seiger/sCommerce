@@ -4,6 +4,7 @@ use EvolutionCMS\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Seiger\sCommerce\Cart\sCart;
 use Seiger\sCommerce\Checkout\sCheckout;
+use Seiger\sCommerce\Wishlist\sWishlist;
 
 /**
  * sCommerceServiceProvider - Service Provider for sCommerce package

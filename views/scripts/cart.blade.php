@@ -1,4 +1,4 @@
-@php use Seiger\sCommerce\Facades\sCommerce; @endphp
+@use(Seiger\sCommerce\Facades\sCommerce)
 <script>
     if (!window.sCommerce) {
         window.sCommerce = {};
@@ -26,7 +26,8 @@
                 'AddedToCart': 'sCommerceAddedToCart',
                 'RemovedFromCart': 'sCommerceRemovedFromCart',
                 'UpdatedCart': 'sCommerceUpdatedCart',
-                'FastOrder': 'sCommerceAddedFastOrder'
+                'FastOrder': 'sCommerceAddedFastOrder',
+                'Wishlist': 'sCommerceSetWishlist',
             };
             const oldEventName = eventMap[event];
             if (oldEventName) {

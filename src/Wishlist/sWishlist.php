@@ -1,4 +1,4 @@
-<?php namespace Seiger\sCommerce;
+<?php namespace Seiger\sCommerce\Wishlist;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -45,8 +45,12 @@ class sWishlist
             $flipped = array_flip($this->data);
             unset($flipped[$product]);
             $this->data = array_keys($flipped);
+            $event = 'remove';
+            $message = 'Product remove from wishlist';
         } else {
             $this->data[] = $product;
+            $event = 'add';
+            $message = 'Product added to wishlist';
         }
 
         $userId = evo()->getLoginUserID('web') ?: evo()->getLoginUserID('mgr');
@@ -59,7 +63,8 @@ class sWishlist
 
         return [
             'success' => true,
-            'message' => 'Product added to wishlist',
+            'event' => $event,
+            'message' => $message,
             'products' => $this->data,
         ];
     }

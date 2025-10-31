@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @mixin \Seiger\sCommerce\sWishlist
+ * @mixin \Seiger\sCommerce\Wishlist\sWishlist
  */
 class sWishlist extends Facade
 {
