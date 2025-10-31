@@ -78,7 +78,14 @@
         @foreach($items as $item)
             <tr style="height: 42px;" id="order-{{$item->id}}">
                 <td><b>#{{$item->id}}</b>@if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif</td>
-                <td>{{$item->client}} {{$item->user_info['phone'] ?? ''}}</td>
+                <td>
+                    {{implode(' ', array_diff([
+                        $item->user_info['first_name'] ?? '',
+                        $item->user_info['middle_name'] ?? '',
+                        $item->user_info['last_name'] ?? ''],
+                    ['']))}}
+                    ({{$item->user_info['phone'] ?? ''}})
+                </td>
                 <td>{{$item->created_at}}</td>
                 <td>{{sCommerce::convertPrice($item->cost, $item->currency)}}</td>
                 <td>

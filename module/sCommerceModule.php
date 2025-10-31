@@ -90,7 +90,6 @@ switch ($get) {
         $direc = request()->input('direc', 'desc');
 
         $query = sOrder::query()->select('*');
-        $query->selectRaw('JSON_UNQUOTE(JSON_EXTRACT(user_info, "$.name")) as client');
         $query->orderBy($order, $direc);
 
         $unprocessedes = [
