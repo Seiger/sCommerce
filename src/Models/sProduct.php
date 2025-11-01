@@ -34,6 +34,14 @@ use Seiger\sGallery\sGallery;
 class sProduct extends Model
 {
     /**
+     * Static cache for friendly URL suffix configuration.
+     * Loaded once per request to avoid multiple config lookups.
+     *
+     * @var string|null
+     */
+    protected static ?string $friendlyUrlSuffix = null;
+
+    /**
      * The accessors to append to the model's array form.
      *
      * @var array
@@ -464,8 +472,14 @@ class sProduct extends Model
                 break;
         }
 
-        $base_url = rtrim($base_url, evo()->getConfig('friendly_url_suffix', '')) . '/';
-        return $base_url . $this->alias . evo()->getConfig('friendly_url_suffix', '');
+        $suffix = static::getFriendlyUrlSuffix();
+        $base_url = rtrim($base_url, $suffix);
+
+        if (!str_ends_with($base_url, '/')) {
+            $base_url .= '/';
+        }
+
+        return $base_url . $this->alias . $suffix;
     }
 
     /**
@@ -478,12 +492,12 @@ class sProduct extends Model
      */
     public function getCoverSrcAttribute(): string
     {
-        if (!empty($this->cover) && is_file(MODX_BASE_PATH . $this->cover)) {
-            $coverSrc = MODX_SITE_URL . $this->cover;
+        if (!empty($this->cover) && is_file(EVO_BASE_PATH . $this->cover)) {
+            $coverSrc = EVO_SITE_URL . $this->cover;
         }  elseif (!empty($this->cover) && sGallery::hasLink($this->cover)) {
             $coverSrc = $this->cover;
         } else {
-            $coverSrc = MODX_SITE_URL . 'assets/images/noimage.png';
+            $coverSrc = EVO_SITE_URL . 'assets/images/noimage.png';
         }
 
         return $coverSrc;
@@ -659,27 +673,20 @@ class sProduct extends Model
     }
 
     /**
-     * Gets the inventory attribute of the sProduct.
-     * Returns the product inventory quantity based on inventory management settings.
+     * Get cached friendly URL suffix configuration.
      *
-     * If inventory management is disabled (inventory_on < 1), returns a high number (99999)
-     * to indicate unlimited availability. Otherwise, returns the actual inventory value
-     * from the database, with a minimum of 0 for non-positive values.
+     * Loads the value once per request and caches it statically to avoid
+     * multiple config lookups, significantly improving performance when
+     * rendering product lists.
      *
-     * @return int The inventory quantity of the product.
+     * @return string The friendly URL suffix (e.g., '.html')
      */
-    public function getInventoryAttribute()
+    protected static function getFriendlyUrlSuffix(): string
     {
-        if (sCommerce::config('product.inventory_on', 0) < 1) {
-            return 99999;
+        if (static::$friendlyUrlSuffix === null) {
+            static::$friendlyUrlSuffix = evo()->getConfig('friendly_url_suffix', '');
         }
 
-        $inventory = $this->attributes['inventory'] ?? 0;
-
-        if ($inventory <= 0) {
-            return 0;
-        }
-
-        return $inventory;
+        return static::$friendlyUrlSuffix;
     }
 }
