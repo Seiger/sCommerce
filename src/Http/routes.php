@@ -54,7 +54,7 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
 
     // Routes with suffix (for frontend calls with friendly URLs)
     $suffix = sCommerce::config('basic.friendlyUrlSuffix', evo()->getConfig('friendly_url_suffix', ''));
-    if (!empty($suffix)) {
+    if (!empty($suffix) && $suffix != '/') {
         Route::post('add-to-cart' . $suffix, $addToCartHandler);
         Route::post('remove-from-cart' . $suffix, $removeFromCartHandler);
         Route::post('set-order-data' . $suffix, $setOrderDataHandler);

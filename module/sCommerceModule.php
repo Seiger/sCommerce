@@ -1493,7 +1493,7 @@ switch ($get) {
     case "integrations":
         $perpage = Cookie::get('scom_per_page', 50);
 
-        $query = sWorker::query()->visible();
+        $query = sWorker::query()->visible()->byScope('sCommerce');
         if (!evo()->hasPermission('stask')) {
             $query->active();
         }
