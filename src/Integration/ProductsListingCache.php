@@ -207,7 +207,8 @@ class ProductsListingCache extends BaseWorker
                     $link = str_replace([EVO_SITE_URL, EVO_CORE_PATH], '|', $product->getLinkAttribute(intval($product->catId)));
                     $link = explode('|', $link);
                     $link = end($link);
-                    $productsListing[$scope][ltrim($link, '.')] = $product->id;
+                    $link = ltrim($link, '.');
+                    $productsListing[$scope][ltrim($link, '/')] = $product->id;
                 }
 
                 $totalProcessed += $products->count();
