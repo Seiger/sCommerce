@@ -97,7 +97,7 @@
             <div class="col-sm-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center" @if($item->active)style="background-color:oklch(95.1% .026 236.824)"@endif>
-                        <div>{!!$item->icon!!} {!!$item->title!!}</div>
+                        <div>{!!$item->icon!!} {!!$item->title!!} @if(trim($item->description ?? ''))<i class="fa fa-question-circle" data-tooltip="@lang($item->description)"></i>@endif</div>
                         <a onclick="openWorkerSettings('{{$item->identifier}}')" class="text-muted" data-tooltip="@lang('global.edit')"><i class="fas fa-cogs"></i></a>
                     </div>
                     @if($item->active)<div class="card-block">{!!$item->renderWidget()!!}</div>@endif
