@@ -13,8 +13,7 @@ use Seiger\sCommerce\Integration\IntegrationActionController;
 /**
  * Catch the Product by alias
  */
-Event::listen('evolution.OnPageNotFound', function($params) {
-    $goTo = false;
+Event::listen('evolution.OnPageNotFound', function() {
     $aliasArr = request()->segments();
     if ($aliasArr[0] === evo()->getConfig('lang', 'base')) {
         unset($aliasArr[0]);
@@ -26,7 +25,12 @@ Event::listen('evolution.OnPageNotFound', function($params) {
     } else {
         $pAlias = Arr::last($aliasArr);
         $product = sCommerce::getProductByAlias($pAlias ?? '');
-        if ($product && trim($product->link, '/') == trim($alias, '/')) {
+        if ($product &&
+            (
+                trim($product->link, '/') == trim($alias, '/') ||
+                trim($product->link, '/') == trim('/' . evo()->getConfig('lang', 'base') . '/' . $alias, '/')
+            )
+        ) {
             if (evo()->getLoginUserID('mgr')) {
                 evo()->setPlaceholder('product', (int)$product?->id);
                 $goTo = true;
