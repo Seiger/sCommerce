@@ -14,6 +14,9 @@
             <option value="{{$optValue}}" @if(($field['value'] ?? '') == (string)$optValue) selected @endif>{{$optLabel}}</option>
         @endforeach
     </select>
+    @if(trim($field['hint'] ?? '') || trim($field['description'] ?? ''))
+        <small class="form-text text-muted">{!!$field['hint'] ?? $field['description'] ?? ''!!}</small>
+    @endif
 </div>
 
 

@@ -12,4 +12,7 @@
             class="form-control"
             rows="{{$field['rows'] ?? 5}}"
             onchange="documentDirty=true;">{{$field['value'] ?? ''}}</textarea>
+    @if(trim($field['hint'] ?? '') || trim($field['description'] ?? ''))
+        <small class="form-text text-muted">{!!$field['hint'] ?? $field['description'] ?? ''!!}</small>
+    @endif
 </div>

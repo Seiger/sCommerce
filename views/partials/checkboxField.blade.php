@@ -17,5 +17,8 @@
             name="{{$field['prefix'] ?? ''}}{{$field['name'] ?? ''}}"
             value="{{$field['value'] ?? 0}}"
             onchange="documentDirty=true;">
+    @if(trim($field['hint'] ?? '') || trim($field['description'] ?? ''))
+        <small class="form-text text-muted">{!!$field['hint'] ?? $field['description'] ?? ''!!}</small>
+    @endif
 </div>
 

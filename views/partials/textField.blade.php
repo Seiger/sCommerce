@@ -13,4 +13,7 @@
             placeholder="{{$field['placeholder'] ?? ''}}"
             class="form-control"
             onchange="documentDirty=true;">
+    @if(trim($field['hint'] ?? '') || trim($field['description'] ?? ''))
+        <small class="form-text text-muted">{!!$field['hint'] ?? $field['description'] ?? ''!!}</small>
+    @endif
 </div>
