@@ -72,6 +72,7 @@
     "category" => "Category",
     "category_help" => "Define the main category of the product. Used to form the main link and navigation chain.",
     "cash" => "Сash",
+    "check_connection" => "Check connection",
     "bank_invoice" => "Bank Invoice",
     "bank_details" => "Bank Details",
     "account_holder" => "Account Holder",
