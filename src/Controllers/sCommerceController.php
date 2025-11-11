@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Controllers;
 
 use EvolutionCMS\Models\SiteContent;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +16,7 @@ use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
+use Seiger\sLang\Models\sLangContent;
 
 class sCommerceController
 {
@@ -30,6 +32,10 @@ class sCommerceController
     protected $data = [];
     protected $categories = [];
     protected $productIds = [];
+    protected array $categoryLangCache = [];
+    protected ?bool $sLangEnabled = null;
+    protected array $categoryTvNames = [];
+    protected ?string $categoryLangCacheLocale = null;
 
     /**
      * Update database configurations
@@ -293,8 +299,11 @@ class sCommerceController
      */
     public function listSubCategories(object &$category, int $dept): object
     {
+        $this->applyCategoryTranslation($category);
+
         if ($category->hasChildren() && $dept--) {
             $children = $category->children()->active()->orderBy('menuindex')->get();
+            $this->applyCategoriesTranslations($children);
             $children->map(function ($item) use ($dept) {
                 return $this->listSubCategories($item, $dept);
             });
@@ -304,6 +313,174 @@ class sCommerceController
         }
 
         return $category;
+    }
+
+    /**
+     * Apply localized fields to each category in the collection when sLang is available.
+     */
+    protected function applyCategoriesTranslations(Collection $categories): void
+    {
+        if (!$this->isSLangEnabled() || $categories->isEmpty()) {
+            return;
+        }
+
+        $ids = $categories->pluck('id')->filter()->unique()->values()->all();
+        if (empty($ids)) {
+            return;
+        }
+
+        $this->warmCategoryLangCache($ids);
+
+        foreach ($categories as $category) {
+            if (!isset($category->id)) {
+                continue;
+            }
+
+            $translation = $this->categoryLangCache[$category->id] ?? null;
+            if ($translation) {
+                $this->fillCategoryFromTranslation($category, $translation);
+            }
+        }
+    }
+
+    /**
+     * Apply localized fields to a single category instance.
+     */
+    protected function applyCategoryTranslation(object $category): void
+    {
+        if (!$this->isSLangEnabled() || !isset($category->id)) {
+            return;
+        }
+
+        $this->warmCategoryLangCache([$category->id]);
+
+        $translation = $this->categoryLangCache[$category->id] ?? null;
+        if ($translation) {
+            $this->fillCategoryFromTranslation($category, $translation);
+        }
+    }
+
+    /**
+     * Fetch translation rows for the provided category identifiers and store them in cache.
+     */
+    protected function warmCategoryLangCache(array $ids): void
+    {
+        $localeKey = $this->currentLocaleKey();
+        if ($this->categoryLangCacheLocale !== $localeKey) {
+            $this->categoryLangCache = [];
+            $this->categoryLangCacheLocale = $localeKey;
+        }
+
+        $missing = array_values(array_diff($ids, array_keys($this->categoryLangCache)));
+        if (empty($missing)) {
+            return;
+        }
+
+        $query = sLangContent::whereIn('resource', $missing);
+        if (!empty($this->categoryTvNames)) {
+            $query = $query->withTVs($this->categoryTvNames);
+        }
+        $translations = $query->get();
+        foreach ($translations as $translation) {
+            $this->categoryLangCache[$translation->resource] = $translation;
+        }
+
+        foreach ($missing as $id) {
+            if (!isset($this->categoryLangCache[$id])) {
+                $this->categoryLangCache[$id] = null;
+            }
+        }
+    }
+
+    /**
+     * Copy translated fields onto the category instance.
+     */
+    protected function fillCategoryFromTranslation(object $category, sLangContent $translation): void
+    {
+        $fields = [
+            'pagetitle',
+            'longtitle',
+            'description',
+            'introtext',
+            'content',
+            'menutitle',
+        ];
+
+        foreach ($fields as $field) {
+            $value = $translation->{$field} ?? null;
+            if ($value !== null && $value !== '') {
+                $category->{$field} = $value;
+            }
+        }
+
+        if (!empty($this->categoryTvNames)) {
+            $attributes = $translation->getAttributes();
+            foreach ($this->categoryTvNames as $tvName) {
+                if (array_key_exists($tvName, $attributes)) {
+                    $category->{$tvName} = $attributes[$tvName];
+                }
+            }
+        }
+    }
+
+    /**
+     * Determine whether sLang translations should be applied.
+     */
+    protected function isSLangEnabled(): bool
+    {
+        if ($this->sLangEnabled !== null) {
+            return $this->sLangEnabled;
+        }
+
+        $enabled = (bool)evo()->getConfig('check_sLang', false);
+
+        if ($enabled && !class_exists(sLangContent::class)) {
+            $enabled = false;
+        }
+
+        return $this->sLangEnabled = $enabled;
+    }
+
+    /**
+     * Define TV names that should be fetched together with category translations.
+     */
+    public function setCategoryTvNames(array $tvNames): void
+    {
+        $normalized = array_values(array_filter($tvNames, fn($name) => is_string($name) && $name !== ''));
+        sort($normalized);
+
+        if ($this->categoryTvNames !== $normalized) {
+            $this->categoryLangCache = [];
+            $this->categoryLangCacheLocale = null;
+        }
+
+        $this->categoryTvNames = $normalized;
+    }
+
+    /**
+     * Resolve the current locale key for caching purposes.
+     */
+    protected function currentLocaleKey(): string
+    {
+        $locale = '';
+
+        if (function_exists('evo')) {
+            $locale = (string)evo()->getLocale();
+            if ($locale === '') {
+                $locale = (string)evo()->getConfig('lang', 'uk');
+            }
+        }
+
+        if ($locale === '') {
+            $locale = 'uk';
+        }
+
+        $underscorePos = strpos($locale, '_');
+        if ($underscorePos !== false) {
+            $locale = substr($locale, 0, $underscorePos);
+        }
+
+        return strtolower($locale);
     }
 
     /**

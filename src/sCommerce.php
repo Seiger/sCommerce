@@ -174,15 +174,25 @@ class sCommerce
     }
 
     /**
-     * Retrieves the active subcategories of a given category.
+     * Build the active category tree with optional localized TV fields.
      *
-     * @param int $category The id of the category whose subcategories need to be retrieved.
-     * @param int $dept The depth level up to which the subcategories should be retrieved. Default value is 10.
-     * @return object The list of active subcategories of the given category.
+     * - Every node in the tree exposes a lazily-added `subcategories` collection that contains the
+     *   child categories up to the requested depth.
+     * - When the sLang package is enabled (`check_sLang = true`) the current locale is resolved
+     *   automatically and translated attributes (including requested TVs) are hydrated onto each node.
+     * - If sLang is not present, the `$tvNames` argument is ignored gracefully and the default content
+     *   fields are returned.
+     *
+     * @param int   $category Root category identifier that will be used as an entry point.
+     * @param int   $dept     Maximum depth for recursive traversal (defaults to 10).
+     * @param array $tvNames  Optional list of TV names to append to every category in the tree.
+     *
+     * @return object Category model with a `subcategories` property containing nested nodes.
      */
-    public function getTreeActiveCategories(int $category, int $dept = 10): object
+    public function getTreeActiveCategories(int $category, int $dept = 10, array $tvNames = []): object
     {
         $object = sCategory::find($category);
+        $this->controller->setCategoryTvNames($tvNames);
         return $this->controller->listSubCategories($object, $dept);
     }
 

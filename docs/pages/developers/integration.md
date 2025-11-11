@@ -12,7 +12,8 @@ In order to get the desired category together with subcategories, use the method
 construction of the category tree `sCommerce::getTreeActiveCategories(evo()->documentIdentifier, 10)`.
 
 This method will return the searched category along with the recursively constructed subcategories.
-Nesting depth depends on the `$dept` parameter (default 10).
+Nesting depth depends on the `$dept` parameter (default 10). When the **sLang** package is installed,
+the current locale is applied automatically, and you can request TV values using the third argument.
 
 ```php
  Seiger\sCommerce\Models\sCategory {#1902 ▼
@@ -58,7 +59,11 @@ class CategoryController extends BaseController
     {
         parent::render();
         ...
-        $this->data['category'] = sCommerce::getTreeActiveCategories(evo()->documentIdentifier, 10);
+        $this->data['category'] = sCommerce::getTreeActiveCategories(
+            evo()->documentIdentifier,
+            10,
+            ['menu_main', 'menu_footer'] // optional TV list
+        );
         ...
     }
 }
@@ -71,6 +76,9 @@ From the example above:
 `evo()->documentIdentifier` - The ID of the category for which you want to retrieve data. Number type integer.
 
 `10` - Nesting depth to get subcategories. Number type integer. Default 10.
+
+`['menu_main', 'menu_footer']` *(optional)* – Array with TV names that should be appended to each category
+when **sLang** is installed. Defaults to an empty array.
 
 #### Applying the result of the getTreeActiveCategories() call
 

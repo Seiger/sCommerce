@@ -19,7 +19,17 @@ Retrieves a product by its alias.
 
 Retrieves the products belonging to a specific category.
 
-### getActiveCategoriesTree
+### getTreeActiveCategories
+
+Builds a category tree starting from the given category ID.
+
+```php
+$tree = sCommerce::getTreeActiveCategories(48, 5, ['menu_main', 'menu_footer']);
+```
+
+- **First argument** – category ID.
+- **Second argument** – depth (optional, default `10`).
+- **Third argument** – array of TV names (optional). Requires the sLang module to populate translated TV values.
 
 ## Technical functionality
 

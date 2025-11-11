@@ -12,7 +12,8 @@ sidebar_position: 6
 побудови дерева категорій `sCommerce::getTreeActiveCategories(evo()->documentIdentifier, 10)`.
 
 Цей метод поверне шукану категорію разом з рекурсивно побудованими підкатегоріями.
-Глибина вкладеності залежить від параметра `$dept` (за замовчуванням 10).
+Глибина вкладеності залежить від параметра `$dept` (типово 10). Якщо встановлено пакет **sLang**,
+автоматично застосовується поточна локаль, а третім аргументом можна передати перелік TV.
 
 ```php
  Seiger\sCommerce\Models\sCategory {#1902 ▼
@@ -58,7 +59,11 @@ class CategoryController extends BaseController
     {
         parent::render();
         ...
-        $this->data['category'] = sCommerce::getTreeActiveCategories(evo()->documentIdentifier, 10);
+        $this->data['category'] = sCommerce::getTreeActiveCategories(
+            evo()->documentIdentifier,
+            10,
+            ['menu_main', 'menu_footer'] // опційно: перелік TV
+        );
         ...
     }
 }
@@ -70,7 +75,9 @@ class CategoryController extends BaseController
 
 `evo()->documentIdentifier` - ID категорії, для якої потрібно отримати дані. Тип number integer.
 
-`10` - Глибина вкладеності для отримання підкатегорій. Тип number integer. За замовчуванням 10.
+`10` - Глибина вкладеності для отримання підкатегорій. Тип number integer. Типово 10.
+
+`['menu_main', 'menu_footer']` *(опційно)* – Масив із назвами TV, які потрібно додати до кожної категорії (працює, якщо встановлено **sLang**). Типово порожній масив.
 
 #### Застосування результату виклику getTreeActiveCategories()
 

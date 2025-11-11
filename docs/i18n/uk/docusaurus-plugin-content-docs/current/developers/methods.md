@@ -30,14 +30,6 @@ $product = sCommerce::getProductByAlias('my-product-alias');
 $products = sCommerce::getCategoryProducts(10, 'uk', 5);
 ```
 
-### getActiveCategoriesTree
-
-Отримує дерево активних категорій.
-
-```php
-$categories = sCommerce::getActiveCategoriesTree(10);
-```
-
 ## Технічна функціональність
 
 ### documentListing
@@ -69,11 +61,15 @@ $friendlyUrlSuffix = sCommerce::config('basic.friendlyUrlSuffix');
 
 ### getTreeActiveCategories
 
-Рекурсивно отримує дерево категорій з підкатегоріями.
+Рекурсивно отримує дерево категорій з підкатегоріями. Автоматично застосовує поточну мову, якщо встановлено **sLang**, і може завантажувати TV.
 
 ```php
-$category = sCommerce::getTreeActiveCategories(10, 5);
+$category = sCommerce::getTreeActiveCategories(10, 5, ['menu_main', 'menu_footer']);
 ```
+
+- Перший аргумент — ідентифікатор категорії.
+- Другий аргумент — глибина (опційно, типово `10`).
+- Третій аргумент — масив TV (опційно). Потребує **sLang**, щоб заповнити перекладені значення.
 
 ### getCurrencies
 
