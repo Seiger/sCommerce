@@ -396,12 +396,22 @@ class sCheckout
     }
 
     /**
-     * Process the order and return the result.
+     * Process the order and optionally trigger payment handling.
      *
-     * This method saves the order data, logs the result, and handles errors gracefully.
-     * It ensures a consistent response structure for the frontend.
+     * Flow:
+     * 1. Validate delivery/payment methods if they are enabled.
+     * 2. Save the order to the database.
+     * 3. Call {@see PaymentMethodInterface::processPayment()} for the selected method.
+     * 4. Merge payment data into `payment_info` and return it inside the `payment` key.
+     * 5. Send notifications and clear checkout session data.
      *
-     * @return array The processed order data or error details.
+     * @return array{
+     *     success: bool,
+     *     message: string,
+     *     order: \Seiger\sCommerce\Models\sOrder,
+     *     payment?: array{success?: bool} & array<string, mixed>,
+     *     redirectTo?: string
+     * }
      */
     public function processOrder(): array
     {
@@ -409,6 +419,10 @@ class sCheckout
             if (empty($this->orderData['products'])) {
                 throw new \Exception("Invalid products in Order.");
             }
+
+            $paymentMethod = null;
+            $paymentOutcome = null;
+            $paymentSuccess = true;
 
             if (sCommerce::config('basic.deliveries_on', 1) == 1) {
                 $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method']] ?? null;
@@ -436,11 +450,45 @@ class sCheckout
             }
 
             $_SESSION['sCheckout'] = $this->orderData;
-
             $order = $this->saveOrder();
 
             evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", "sCommerce: Order #{$order->id} Created");
             Log::channel('scommerce')->info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
+
+            if ($paymentMethod) {
+                try {
+                    $paymentOutcome = $paymentMethod->processPayment($order->toArray());
+
+                    if (is_array($paymentOutcome)) {
+                        $paymentSuccess = (bool)($paymentOutcome['success'] ?? true);
+
+                        $paymentInfo = $order->payment_info ?? [];
+                        $paymentInfo = is_array($paymentInfo) ? $paymentInfo : [];
+                        $order->payment_info = array_merge($paymentInfo, $paymentOutcome);
+                        $history = $order->history;
+                        $history[] = [
+                            'payment_status' => sOrder::PAYMENT_STATUS_AWAITING_CONFIRMATION,
+                            'timestamp' => now()->toDateTimeString(),
+                            'user_id' => $order->user_id,
+                        ];
+                        $order->history = $history;
+                        $order->save();
+                    } elseif ($paymentOutcome === false) {
+                        $paymentSuccess = false;
+                    }
+                } catch (\Throwable $paymentException) {
+                    $paymentSuccess = false;
+                    $paymentOutcome = [
+                        'success' => false,
+                        'message' => $paymentException->getMessage(),
+                    ];
+
+                    Log::channel('scommerce')->error(
+                        "Payment processing failed for order #{$order->id}: {$paymentException->getMessage()}",
+                        ['order_id' => $order->id, 'payment_method' => $paymentMethod->getName(), 'trace' => $paymentException->getTraceAsString()]
+                    );
+                }
+            }
 
             if (sCommerce::config('notifications.email_template_admin_order_on', 0)) {
                 sCommerce::notifyEmail(
@@ -463,11 +511,17 @@ class sCheckout
             unset($_SESSION['sCheckout'], $_SESSION['sCart']);
             $this->orderData = [];
 
-            return [
-                'success' => true,
-                'message' => __('sCommerce::order.success'),
+            $response = [
+                'success' => $paymentSuccess,
+                'message' => $paymentSuccess ? __('sCommerce::order.success') : ($paymentOutcome['message'] ?? 'Payment processing failed.'),
                 'order' => $order,
             ];
+
+            if (isset($paymentOutcome['redirectTo'])) {
+                $response['redirectTo'] = $paymentOutcome['redirectTo'];
+            }
+
+            return $response;
         } catch (\Exception $e) {
             evo()->logEvent(0, 3, $e->getMessage(), 'sCommerce: Order Processing Failed');
             Log::channel('scommerce')->error("Order processing failed: {$e->getMessage()}", ['order_data' => $this->orderData, 'error' => $e->getTraceAsString()]);
@@ -583,13 +637,13 @@ class sCheckout
         $adminNotes = [
             [
                 'comment' => "Quick order created by user " . implode(' ',
-                        [
-                            trim($userData['first_name']),
-                            trim($userData['middle_name']),
-                            trim($userData['last_name']),
-                            trim($userData['phone']),
-                            trim($userData['email']),
-                        ]) . '.',
+                    [
+                        trim($userData['first_name']),
+                        trim($userData['middle_name']),
+                        trim($userData['last_name']),
+                        trim($userData['phone']),
+                        trim($userData['email']),
+                    ]) . '.',
                 'timestamp' => now()->toDateTimeString(),
                 'user_id' => (int)$userData['id'],
             ]
