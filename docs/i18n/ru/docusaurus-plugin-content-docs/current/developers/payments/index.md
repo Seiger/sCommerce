@@ -147,12 +147,12 @@ class CashPayment extends BasePaymentMethod
      * Process the payment.
      * 
      * This method is called when the payment is being processed.
-     * Return true for success, false for failure.
+     * Return true for success, false for failure, or an array with additional data (e.g. redirect URL).
      * 
      * @param array $data
-     * @return bool
+     * @return bool|array
      */
-    public function processPayment(array $data): bool
+    public function processPayment(array $data): bool|array
     {
         return true; // Assume payment is successful
     }

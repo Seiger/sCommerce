@@ -147,12 +147,12 @@ class CashPayment extends BasePaymentMethod
      * Обробити платіж.
      * 
      * Цей метод викликається під час обробки платежу.
-     * Повернути true для успіху, false для невдачі.
+     * Поверніть true для успіху, false для помилки або масив з додатковими даними (наприклад, redirect URL).
      * 
      * @param array $data
-     * @return bool
+     * @return bool|array
      */
-    public function processPayment(array $data): bool
+    public function processPayment(array $data): bool|array
     {
         return true; // Припустимо, що платіж успішний
     }

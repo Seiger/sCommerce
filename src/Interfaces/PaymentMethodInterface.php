@@ -118,11 +118,15 @@ interface PaymentMethodInterface
     /**
      * Process the payment.
      *
-     * Handles the payment logic, such as interacting with external
-     * payment gateways or performing local validations.
+     * Handles the payment logic, such as interacting with external gateways or performing local validations.
+     * The method should return:
+     * - `true` when the payment has been processed (or no additional actions are required);
+     * - `false` when the payment failed;
+     * - an associative array with provider-specific data (e.g., redirect URL, invoice ID) when additional
+     *   action is required on the client side.
      *
-     * @param array $data The payment data.
-     * @return bool True if the payment is successfully processed, false otherwise.
+     * @param array $data The payment data (order information, user details, etc.).
+     * @return array|bool Provider response (see description above).
      */
     public function processPayment(array $data): array|bool;
 
