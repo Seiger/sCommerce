@@ -137,11 +137,12 @@ class BankInvoicePayment extends BasePaymentMethod
      * Render the payment button for the order.
      *
      * Template resolution order:
-     * 1. Custom template: assets/modules/scommerce/payment/bank_invoice.blade.php
-     * 2. Default template: core/vendor/seiger/scommerce/payment/bank_invoice.blade.php
+     * 1. Project override: views/payment/bank_invoice.blade.php
+     * 2. Custom package override: core/custom/packages/seiger/views/sCommercePro/Payment/bank_invoice.blade.php
+     * 3. Vendor default: core/vendor/seiger/scommerce/views/payment/bank_invoice.blade.php
      *
      * To customize the template, create a copy at:
-     * assets/modules/scommerce/payment/bank_invoice.blade.php
+     * views/payment/bank_invoice.blade.php
      *
      * Available template variables (see Blade comments in template file):
      * - $title, $account_holder, $bank_name, $account_number, $bank_code
@@ -180,17 +181,20 @@ class BankInvoicePayment extends BasePaymentMethod
             'info' => $this->getSettings()['info'] ?? '',
         ];
 
-        // Check if custom Blade template exists
-        $customTemplatePath = EVO_BASE_PATH . 'assets/modules/scommerce/payment/bank_invoice.blade.php';
-        $defaultTemplatePath = __DIR__ . '/../payment/bank_invoice.blade.php';
+        $templatePaths = [
+            EVO_BASE_PATH . 'views/payment/bank_invoice.blade.php',
+            EVO_BASE_PATH . 'core/custom/packages/seiger/views/sCommercePro/Payment/bank_invoice.blade.php',
+            EVO_BASE_PATH . 'core/vendor/seiger/scommerce/views/payment/bank_invoice.blade.php',
+        ];
 
-        if (file_exists($customTemplatePath)) {
-            // Render custom Blade template
-            return $this->renderBladeTemplate($customTemplatePath, $viewData);
+        foreach ($templatePaths as $templatePath) {
+            if (is_string($templatePath) && $templatePath !== '' && file_exists($templatePath)) {
+                return $this->renderBladeTemplate($templatePath, $viewData);
+            }
         }
 
-        // Use default template from core
-        return $this->renderBladeTemplate($defaultTemplatePath, $viewData);
+        // No template found
+        return '';
     }
 
     /**

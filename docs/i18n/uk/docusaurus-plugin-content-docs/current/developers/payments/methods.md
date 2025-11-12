@@ -448,16 +448,17 @@ $overduePayments = sOrder::where('payment_method', 'bank_invoice')
 #### Порядок пошуку шаблонів
 
 Система шукає шаблони в такому порядку:
-1. **Користувацький шаблон**: `assets/modules/scommerce/payment/bank_invoice.blade.php`
-2. **Типовий шаблон**: `core/vendor/seiger/scommerce/payment/bank_invoice.blade.php`
+1. **Проєктний оверрайд**: `views/payment/bank_invoice.blade.php`
+2. **Оверрайд пакета**: `core/custom/packages/seiger/views/sCommercePro/Payment/bank_invoice.blade.php`
+3. **Типовий шаблон постачальника**: `core/vendor/seiger/scommerce/views/payment/bank_invoice.blade.php`
 
 #### Налаштування
 
-Для налаштування відображення оплати створіть копію типового шаблону:
+Для налаштування відображення оплати скопіюйте типовий шаблон у свій проєкт:
 
 ```bash
-# Скопіюйте типовий шаблон для налаштування
-cp core/vendor/seiger/scommerce/payment/bank_invoice.blade.php assets/modules/scommerce/payment/bank_invoice.blade.php
+# Копіюємо типовий шаблон у директорію оверрайдів
+cp core/vendor/seiger/scommerce/views/payment/bank_invoice.blade.php views/payment/bank_invoice.blade.php
 ```
 
 #### Доступні змінні
@@ -525,7 +526,7 @@ cp core/vendor/seiger/scommerce/payment/bank_invoice.blade.php assets/modules/sc
 1. **Перевірте банківські реквізити**: Переконайтеся, що всі обов'язкові поля заповнені
 2. **Перевірте статус активності**: Спосіб оплати має бути увімкнений
 3. **Перевірте дозволи**: Переконайтеся, що способи оплати увімкнені глобально
-4. **Перевірте шаблон**: Переконайтеся, що файл шаблону існує за адресою `assets/modules/scommerce/payment/bank_invoice.blade.php`
+4. **Перевірте шаблон**: Переконайтеся, що файл шаблону існує за адресою `views/payment/bank_invoice.blade.php`
 
 #### Шаблон не завантажується
 

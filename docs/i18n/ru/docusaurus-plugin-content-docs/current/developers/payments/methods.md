@@ -272,26 +272,66 @@ Complete checkout payment selection:
 </div>
 ```
 
-### Statistics and Reporting
+### Настройка отображения
 
-Track cash payment orders:
+Способ оплаты «Оплата на счёт» использует Blade-шаблон, который можно адаптировать под дизайн вашего сайта.
+
+#### Порядок пошуку шаблонів
+
+Система ищет шаблоны в следующем порядке:
+1. **Переопределение проекта**: `views/payment/bank_invoice.blade.php`
+2. **Переопределение пакета**: `core/custom/packages/seiger/views/sCommercePro/Payment/bank_invoice.blade.php`
+3. **Шаблон поставщика**: `core/vendor/seiger/scommerce/views/payment/bank_invoice.blade.php`
+
+#### Налаштування
+
+Чтобы изменить шаблон, скопируйте файл поставщика в свой проект:
+
+```bash
+# Копіюємо типовий шаблон у директорію оверрайдів
+cp core/vendor/seiger/scommerce/views/payment/bank_invoice.blade.php views/payment/bank_invoice.blade.php
+```
+
+#### Доступні змінні
+
+В Blade-шаблоне доступны следующие переменные (см. комментарии внутри файла):
+
+- `$title` — название способа оплаты (локализованное)
+- `$account_holder` — получатель средств
+- `$bank_name` — банк
+- `$account_number` — номер счёта (IBAN)
+- `$bank_code` — код банка (МФО/SWIFT)
+- `$tax_id` — код ЕГРПОУ/ИНН
+- `$amount` — сумма к оплате
+- `$currency` — валюта
+- `$order_id` — номер заказа
+- `$payment_terms` — количество дней на оплату
+- `$info` — дополнительные инструкции
+
+#### Резервний шаблон
+
+Если файл не найден или его не удалось отрендерить, метод повернёт пустую строку. Убедитесь, что хотя бы один из шаблонов существует.
+
+#### Статистика и отчётность
+
+Пример отслеживания заказов с оплатой на счёт:
 
 ```php
 use Seiger\sCommerce\Models\sOrder;
 
-// Get all cash payment orders
-$cashOrders = sOrder::where('payment_method', 'cash')
+// Все заказы с оплатой на счёт
+$invoiceOrders = sOrder::where('payment_method', 'bank_invoice')
     ->where('status', 'paid')
     ->get();
 
-// Calculate total cash collected
-$totalCash = sOrder::where('payment_method', 'cash')
+// Общая сумма полученных средств
+$totalInvoice = sOrder::where('payment_method', 'bank_invoice')
     ->where('status', 'paid')
     ->sum('total');
 
-// Get pending cash orders
-$pendingCash = sOrder::where('payment_method', 'cash')
-    ->where('status', 'pending')
+// Ожидаемые платежи
+$pendingInvoice = sOrder::where('payment_method', 'bank_invoice')
+    ->where('status', 'awaiting_payment')
     ->get();
 ```
 

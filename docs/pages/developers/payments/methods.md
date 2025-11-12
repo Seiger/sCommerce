@@ -653,16 +653,17 @@ The Bank Invoice payment method uses a Blade template that can be customized to 
 #### Template Resolution
 
 The system looks for templates in this order:
-1. **Custom template**: `assets/modules/scommerce/payment/bank_invoice.blade.php`
-2. **Default template**: `core/vendor/seiger/scommerce/payment/bank_invoice.blade.php`
+1. **Project override**: `views/payment/bank_invoice.blade.php`
+2. **Custom package override**: `core/custom/packages/seiger/views/sCommercePro/Payment/bank_invoice.blade.php`
+3. **Vendor default**: `core/vendor/seiger/scommerce/views/payment/bank_invoice.blade.php`
 
 #### Customization
 
-To customize the payment display, create a copy of the default template:
+To customize the payment display, copy the vendor template to your project:
 
 ```bash
-# Copy the default template to customize it
-cp core/vendor/seiger/scommerce/payment/bank_invoice.blade.php assets/modules/scommerce/payment/bank_invoice.blade.php
+# Copy the default template to your project overrides directory
+cp core/vendor/seiger/scommerce/views/payment/bank_invoice.blade.php views/payment/bank_invoice.blade.php
 ```
 
 #### Available Variables
@@ -730,7 +731,7 @@ If the template file doesn't exist or fails to render, the system will use a bui
 1. **Check bank details**: Ensure all required fields are filled
 2. **Verify active status**: Payment method must be enabled
 3. **Check permissions**: Ensure payment methods are globally enabled
-4. **Check template**: Verify template file exists at `assets/modules/scommerce/payment/bank_invoice.blade.php`
+4. **Check template**: Verify template file exists at `views/payment/bank_invoice.blade.php`
 
 #### Template Not Loading
 

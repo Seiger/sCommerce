@@ -81,6 +81,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] Integration with Payment Systems.
     - [x] Cash.
     - [x] Bank Invoice.
+    - [x] Monobank **(pro)**.
     - [x] Portmone **(pro)**.
 - [x] Integration with Deliveries Methods.
     - [x] Courier.
