@@ -242,6 +242,56 @@ class sFilter
     }
 
     /**
+     * Force filters for the current request, bypassing URL detection.
+     *
+     * @param array<string, array<int|string>> $filters Filters indexed by attribute alias.
+     * @param int|null $categoryId Optional category context.
+     * @return void
+     */
+    public static function force(array $filters, ?int $categoryId = null): void
+    {
+        $categoryId = $categoryId ?? (int)evo()->documentIdentifier;
+        $instance = new static();
+        $result = $instance->validateFiltersStructure(['category' => $categoryId], $filters);
+
+        static::$cachedResult = [
+            'filters' => $result['filters'],
+            'filtersIds' => $result['filtersIds'],
+            'category' => $categoryId,
+        ];
+        static::$isValidated = true;
+
+        if (count(static::$cachedResult['filters'])) {
+            $sFilters = implode(';', array_map(function ($filterName, $filterValues) {
+                return $filterName . '=' . implode(',', $filterValues);
+            }, array_keys(static::$cachedResult['filters']), array_values(static::$cachedResult['filters'])));
+
+            evo()->setPlaceholder('sFilters', $sFilters);
+            evo()->setPlaceholder('sFiltersArray', static::$cachedResult['filters']);
+        } else {
+            evo()->setPlaceholder('sFilters', '');
+            evo()->setPlaceholder('sFiltersArray', []);
+        }
+    }
+
+    /**
+     * Clear previously forced filters.
+     *
+     * @return void
+     */
+    public static function release(): void
+    {
+        static::$cachedResult = [
+            'filters' => [],
+            'filtersIds' => [],
+            'category' => 0,
+        ];
+        static::$isValidated = false;
+        evo()->setPlaceholder('sFilters', '');
+        evo()->setPlaceholder('sFiltersArray', []);
+    }
+
+    /**
      * Retrieves the validated Ids filters.
      *
      * @return array

@@ -65,10 +65,10 @@
             const newPath = existingFilters.length > 0
                 ? `${_path.replace(_filterMatch, '')}/${existingFilters.join(';')}/`
                 : `${_path.replace(_filterMatch, '')}/`;
-            currentUrl.pathname = newPath.replace('//', '/');
+            currentUrl.pathname = newPath.replace('//', '/').replace(/\/;+/g, '/').replace(/;+\//g, '/');
         } else {
             // If there were no filters before this
-            currentUrl.pathname = `${_path}/${dataFilter}/`.replace('//', '/');
+            currentUrl.pathname = `${_path}/${dataFilter}/`.replace('//', '/').replace(/\/;+/g, '/').replace(/;+\//g, '/');
         }
 
         window.location.href = `${currentUrl.pathname}${_getParams}`;

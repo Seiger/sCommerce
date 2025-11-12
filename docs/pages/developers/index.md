@@ -130,6 +130,11 @@ $products = sCommerce::getProducts($filters);
 $product = sCommerce::getProduct($id);
 $product = sCommerce::getProductByAlias($alias);
 
+// Manual filters
+sCommerce::applyFilters([
+    'bicycle-category' => ['grevel'],
+], $categoryId);
+
 // Category operations
 $categories = sCommerce::getCategories();
 $category = sCommerce::getCategory($id);
@@ -149,6 +154,20 @@ sCommerce::cancelOrder($orderId);
 // Search operations
 $results = sCommerce::searchProducts($query, $filters);
 $suggestions = sCommerce::getSearchSuggestions($query);
+```
+
+#### Forcing filters
+
+```php
+use Seiger\sCommerce\sFilter;
+
+sFilter::force([
+    'sex' => ['unisex'],
+], $categoryId);
+
+// ... render catalogue ...
+
+sFilter::release();
 ```
 
 ### ProductService

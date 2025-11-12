@@ -110,6 +110,10 @@ use Seiger\sCommerce\Facades\sCommerce;
 
 // Операции с товарами
 $products = sCommerce::getProducts($filters);
+$product = sCommerce::getProductByAlias($alias);
+sCommerce::applyFilters([
+    'bicycle-category' => ['grevel'],
+], $categoryId);
 $product = sCommerce::getProduct($id);
 
 // Операции с категориями
@@ -123,6 +127,20 @@ $cart = sCommerce::getCart();
 
 // Операции с заказами
 $order = sCommerce::createOrder($data);
+```
+
+### Принудительные фильтры
+
+```php
+use Seiger\sCommerce\sFilter;
+
+sFilter::force([
+    'sex' => ['unisex'],
+], $categoryId);
+
+// ... вывод каталога ...
+
+sFilter::release();
 ```
 
 ## Разработка API
