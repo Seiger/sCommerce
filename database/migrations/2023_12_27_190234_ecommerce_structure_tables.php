@@ -68,6 +68,7 @@ return new class extends Migration
             $table->smallInteger('published')->unsigned()->default(0)->index()->comment('0-Unpublished|1-Published');
             $table->smallInteger('availability')->unsigned()->default(0)->index()->comment('0-Not available|1-In stock|2-On order');
             $table->string('sku')->index()->comment('It is the SKU Product code');
+            $table->string('gtin', 50)->nullable()->index()->comment('Global Trade Item Number (GTIN) - UPC, EAN, JAN, ISBN, or ITF-14 for Google Merchant');
             $table->string('alias', 512)->index()->comment('It using for generate url');
             $table->integer('views')->unsigned()->default(0)->index()->comment('Count view the product');
             $table->integer('rating')->unsigned()->default(5)->index()->comment('Rating the product base on votes');

@@ -2,6 +2,7 @@
     .btn.disabled {opacity:0.6;cursor:not-allowed;pointer-events:none;}
     .btn.disabled:hover {opacity:0.6;}
     .widget-log {
+        display: none;
         height:150px;overflow-y:auto;background:#f1f1f1;border:1px solid #e1e1e1;border-radius:.5rem;
         margin:.1rem .9rem .6rem .9rem;padding:.6rem .9rem .6rem .9rem;white-space:normal;line-height:1.15;
         font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;font-size:.8rem;
@@ -97,7 +98,15 @@
             <div class="col-sm-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center" @if($item->active)style="background-color:oklch(95.1% .026 236.824)"@endif>
-                        <div>{!!$item->icon!!} {!!$item->title!!} @if(trim($item->description ?? ''))<i class="fa fa-question-circle" data-tooltip="@lang($item->description)"></i>@endif</div>
+                        <div>
+                            {!!$item->icon!!} {!!$item->title!!} @if(trim($item->description ?? ''))<i class="fa fa-question-circle" data-tooltip="@lang($item->description)"></i>@endif
+                            @if($item->getInstance() && method_exists($item->getInstance(), 'taskMake'))
+                                <span id="{{$item->identifier ?? ''}}Run" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-play" style="font-size: 0.75rem;"></i>
+                                    @lang('sTask::global.run_task')
+                                </span>
+                            @endif
+                        </div>
                         <a onclick="openWorkerSettings('{{$item->identifier}}')" class="text-muted" data-tooltip="@lang('global.edit')"><i class="fas fa-cogs"></i></a>
                     </div>
                     @if($item->active)<div class="card-block">{!!$item->renderWidget()!!}</div>@endif

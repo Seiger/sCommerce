@@ -51,7 +51,7 @@ class ProductsListingCache extends BaseWorker
      */
     public function identifier(): string
     {
-        return 's_products_listing_cache';
+        return 'sProductsListingCache';
     }
 
     /**

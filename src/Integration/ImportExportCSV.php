@@ -62,7 +62,7 @@ class ImportExportCSV extends BaseWorker
      */
     public function identifier(): string
     {
-        return 's_import_export_csv';
+        return 'sImportExportCSV';
     }
 
     /**
