@@ -90,7 +90,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [x] Customizable Delivery Widgets (Blade templates).
     - [x] Third-party delivery integration support (Nova Poshta, etc.).
 - [ ] Integration with Warehouses.
-- [ ] Integration with Trading Platforms.
+- [x] Integration with Trading Platforms.
+  - [x] Google Merchant XML feeds.
 - [x] **[sLang](https://github.com/Seiger/sLang)** Integration.
 - [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
 - [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.

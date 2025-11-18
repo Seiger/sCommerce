@@ -17,12 +17,14 @@ use Seiger\sTask\Workers\BaseWorker;
 
 /**
  * GoogleMerchantFeed - Worker responsible for generating Google Merchant XML feeds.
+ * https://support.google.com/merchants/answer/7052112
  *
  * Supports:
  * - Multi-domain and multi-language configurations
  * - Batched feed generation to stay within Google limits
  * - Atomic file replacement via temporary file rename
- * - Automatic cleanup of obsolete feed files and manifest update
+ * - Automatic cleanup of obsolete feed files
+ * - Detailed file list display after generation
  */
 class GoogleMerchantFeed extends BaseWorker
 {
@@ -56,13 +58,74 @@ class GoogleMerchantFeed extends BaseWorker
     /**
      * Get the widget for the integration.
      *
-     * Retrieves the widget of the integration.
+     * Retrieves the widget of the integration with generated files list.
      *
      * @return string The widget of the integration.
      */
     public function renderWidget(): string
     {
         return view('sTask::widgets.defaultWorkerWidget', ['identifier' => $this->identifier()])->render();
+    }
+
+    /**
+     * Get generated files from root directory.
+     * Reads all XML feed files directly from filesystem.
+     *
+     * @return array
+     */
+    public function getGeneratedFiles(): array
+    {
+        $directory = rtrim(EVO_BASE_PATH, DIRECTORY_SEPARATOR);
+        $publicBase = rtrim(EVO_SITE_URL, '/');
+
+        // Get all configured feed slugs to filter files
+        $feeds = $this->loadFeedsFromSettings();
+        $feedSlugs = [];
+        foreach ($feeds as $feed) {
+            $normalized = $this->normalizeFeedConfig($feed);
+            $slug = $normalized['slug'] ?? '';
+            if (!empty($slug)) {
+                $feedSlugs[] = $slug;
+            }
+        }
+
+        // Get all XML files from root directory
+        $feedFiles = glob($directory . DIRECTORY_SEPARATOR . '*.xml') ?: [];
+        $generatedFiles = [];
+
+        foreach ($feedFiles as $filePath) {
+            $filename = basename($filePath);
+
+            // Check if file matches feed pattern (slug-XXX.xml or slug.xml)
+            $isFeedFile = false;
+            if (empty($feedSlugs)) {
+                // If no feeds configured, accept any XML file that looks like a feed
+                $isFeedFile = preg_match('/^([a-z0-9-]+)(?:-\d{3})?\.xml$/', $filename);
+            } else {
+                // Check if file belongs to any configured feed
+                foreach ($feedSlugs as $slug) {
+                    // Match exact slug.xml or slug-XXX.xml pattern
+                    if (preg_match('/^' . preg_quote($slug, '/') . '(?:-\d{3})?\.xml$/', $filename)) {
+                        $isFeedFile = true;
+                        break;
+                    }
+                }
+            }
+
+            if ($isFeedFile) {
+                $generatedFiles[] = [
+                    'filename' => $filename,
+                    'url' => $publicBase . '/' . $filename,
+                ];
+            }
+        }
+
+        // Sort by filename
+        usort($generatedFiles, function($a, $b) {
+            return strcmp($a['filename'], $b['filename']);
+        });
+
+        return $generatedFiles;
     }
 
     /**
@@ -96,7 +159,6 @@ class GoogleMerchantFeed extends BaseWorker
                 'currency' => 'UAH',
                 'country' => 'UA',
                 'chunk' => self::DEFAULT_CHUNK,
-                'scope' => '',
                 'include_out_of_stock' => false,
                 'google_product_category' => '',
                 'site_key' => '',
@@ -136,19 +198,38 @@ class GoogleMerchantFeed extends BaseWorker
 
         $defaultDomain = !$isMultisite ? rtrim(evo()->getConfig('site_url', EVO_BASE_URL), '/') : '';
         $firstMultisiteDomain = $isMultisite && !empty($multisiteSites) ? array_key_first($multisiteSites) : '';
-        
-        // Check if slug is required (only if more than one feed)
+
         $feedsCount = count($feeds);
         $slugRequired = $feedsCount > 1;
 
         // Preload Google Product Categories for all domains
         $allGoogleCategories = [];
         if ($isMultisite && !empty($domainToSiteKey)) {
+            // Load all categories once (contains all domains)
+            $allCategoriesData = $this->getGoogleProductCategories();
             foreach ($domainToSiteKey as $domain => $siteKey) {
-                $allGoogleCategories[$domain] = $this->getGoogleProductCategories($siteKey);
+                if (isset($allCategoriesData[$siteKey])) {
+                    $allGoogleCategories[$domain] = $allCategoriesData[$siteKey];
+                } elseif (is_array($allCategoriesData) && !empty($allCategoriesData)) {
+                    $firstKey = array_key_first($allCategoriesData);
+                    $allGoogleCategories[$domain] = $allCategoriesData[$firstKey] ?? [];
+                } else {
+                    $allGoogleCategories[$domain] = [];
+                }
             }
         } else {
-            $allGoogleCategories[$defaultDomain] = $this->getGoogleProductCategories();
+            $categoriesData = $this->getGoogleProductCategories();
+            // If it's nested structure, extract default or first
+            if (is_array($categoriesData) && !empty($categoriesData)) {
+                $firstKey = array_key_first($categoriesData);
+                if (is_array($categoriesData[$firstKey] ?? null)) {
+                    $allGoogleCategories[$defaultDomain] = $categoriesData['default'] ?? $categoriesData[$firstKey] ?? [];
+                } else {
+                    $allGoogleCategories[$defaultDomain] = $categoriesData;
+                }
+            } else {
+                $allGoogleCategories[$defaultDomain] = [];
+            }
         }
 
         // Render feed blocks
@@ -167,10 +248,49 @@ class GoogleMerchantFeed extends BaseWorker
             if ($isMultisite && !empty($domainToSiteKey) && isset($domainToSiteKey[$domainValue])) {
                 $feedSiteKey = $domainToSiteKey[$domainValue];
             }
-            
+
             // Load Google Product Categories for this domain/site_key
-            $googleCategories = $this->getGoogleProductCategories($feedSiteKey);
-            
+            // getGoogleProductCategories() returns nested array by domain key when multisite is enabled
+            // Structure: ["default" => [id => name], "polypro" => [id => name], ...]
+            // We need to extract categories for the current domain's site_key
+            $googleCategories = [];
+            if (isset($allGoogleCategories[$domainValue])) {
+                $categoriesForDomain = $allGoogleCategories[$domainValue];
+                // Check if it's a nested array (multisite structure)
+                if ($isMultisite && $feedSiteKey && is_array($categoriesForDomain) && isset($categoriesForDomain[$feedSiteKey])) {
+                    // Extract categories for this site_key
+                    $googleCategories = $categoriesForDomain[$feedSiteKey];
+                } elseif (is_array($categoriesForDomain) && !empty($categoriesForDomain)) {
+                    // Check if first element is an array (nested structure)
+                    $firstKey = array_key_first($categoriesForDomain);
+                    if (is_array($categoriesForDomain[$firstKey] ?? null)) {
+                        // It's nested, try to get by site_key or use first available
+                        $googleCategories = $categoriesForDomain[$feedSiteKey] ?? $categoriesForDomain[$firstKey] ?? [];
+                    } else {
+                        // It's a flat array [id => name]
+                        $googleCategories = $categoriesForDomain;
+                    }
+                }
+            } else {
+                // Fallback: load directly and extract
+                $allCategoriesForFeed = $this->getGoogleProductCategories($feedSiteKey);
+                if ($isMultisite && $feedSiteKey && is_array($allCategoriesForFeed) && isset($allCategoriesForFeed[$feedSiteKey])) {
+                    $googleCategories = $allCategoriesForFeed[$feedSiteKey];
+                } elseif (is_array($allCategoriesForFeed) && !empty($allCategoriesForFeed)) {
+                    $firstKey = array_key_first($allCategoriesForFeed);
+                    if (is_array($allCategoriesForFeed[$firstKey] ?? null)) {
+                        $googleCategories = $allCategoriesForFeed[$feedSiteKey] ?? $allCategoriesForFeed[$firstKey] ?? [];
+                    } else {
+                        $googleCategories = $allCategoriesForFeed;
+                    }
+                }
+            }
+
+            // Ensure we have an array
+            if (!is_array($googleCategories)) {
+                $googleCategories = [];
+            }
+
             $feedBlocks .= Blade::render('
                 @php
                     $title = ($feed["slug"] ?? "") ? htmlspecialchars($feed["slug"]) : "Новий фід";
@@ -262,13 +382,6 @@ class GoogleMerchantFeed extends BaseWorker
                             </label>
                             <input type="number" name="chunk[]" class="form-control" min="100" max="10000" value="{{$feed["chunk"] ?? $defaultChunk}}">
                         </div>
-                        <div class="col-sm-4">
-                            <label>
-                                Scope
-                                <i data-lucide="help-circle" class="settings-icon" data-tooltip="Опціональний scope для фільтрації товарів. Використовується для обмеження набору товарів у фіді." style="width:14px;height:14px;"></i>
-                            </label>
-                            <input type="text" name="scope[]" class="form-control" value="{{$feed["scope"] ?? ""}}">
-                        </div>
                         @if($isMultisite)
                             <input type="hidden" name="site_key[]" value="">
                         @endif
@@ -355,12 +468,24 @@ class GoogleMerchantFeed extends BaseWorker
 
                 function updateGoogleCategories(domainSelect, categorySelect) {
                     const domain = domainSelect.value || domainSelect.getAttribute("value") || "";
-                    const categories = allGoogleCategories[domain] || {};
+                    let categories = allGoogleCategories[domain] || {};
                     
-                    // Clear existing options except the first one
+                    // Check if categories is a nested structure (multisite)
+                    // Structure: {"default": {id: name}, "polypro": {id: name}, ...}
+                    if (categories && typeof categories === "object" && !Array.isArray(categories)) {
+                        const firstKey = Object.keys(categories)[0];
+                        // If first value is also an object (nested structure), extract by site_key
+                        if (firstKey && categories[firstKey] && typeof categories[firstKey] === "object" && !Array.isArray(categories[firstKey])) {
+                            // Get site_key for this domain
+                            const siteKey = domainToSiteKey[domain] || firstKey;
+                            categories = categories[siteKey] || categories[firstKey] || {};
+                        }
+                    }
+                    
+                    // Clear existing options
                     categorySelect.innerHTML = "";
                     
-                    // Add categories
+                    // Add categories (now should be flat object {id: name})
                     for (const [id, name] of Object.entries(categories)) {
                         const option = document.createElement("option");
                         option.value = id;
@@ -447,9 +572,6 @@ class GoogleMerchantFeed extends BaseWorker
                         const chunkInput = feedBlock.querySelector("[name=\"chunk[]\"]");
                         feed.chunk = chunkInput ? chunkInput.value.trim() : "";
                         
-                        // Get scope
-                        const scopeInput = feedBlock.querySelector("[name=\"scope[]\"]");
-                        feed.scope = scopeInput ? scopeInput.value.trim() : "";
                         
                         // Get category
                         const categoryInput = feedBlock.querySelector("[name=\"category[]\"]");
@@ -624,7 +746,7 @@ class GoogleMerchantFeed extends BaseWorker
     }
 
     /**
-     * Generate Google Merchant feeds for all configured scopes.
+     * Generate Google Merchant feeds for all configured feeds.
      *
      * @param sTaskModel $task
      * @param array $opt
@@ -667,37 +789,61 @@ class GoogleMerchantFeed extends BaseWorker
                 $filesBySite[$siteKey] = array_merge($filesBySite[$siteKey] ?? [], $result['filenames']);
             }
 
-            // Cleanup obsolete files and write manifests per site key
+            // Cleanup obsolete files and prepare feed summary
+            $feedSummary = [];
             foreach ($manifestBySite as $siteKey => $manifest) {
                 $directory = $manifest['directory'];
                 $publicBase = $manifest['public_base'];
                 $feedList = $manifest['feeds'] ?? [];
                 $allFiles = $filesBySite[$siteKey] ?? [];
-                
-                // Count total files across all feeds for this site
-                $totalFiles = count($allFiles);
-                
-                // Only write manifest if more than one file
-                if ($totalFiles > 1) {
-                    $this->cleanupDirectory($directory, $allFiles);
-                    $this->writeManifest($directory, $publicBase, $feedList);
-                } else {
-                    // Single file - just cleanup old files
-                    $this->cleanupDirectory($directory, $allFiles);
+
+                // Cleanup old files
+                $this->cleanupDirectory($directory, $allFiles);
+
+                // Build summary for each feed
+                foreach ($feedList as $feedInfo) {
+                    $feedSummary[] = [
+                        'slug' => $feedInfo['slug'] ?? 'unknown',
+                        'domain' => $feedInfo['domain'] ?? 'unknown',
+                        'files' => $feedInfo['files'] ?? [],
+                    ];
                 }
             }
+
+            // Build success message with file list
+            $message = "**Google Merchant feeds generated successfully.**\n\n";
+            foreach ($feedSummary as $feed) {
+                $message .= "**Feed: {$feed['slug']}** ({$feed['domain']})\n";
+                if (empty($feed['files'])) {
+                    $message .= "⚠️ No files generated (no products found)\n";
+                } else {
+                    $fileCount = count($feed['files']);
+                    $message .= "📄 Files generated: {$fileCount}\n";
+                    foreach ($feed['files'] as $file) {
+                        $url = $file['url'] ?? '';
+                        $filename = $file['filename'] ?? 'unknown';
+                        if ($url) {
+                            $message .= "   • [{$filename}]({$url})\n";
+                        } else {
+                            $message .= "   • {$filename}\n";
+                        }
+                    }
+                }
+                $message .= "\n";
+            }
+            $message .= "**Note:** Submit these XML files to Google Merchant Center. For multiple files, consider creating a ZIP archive.";
 
             $task->update([
                 'status' => sTaskModel::TASK_STATUS_FINISHED,
                 'progress' => 100,
-                'message' => '**Google Merchant feeds generated successfully.**',
+                'message' => $message,
                 'finished_at' => now(),
             ]);
 
             $this->pushProgress($task, [
                 'status' => sTaskModel::statusText(sTaskModel::TASK_STATUS_FINISHED),
                 'progress' => 100,
-                'message' => 'Google Merchant feeds generated successfully.',
+                'message' => 'Google Merchant feeds generated successfully. Check task details for file list.',
             ]);
         } catch (\Throwable $e) {
             $message = 'Google Merchant feed generation failed: ' . $e->getMessage();
@@ -793,7 +939,7 @@ class GoogleMerchantFeed extends BaseWorker
         }
 
         $normalized = [];
-        
+
         // Check if it's an object with string keys (structured format: {"feed_slug": {...}})
         $isStructuredObject = false;
         foreach (array_keys($value) as $key) {
@@ -856,15 +1002,16 @@ class GoogleMerchantFeed extends BaseWorker
             }
         }
         $siteKey = $siteKey ?? evo()->getConfig('site_key', 'default');
-        
+
         // Support both 'lang' and 'language' field names
         $languageValue = $feed['lang'] ?? $feed['language'] ?? null;
         $slug = $feed['slug'] ?? Str::slug(($feed['domain'] ?? '') . '-' . ($languageValue ?? '') . '-' . ($feed['currency'] ?? ''));
         $chunk = max(100, min(10000, (int)($feed['chunk'] ?? self::DEFAULT_CHUNK)));
 
         $isMultisite = evo()->getConfig('check_sMultisite', false);
-        // Initially use default directory (will be updated in generateFeed if single file)
-        $directory = $this->resolveFeedDirectory($siteKey, $isMultisite, false);
+        // All feeds are generated in root directory
+        $directory = rtrim(EVO_BASE_PATH, DIRECTORY_SEPARATOR);
+        $publicBase = rtrim(EVO_SITE_URL, '/');
 
         // Determine language: use from feed if provided, or null if sLang not installed
         $language = null;
@@ -873,13 +1020,13 @@ class GoogleMerchantFeed extends BaseWorker
         } elseif (evo()->getConfig('check_sLang', false) && class_exists(\Seiger\sLang\Facades\sLang::class)) {
             $language = strtolower(sLang::langDefault());
         }
-        
+
         // Support both 'category' and 'google_product_category' field names
         $googleProductCategory = $feed['category'] ?? $feed['google_product_category'] ?? null;
 
         // Support both 'include_out_of_stock' field name
         $includeOutOfStock = $feed['include_out_of_stock'] ?? false;
-        
+
         return [
             'slug' => $slug ?: Str::slug($siteKey . '-' . ($language ?? 'base')),
             'domain' => $this->normalizeDomain($feed['domain'] ?? EVO_SITE_URL),
@@ -888,94 +1035,16 @@ class GoogleMerchantFeed extends BaseWorker
             'country' => strtoupper($feed['country'] ?? 'UA'),
             'title' => $feed['title'] ?? (evo()->getConfig('site_name', 'Store') . ' | Google Merchant'),
             'description' => $feed['description'] ?? 'Automatically generated Google Merchant feed.',
-            'scope' => $feed['scope'] ?? null,
             'chunk' => $chunk,
             'include_out_of_stock' => (bool)$includeOutOfStock,
             'google_product_category' => $googleProductCategory,
             'site_key' => $siteKey,
             'directory' => $directory,
-            // Initially use default public base (will be updated in generateFeed if single file)
-            'public_base' => $this->resolvePublicBase($siteKey, $isMultisite, false),
+            'public_base' => $publicBase,
             'is_multisite' => $isMultisite,
         ];
     }
 
-    /**
-     * Resolve feed storage directory for given site key.
-     * If multisite is not installed and single file, uses base directory.
-     * If multisite is installed and single file, uses site key directory.
-     * If multiple files, uses subdirectory.
-     *
-     * @param string $siteKey
-     * @param bool $isMultisite
-     * @param bool $isSingleFile
-     * @return string
-     */
-    protected function resolveFeedDirectory(string $siteKey, bool $isMultisite, bool $isSingleFile = false): string
-    {
-        $basePath = rtrim(EVO_BASE_PATH, DIRECTORY_SEPARATOR);
-        
-        // If single file and no multisite, use base directory
-        if ($isSingleFile && !$isMultisite) {
-            return $basePath;
-        }
-        
-        // If single file and multisite, use site key directory
-        if ($isSingleFile && $isMultisite) {
-            $target = $basePath . DIRECTORY_SEPARATOR . $siteKey;
-        } else {
-            // Multiple files - use subdirectory
-            if (!$isMultisite) {
-                $target = $basePath;
-            } else {
-                $target = $basePath . DIRECTORY_SEPARATOR . $siteKey;
-            }
-        }
-
-        if (!is_dir($target)) {
-            $permissions = octdec(evo()->getConfig('new_folder_permissions', '0777'));
-            if (!mkdir($target, $permissions, true) && !is_dir($target)) {
-                throw new \RuntimeException('Unable to create feed directory: ' . $target);
-            }
-            @chmod($target, $permissions);
-        }
-
-        return $target;
-    }
-
-    /**
-     * Build public base URL for feeds.
-     * If single file and no multisite, returns direct file URL.
-     * If single file and multisite, returns site key URL with filename.
-     * If multiple files, returns directory URL.
-     *
-     * @param string $siteKey
-     * @param bool $isMultisite
-     * @param bool $isSingleFile
-     * @return string
-     */
-    protected function resolvePublicBase(string $siteKey, bool $isMultisite, bool $isSingleFile = false): string
-    {
-        $base = rtrim(EVO_SITE_URL, '/');
-        
-        // Note: For single file, filename will be determined in generateFeed() based on slug
-        // This method is called before we know the actual filename, so we return a placeholder
-        // The actual URL will be constructed in generateFeed()
-        if ($isSingleFile && !$isMultisite) {
-            return $base . '/feed.xml'; // Placeholder, will be updated in generateFeed()
-        }
-        
-        if ($isSingleFile && $isMultisite) {
-            return $base . '/' . rawurlencode($siteKey) . '/feed.xml'; // Placeholder, will be updated in generateFeed()
-        }
-        
-        // Multiple files - return directory URL
-        if (!$isMultisite) {
-            return $base;
-        } else {
-            return $base . '/' . rawurlencode($siteKey);
-        }
-    }
 
     /**
      * Generate a single feed (may produce several chunk files).
@@ -995,6 +1064,20 @@ class GoogleMerchantFeed extends BaseWorker
         $filenames = [];
 
         if ($totalProducts === 0) {
+            Log::warning('Google Merchant Feed: No products found for feed', [
+                'slug' => $config['slug'] ?? 'unknown',
+                'domain' => $config['domain'] ?? 'unknown',
+                'include_out_of_stock' => $config['include_out_of_stock'] ?? false,
+            ]);
+
+            $task->update([
+                'message' => sprintf(
+                    'Feed "%s": No products found matching criteria (include_out_of_stock: %s)',
+                    $config['slug'] ?? 'unknown',
+                    $config['include_out_of_stock'] ? 'yes' : 'no'
+                ),
+            ]);
+
             return [
                 'filenames' => $filenames,
                 'manifest' => $this->buildManifestEntry($config, []),
@@ -1004,10 +1087,6 @@ class GoogleMerchantFeed extends BaseWorker
         // Determine if this will be a single file feed
         $estimatedChunks = ceil($totalProducts / $config['chunk']);
         $isSingleFile = $estimatedChunks == 1;
-
-        // Update directory and public_base based on single file status
-        $config['directory'] = $this->resolveFeedDirectory($config['site_key'], $config['is_multisite'], $isSingleFile);
-        $config['public_base'] = $this->resolvePublicBase($config['site_key'], $config['is_multisite'], $isSingleFile);
 
         $query->chunk($config['chunk'], function ($products) use (
             $config,
@@ -1021,7 +1100,7 @@ class GoogleMerchantFeed extends BaseWorker
             $isSingleFile
         ) {
             $chunkCounter++;
-            
+
             // If single file, use slug-based name or feed.xml if slug is empty
             if ($isSingleFile) {
                 $slug = $config['slug'] ?? '';
@@ -1029,7 +1108,7 @@ class GoogleMerchantFeed extends BaseWorker
             } else {
                 $fileName = $this->buildFeedFilename($config['slug'], $chunkCounter);
             }
-            
+
             $tmpPath = $config['directory'] . DIRECTORY_SEPARATOR . $fileName . '.tmp';
             $finalPath = $config['directory'] . DIRECTORY_SEPARATOR . $fileName;
 
@@ -1054,17 +1133,7 @@ class GoogleMerchantFeed extends BaseWorker
             ]);
         }, 's_products.id');
 
-        // Update public_base with actual filename for single file
-        if ($isSingleFile && count($filenames) > 0) {
-            $base = rtrim(EVO_SITE_URL, '/');
-            $actualFileName = $filenames[0];
-            
-            if (!$config['is_multisite']) {
-                $config['public_base'] = $base . '/' . $actualFileName;
-            } else {
-                $config['public_base'] = $base . '/' . rawurlencode($config['site_key']) . '/' . $actualFileName;
-            }
-        }
+        // public_base is already set to root URL, no need to update
 
         return [
             'filenames' => $filenames,
@@ -1087,7 +1156,11 @@ class GoogleMerchantFeed extends BaseWorker
             ->orderBy('s_products.id')
             ->with([
                 'texts' => function ($relation) use ($config) {
-                    $relation->whereIn('lang', [$config['language'], 'base']);
+                    $langs = ['base'];
+                    if (!empty($config['language'])) {
+                        $langs[] = $config['language'];
+                    }
+                    $relation->whereIn('lang', array_unique($langs));
                 },
                 'categories',
             ]);
@@ -1099,15 +1172,6 @@ class GoogleMerchantFeed extends BaseWorker
             });
         }
 
-        if (!empty($config['scope'])) {
-            $scope = $config['scope'];
-            $query->whereExists(function ($sub) use ($scope) {
-                $sub->select(DB::raw('1'))
-                    ->from('s_product_category as spc')
-                    ->whereColumn('spc.product', 's_products.id')
-                    ->where('spc.scope', '=', $scope);
-            });
-        }
 
         return $query;
     }
@@ -1233,7 +1297,7 @@ class GoogleMerchantFeed extends BaseWorker
     }
 
     /**
-     * Remove obsolete feed files within directory.
+     * Remove obsolete feed files from root directory.
      *
      * @param string $directory
      * @param array $keepFiles
@@ -1241,64 +1305,23 @@ class GoogleMerchantFeed extends BaseWorker
      */
     protected function cleanupDirectory(string $directory, array $keepFiles): void
     {
-        // Only cleanup if directory exists and is not root
+        // Only cleanup if directory exists
         if (!is_dir($directory)) {
             return;
         }
-        
-        $basePath = rtrim(EVO_BASE_PATH, DIRECTORY_SEPARATOR);
-        
-        // For root directory or site key directory (single file case), cleanup feed files
-        if ($directory === $basePath || (is_dir($directory))) {
-            // Clean up feed.xml and any {slug}.xml files that are not in keepFiles
-            $feedFiles = glob($directory . DIRECTORY_SEPARATOR . '*.xml') ?: [];
-            $keep = array_map('strval', $keepFiles);
-            
-            foreach ($feedFiles as $feedFile) {
-                $basename = basename($feedFile);
-                // Only remove feed files (feed.xml or files that look like feed slugs)
-                // Don't remove other XML files that might be in the directory
-                if (preg_match('/^(feed|[a-z0-9-]+)\.xml$/', $basename) && !in_array($basename, $keep, true)) {
-                    @unlink($feedFile);
-                }
-            }
-            return;
-        }
-        
-        $existing = glob($directory . DIRECTORY_SEPARATOR . '*.xml') ?: [];
+
+        // Clean up feed.xml and any {slug}.xml files that are not in keepFiles
+        $feedFiles = glob($directory . DIRECTORY_SEPARATOR . '*.xml') ?: [];
         $keep = array_map('strval', $keepFiles);
 
-        foreach ($existing as $path) {
-            if (!in_array(basename($path), $keep, true)) {
-                @unlink($path);
+        foreach ($feedFiles as $feedFile) {
+            $basename = basename($feedFile);
+            // Only remove feed files (feed.xml or files that look like feed slugs)
+            // Don't remove other XML files that might be in the directory
+            if (preg_match('/^(feed|[a-z0-9-]+)\.xml$/', $basename) && !in_array($basename, $keep, true)) {
+                @unlink($feedFile);
             }
         }
-    }
-
-    /**
-     * Write manifest JSON describing generated feeds.
-     *
-     * @param string $directory
-     * @param string $publicBase
-     * @param array $feeds
-     * @return void
-     */
-    protected function writeManifest(string $directory, string $publicBase, array $feeds): void
-    {
-        $manifestPath = $directory . DIRECTORY_SEPARATOR . 'manifest.json';
-        $tmpPath = $manifestPath . '.tmp';
-
-        $payload = [
-            'generated_at' => Carbon::now()->toIso8601String(),
-            'base_url' => $publicBase,
-            'feeds' => $feeds,
-        ];
-
-        if (file_put_contents($tmpPath, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) === false) {
-            throw new \RuntimeException('Unable to write manifest file: ' . $manifestPath);
-        }
-
-        $this->atomicReplace($tmpPath, $manifestPath);
     }
 
     /**
@@ -1355,7 +1378,7 @@ class GoogleMerchantFeed extends BaseWorker
      */
     protected function buildFeedFilename(string $slug, int $chunkIndex): string
     {
-        return sprintf('%s-%04d.xml', $slug, $chunkIndex);
+        return sprintf('%s-%03d.xml', $slug, $chunkIndex);
     }
 
     /**
@@ -1368,7 +1391,7 @@ class GoogleMerchantFeed extends BaseWorker
     protected function resolveTranslation(sProduct $product, ?string $language): array
     {
         $texts = $product->texts ?? collect();
-        
+
         // If language is null or empty, use 'base' as fallback
         $lang = $language ?: 'base';
         $preferred = $texts->firstWhere('lang', $lang) ?? $texts->firstWhere('lang', 'base');
@@ -1524,22 +1547,22 @@ class GoogleMerchantFeed extends BaseWorker
     {
         // Get admin language
         $adminLang = evo()->getConfig('manager_language', 'english');
-        
+
         // Map country ID to ISO 3166-1 alpha-2 code based on English country name
         $idToIso = $this->getCountryIdToIsoMap();
-        
+
         // Load country file for admin language
         $countryFile = EVO_BASE_PATH . 'manager/includes/lang/country/' . $adminLang . '_country.inc.php';
         if (!file_exists($countryFile)) {
             // Fallback to English if language file doesn't exist
             $countryFile = EVO_BASE_PATH . 'manager/includes/lang/country/en_country.inc.php';
         }
-        
+
         $countries = [];
         if (file_exists($countryFile)) {
             $_country_lang = [];
             include $countryFile;
-            
+
             // Map country ID to ISO code and store with translated name
             foreach ($_country_lang as $id => $name) {
                 if (isset($idToIso[$id])) {
@@ -1548,10 +1571,10 @@ class GoogleMerchantFeed extends BaseWorker
                 }
             }
         }
-        
+
         // Sort by country name
         asort($countries);
-        
+
         return $countries;
     }
 
@@ -1811,27 +1834,13 @@ class GoogleMerchantFeed extends BaseWorker
     /**
      * Get Google Product Taxonomy categories.
      * Returns array of category ID => category name.
-     * 
+     *
      * @param string $siteKey Optional site key for multisite setups
      * @return array
      */
     protected function getGoogleProductCategories(?string $siteKey = null): array
     {
         $sCommerceController = new sCommerceController();
-        $allCats = DB::table('s_product_category')->groupBy('category')->get()->pluck('category')->toArray();
-        if (!evo()->getConfig('check_sMultisite', false)) {
-            $allCats = array_merge([sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))], $allCats);
-        }
-
-        $resources = Cache::rememberForever(
-            'sCommerceProductsResourcesManager',
-            fn () => SiteContent::query()
-                ->select('id', 'pagetitle')
-                ->whereIn('id', $allCats)
-                ->orderBy('pagetitle')
-                ->pluck('pagetitle', 'id')
-                ->all()
-        );
 
         $domains = null;
         if (evo()->getConfig('check_sMultisite', false)) {
@@ -1839,17 +1848,15 @@ class GoogleMerchantFeed extends BaseWorker
         }
 
         $listCategories = Cache::rememberForever(
-            'sCommerceListCategoriesManager',
-            function () use ($domains, $resources, $sCommerceController) {
+            'sCommerceListCategoriesManager1',
+            function () use ($domains, $sCommerceController) {
                 if ($domains && count($domains)) {
                     $out = [];
                     foreach ($domains as $domain) {
                         $root = sCommerce::config('basic.catalog_root' . $domain->key, $domain->site_start);
-                        $res = $sCommerceController->listCategories($root);
+                        $res = $sCommerceController->listCategories($root, 1);
                         foreach ($res as $key => $value) {
-                            if (isset($resources[$key])) {
-                                $out[$domain->key][$key] = $value;
-                            }
+                            $out[$domain->key][$key] = $value;
                         }
                     }
                     return $out;

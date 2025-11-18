@@ -227,9 +227,10 @@ class sCommerceController
      * @param int $category The ID of the category to retrieve sub-categories for.
      * @return array An associative array where the keys are the category IDs and the values are the category titles.
      */
-    public function listCategories(int $category = 0): array
+    public function listCategories(int $category = 0, int $dept = 10): array
     {
         $this->categories = [];
+        $dept--;
 
         if ($category == 0) {
             if (evo()->getConfig('check_sMultisite', false)) {
@@ -251,7 +252,7 @@ class sCommerceController
                 $this->categories[$root->id] = __('sCommerce::global.catalog_root') . ' ('.$root->id.')';
                 if ($root->hasChildren()) {
                     foreach ($root->children as $item) {
-                        $this->categoryCrumb($item);
+                        $this->categoryCrumb($item, '', $dept);
                     }
                 }
             }
@@ -260,7 +261,7 @@ class sCommerceController
             $this->categories[$root->id] = __('sCommerce::global.catalog_root') . ($root->id > 0 ? ' (' . $root->pagetitle . ')' : '');
             if ($root->hasChildren()) {
                 foreach ($root->children as $item) {
-                    $this->categoryCrumb($item);
+                    $this->categoryCrumb($item, '', $dept);
                 }
             }
         }
@@ -852,13 +853,15 @@ class sCommerceController
      *
      * @return void
      */
-    protected function categoryCrumb($resource, $crumb = ''): void
+    protected function categoryCrumb($resource, $crumb = '', $dept = 10): void
     {
         $crumb = trim($crumb) ? $crumb . ' > ' . $resource->pagetitle : $resource->pagetitle;
         $this->categories[$resource->id] = $crumb;
-        if ($resource->hasChildren()) {
-            foreach ($resource->children as $item) {
-                $this->categoryCrumb($item, $crumb);
+        if ($dept) {
+            if ($resource->hasChildren()) {
+                foreach ($resource->children as $item) {
+                    $this->categoryCrumb($item, $crumb, $dept--);
+                }
             }
         }
     }
