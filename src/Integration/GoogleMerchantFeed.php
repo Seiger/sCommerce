@@ -772,6 +772,8 @@ class GoogleMerchantFeed extends BaseWorker
 
             $manifestBySite = [];
             $filesBySite = [];
+            $allGeneratedFiles = []; // Collect all files from all feeds
+            $feedDirectories = []; // Track directories used
 
             $totalFeeds = count($feeds);
             $feedIndex = 0;
@@ -783,22 +785,33 @@ class GoogleMerchantFeed extends BaseWorker
                 $result = $this->generateFeed($task, $normalized, $feedIndex, $totalFeeds);
 
                 $siteKey = $normalized['site_key'];
-                $manifestBySite[$siteKey]['directory'] = $normalized['directory'];
+                $directory = $normalized['directory'];
+                $manifestBySite[$siteKey]['directory'] = $directory;
                 $manifestBySite[$siteKey]['public_base'] = $normalized['public_base'];
                 $manifestBySite[$siteKey]['feeds'][] = $result['manifest'];
                 $filesBySite[$siteKey] = array_merge($filesBySite[$siteKey] ?? [], $result['filenames']);
+
+                // Collect all files and directories
+                $allGeneratedFiles = array_merge($allGeneratedFiles, $result['filenames']);
+                $feedDirectories[$directory] = true;
             }
 
-            // Cleanup obsolete files and prepare feed summary
+            // Collect all slugs for this feed type
+            $feedSlugs = array_map(function ($feed) {
+                return $this->normalizeFeedConfig($feed)['slug'] ?? '';
+            }, $feeds);
+            $feedSlugs = array_filter($feedSlugs); // Remove empty slugs
+
+            // Cleanup obsolete files once for each unique directory
+            // Since all feeds are in root, this will be called once
+            foreach (array_keys($feedDirectories) as $directory) {
+                $this->cleanupDirectory($directory, $allGeneratedFiles, $feedSlugs);
+            }
+
+            // Prepare feed summary
             $feedSummary = [];
             foreach ($manifestBySite as $siteKey => $manifest) {
-                $directory = $manifest['directory'];
-                $publicBase = $manifest['public_base'];
                 $feedList = $manifest['feeds'] ?? [];
-                $allFiles = $filesBySite[$siteKey] ?? [];
-
-                // Cleanup old files
-                $this->cleanupDirectory($directory, $allFiles);
 
                 // Build summary for each feed
                 foreach ($feedList as $feedInfo) {
@@ -1301,9 +1314,10 @@ class GoogleMerchantFeed extends BaseWorker
      *
      * @param string $directory
      * @param array $keepFiles
+     * @param array $feedSlugs List of slugs for this feed type (to avoid deleting other feed types)
      * @return void
      */
-    protected function cleanupDirectory(string $directory, array $keepFiles): void
+    protected function cleanupDirectory(string $directory, array $keepFiles, array $feedSlugs = []): void
     {
         // Only cleanup if directory exists
         if (!is_dir($directory)) {
@@ -1316,9 +1330,25 @@ class GoogleMerchantFeed extends BaseWorker
 
         foreach ($feedFiles as $feedFile) {
             $basename = basename($feedFile);
-            // Only remove feed files (feed.xml or files that look like feed slugs)
-            // Don't remove other XML files that might be in the directory
-            if (preg_match('/^(feed|[a-z0-9-]+)\.xml$/', $basename) && !in_array($basename, $keep, true)) {
+
+            // Check if file belongs to this feed type
+            $belongsToThisFeed = false;
+            if (empty($feedSlugs)) {
+                // If no slugs specified, check generic pattern
+                $belongsToThisFeed = preg_match('/^(feed|[a-z0-9-]+)\.xml$/', $basename);
+            } else {
+                // Check if file starts with one of our slugs
+                foreach ($feedSlugs as $slug) {
+                    if (preg_match('/^' . preg_quote($slug, '/') . '(?:-\d{3})?\.xml$/', $basename) ||
+                        ($basename === 'feed.xml' && empty($slug))) {
+                        $belongsToThisFeed = true;
+                        break;
+                    }
+                }
+            }
+
+            // Only remove files that belong to this feed type and are not in keepFiles
+            if ($belongsToThisFeed && !in_array($basename, $keep, true)) {
                 @unlink($feedFile);
             }
         }
