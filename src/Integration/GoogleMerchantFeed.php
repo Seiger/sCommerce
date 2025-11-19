@@ -1168,13 +1168,7 @@ class GoogleMerchantFeed extends BaseWorker
             ->active()
             ->orderBy('s_products.id')
             ->with([
-                'texts' => function ($relation) use ($config) {
-                    $langs = ['base'];
-                    if (!empty($config['language'])) {
-                        $langs[] = $config['language'];
-                    }
-                    $relation->whereIn('lang', array_unique($langs));
-                },
+                'texts',
                 'categories',
             ]);
 
@@ -1247,7 +1241,7 @@ class GoogleMerchantFeed extends BaseWorker
             : null;
         $availability = $this->mapAvailability($product->availability);
         $identifier = $this->buildProductId($product);
-        $brand = $translation['brand'] ?? evo()->getConfig('site_name', 'Brand');
+        $brand = $product->attribute('brand')?->label ?? $product->attribute('manufacturer')?->label ?? evo()->getConfig('site_name', 'Brand');
         $productType = $this->resolveProductType($product);
 
         $writer->startElement('item');

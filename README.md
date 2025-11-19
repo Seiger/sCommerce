@@ -92,6 +92,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Integration with Warehouses.
 - [x] Integration with Trading Platforms.
   - [x] Google Merchant XML feeds.
+  - [x] Prom YML feeds **(pro)**.
 - [x] **[sLang](https://github.com/Seiger/sLang)** Integration.
 - [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
 - [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.
