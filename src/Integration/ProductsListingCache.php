@@ -208,7 +208,7 @@ class ProductsListingCache extends BaseWorker
                     $link = explode('|', $link);
                     $link = end($link);
                     $link = ltrim($link, '.');
-                    $productsListing[$scope][ltrim($link, '/')] = $product->id;
+                    $productsListing[$scope][trim($link, '/')] = $product->id;
                 }
 
                 $totalProcessed += $products->count();
