@@ -157,7 +157,7 @@ class GoogleMerchantFeed extends BaseWorker
                 'domain' => '',
                 'lang' => $defaultLanguage,
                 'currency' => 'UAH',
-                'country' => 'UA',
+                'country' => '0',
                 'chunk' => self::DEFAULT_CHUNK,
                 'include_out_of_stock' => false,
                 'google_product_category' => '',
@@ -370,8 +370,9 @@ class GoogleMerchantFeed extends BaseWorker
                                 <i data-lucide="help-circle" class="settings-icon" data-tooltip="Країна призначення фіду. Використовується для g:target_country в XML." style="width:14px;height:14px;"></i>
                             </label>
                             <select name="country[]" class="form-control" required>
+                                <option value="0" {{($feed["country"] ?? "0") === $code ? "selected" : ""}}></option>
                                 @foreach($countries as $code => $name)
-                                    <option value="{{$code}}" {{ ($feed["country"] ?? "UA") === $code ? "selected" : ""}}>{{$name}}</option>
+                                    <option value="{{$code}}" {{($feed["country"] ?? "0") === $code ? "selected" : ""}}>{{$name}}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -1045,7 +1046,7 @@ class GoogleMerchantFeed extends BaseWorker
             'domain' => $this->normalizeDomain($feed['domain'] ?? EVO_SITE_URL),
             'language' => $language,
             'currency' => strtoupper($feed['currency'] ?? sCommerce::config('basic.main_currency', 'USD')),
-            'country' => strtoupper($feed['country'] ?? 'UA'),
+            'country' => strtoupper($feed['country'] ?? '0'),
             'title' => $feed['title'] ?? (evo()->getConfig('site_name', 'Store') . ' | Google Merchant'),
             'description' => $feed['description'] ?? 'Automatically generated Google Merchant feed.',
             'chunk' => $chunk,
@@ -1262,7 +1263,7 @@ class GoogleMerchantFeed extends BaseWorker
         $writer->writeElement('g:mpn', $this->sanitizeText($product->sku ?: $identifier, 70));
         $writer->writeElement('g:identifier_exists', $product->sku ? 'true' : 'false');
 
-        if (!empty($config['country'])) {
+        if (!empty($config['country']) && $config['country'] != '0') {
             $writer->writeElement('g:target_country', $config['country']);
         }
 
