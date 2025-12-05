@@ -453,4 +453,10 @@
     "service_type_doors_doors" => "Адрес-Адрес",
     "use_api_calculation_helptext" => "Использовать автоматический расчет стоимости через API",
     "delivery_city_cost_helptext" => "Стоимость доставки для этого города (грн)",
+    "order_not_found" => "Заказ не найден",
+    "order_deleted_successfully" => "Заказ успешно удален",
+    "order_delete_error" => "Ошибка удаления заказа",
+    "order_not_deleted" => "Заказ не удален",
+    "order_restored_successfully" => "Заказ успешно восстановлен",
+    "order_restore_error" => "Ошибка восстановления заказа",
 ];

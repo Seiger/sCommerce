@@ -453,4 +453,10 @@
     "service_type_doors_doors" => "Address-Address",
     "use_api_calculation_helptext" => "Use automatic cost calculation via API",
     "delivery_city_cost_helptext" => "Delivery cost for this city",
+    "order_not_found" => "Order not found",
+    "order_deleted_successfully" => "Order successfully deleted",
+    "order_delete_error" => "Error deleting order",
+    "order_not_deleted" => "Order is not deleted",
+    "order_restored_successfully" => "Order successfully restored",
+    "order_restore_error" => "Error restoring order",
 ];

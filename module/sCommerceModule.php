@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Controllers\TabOrderController;
 use Seiger\sCommerce\Controllers\TabProductController;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sCommerce;
@@ -207,6 +208,18 @@ switch ($get) {
         $_SESSION['itemname'] = __('sCommerce::global.title');
         $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=orders'));
         evo()->invokeEvent('sCommerceAfterOrderSave', compact('item'));
+        return header('Location: ' . sCommerce::moduleUrl() . $back);
+    case "orderDelete":
+        $requestId = request()->integer('i');
+        $result = (new TabOrderController)->delete($requestId);
+
+        if ($result['success']) {
+            session()->flash('success', $result['message']);
+        } else {
+            session()->flash('error', $result['message']);
+        }
+
+        $back = request()->back ?? '&get=orders';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     /*
     |--------------------------------------------------------------------------

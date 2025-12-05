@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use ReflectionClass;
@@ -16,6 +17,7 @@ use ReflectionClass;
  */
 class sOrder extends Model
 {
+    use SoftDeletes;
     /**
      * Order status constants.
      */

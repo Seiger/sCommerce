@@ -103,6 +103,11 @@
                         <a href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}" class="btn btn-outline-success">
                             <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
                         </a>
+                        @if (evo()->hasPermission('settings'))
+                            <span data-href="{!!sCommerce::moduleUrl()!!}&get=orderDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="#{{$item->id}}" class="btn btn-outline-danger">
+                                <i class="fa fa-trash"></i> <span>@lang('global.remove')</span>
+                            </span>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -141,8 +146,3 @@
         </div>
     </div>
 </div>
-@push('scripts.top')
-    <script>
-        const cookieName = "scom_orders_page_items";
-    </script>
-@endpush

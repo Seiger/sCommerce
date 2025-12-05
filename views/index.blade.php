@@ -77,28 +77,6 @@
                 $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
             });
 
-            // Delete item
-            $(document).on("click", "[data-delete]", function(e) {
-                var _this = $(this);
-                alertify
-                    .confirm(
-                        "@lang('sCommerce::global.confirm_delete')",
-                        "@lang('sCommerce::global.you_sure') <b>"+_this.attr('data-name')+"</b> @lang('sCommerce::global.with_id') <b>"+_this.attr('data-delete')+"</b>",
-                        function() {
-                            alertify.success("@lang('sCommerce::global.deleted')");
-                            window.location.href = _this.attr('data-href');
-                        },
-                        function() {
-                            alertify.error("@lang('global.cancel')");
-                        })
-                    .set('labels', {
-                        ok:"@lang('global.delete')",
-                        cancel:"@lang('global.cancel')"
-                    })
-                    .set({transition:'zoom'});
-                return false;
-            });
-
             // Duplicate item
             $(document).on("click", "[data-duplicate]", function(e) {
                 var _this = $(this);
@@ -224,6 +202,33 @@
             document.form.back.value = starget;
             saveForm('#form');
         }
+
+        // Delete Item
+        document.addEventListener("click", function(e) {
+            console.log("clicked" , e.target);
+            const target = e.target.closest("[data-delete]");
+            if (!target) return;
+
+            const name = target.getAttribute("data-name");
+            const id = target.getAttribute("data-delete");
+            const href = target.getAttribute("data-href");
+
+            alertify
+                .confirm(
+                    "@lang('sCommerce::global.confirm_delete')",
+                    "@lang('sCommerce::global.you_sure') <b>" + name + "</b> @lang('sCommerce::global.with_id') <b>" + id + "</b>",
+                    function () {
+                        alertify.success("@lang('sCommerce::global.deleted')");
+                        window.location.href = href;
+                    },
+                    function () {
+                        alertify.error("@lang('global.cancel')");
+                    }
+                )
+                .set('labels', {ok:"@lang('global.delete')", cancel:"@lang('global.cancel')"})
+                .set({transition:'zoom'});
+            e.preventDefault();
+        });
 
         // Form Validation and Saving
         function saveForm(selector) {

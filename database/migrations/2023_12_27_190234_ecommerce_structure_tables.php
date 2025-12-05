@@ -194,6 +194,7 @@ return new class extends Migration
             $table->jsonb('history')->default(new Expression('(JSON_ARRAY())'))->comment('History of changes');
             $table->string('identifier')->unique()->comment('Unique order key (required by some payment systems)');
             $table->timestamps();
+            $table->timestamp('deleted_at')->nullable()->index();
         });
 
         /*

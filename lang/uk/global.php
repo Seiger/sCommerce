@@ -453,4 +453,10 @@
     "service_type_doors_doors" => "Адреса-Адреса",
     "use_api_calculation_helptext" => "Використовувати автоматичний розрахунок вартості через API",
     "delivery_city_cost_helptext" => "Вартість доставки для цього міста (грн)",
+    "order_not_found" => "Замовлення не знайдено",
+    "order_deleted_successfully" => "Замовлення успішно видалено",
+    "order_delete_error" => "Помилка видалення замовлення",
+    "order_not_deleted" => "Замовлення не видалено",
+    "order_restored_successfully" => "Замовлення успішно відновлено",
+    "order_restore_error" => "Помилка відновлення замовлення",
 ];
