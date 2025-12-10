@@ -1,3 +1,4 @@
+@php($currencies = sCommerce::config('currencies', []))
 @extends('notifications.email.layout')
 @section('subject')
     {{evo()->getConfig('site_name')}} @lang('You Order #:orderId created successful', ['orderId' => $order->id ?? ''])
@@ -7,7 +8,7 @@
         @lang('You Order #:orderId created successful', ['orderId' => $order->id ?? ''])
     </h3>
     <p>@lang('Created at'): {{$order->created_at}}</p>
-    <p>@lang('Sum'): {{sCommerce::convertPrice($order->cost, $order->currency)}}</p>
+    <p>@lang('Sum'): {{sCommerce::convertPrice($order->cost, $order->currency)}}@if(($currencies[$order->currency]['show'] ?? 0) == 0) {{$order->currency}}@endif</p>
     <p>@lang('Thank you for your order. Our manager will contact you shortly.')</p>
 
     <h3>@lang('Products in the Order')</h3>
@@ -36,7 +37,7 @@
                 </td>
                 <td>{{$product['price']}}</td>
                 <td>{{$product['quantity']}}</td>
-                <td>{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $order->currency, $order->currency), $order->currency)}}</td>
+                <td>{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $order->currency, $order->currency), $order->currency)}}@if(($currencies[$order->currency]['show'] ?? 0) == 0) {{$order->currency}}@endif</td>
             </tr>
         @endforeach
         </tbody>

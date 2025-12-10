@@ -1,3 +1,4 @@
+@php($currencies = sCommerce::config('currencies', []))
 @extends('notifications.email.layout')
 @section('subject')
     {{evo()->getConfig('site_name')}} @lang('Order created by user') {{implode(' ', [trim($order->user_info['name'] ?? ''), trim($order->user_info['phone'] ?? ''), trim($order->user_info['email'] ?? '')])}}
@@ -5,12 +6,12 @@
 @section('content')
     <h3>
         @lang('Created new Order')
-        <a href="{{MODX_MANAGER_URL}}{{sCommerce::moduleUrl()}}&get=order&i={{$order->id ?? 0}}" target="_blank">
+        <a href="{{EVO_MANAGER_URL}}{{sCommerce::moduleUrl()}}&get=order&i={{$order->id ?? 0}}" target="_blank">
             <strong>#{{$order->id ?? ''}}</strong>
         </a>
     </h3>
     <p>@lang('Created at'): {{$order->created_at}}</p>
-    <p>@lang('Sum'): {{sCommerce::convertPrice($order->cost, $order->currency)}}</p>
+    <p>@lang('Sum'): {{sCommerce::convertPrice($order->cost, $order->currency)}}@if(($currencies[$order->currency]['show'] ?? 0) == 0) {{$order->currency}}@endif</p>
     <p>@lang('Customer Name'): {{$order->user_info['name'] ?? ''}}</p>
     <p>@lang('E-Mail'): {{$order->user_info['email'] ?? ''}}</p>
     <p>@lang('Phone number'): {{$order->user_info['phone'] ?? ''}}</p>
@@ -42,7 +43,7 @@
                 </td>
                 <td>{{$product['price']}}</td>
                 <td>{{$product['quantity']}}</td>
-                <td>{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $order->currency, $order->currency), $order->currency)}}</td>
+                <td>{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $order->currency, $order->currency), $order->currency)}}@if(($currencies[$order->currency]['show'] ?? 0) == 0) {{$order->currency}}@endif</td>
             </tr>
         @endforeach
         </tbody>

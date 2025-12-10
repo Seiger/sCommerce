@@ -1,5 +1,6 @@
 @php use Seiger\sCommerce\Models\sOrder; @endphp
 @php($order = request()->has('order') ? request()->input('order') : 'id')
+@php($currencies = sCommerce::config('currencies', []))
 <style>
     .badge-1click {
         background-color: #036efe;
@@ -87,7 +88,7 @@
                     ({{$item->user_info['phone'] ?? ''}})
                 </td>
                 <td>{{$item->created_at}}</td>
-                <td>{{sCommerce::convertPrice($item->cost, $item->currency)}}</td>
+                <td>{{sCommerce::convertPrice($item->cost, $item->currency)}}@if(($currencies[$item->currency]['show'] ?? 0) == 0) {{$item->currency}}@endif</td>
                 <td>
                     <span @class(['badge', 'bg-paid' => $item->payment_status == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => $item->payment_status != sOrder::PAYMENT_STATUS_PAID])>
                         {{sOrder::getPaymentStatusName($item->payment_status)}}
