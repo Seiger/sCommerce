@@ -106,23 +106,43 @@ class sFilter
 
         $categoryParentsIds = $this->controller->categoryParentsIds($category);
 
-        // Retrieve (attribute, value, valueid, count) info from DB
-        $values = DB::table('s_product_attribute_values as pav')
-            ->select(
-                'pav.attribute',
-                'pav.value',
-                'pav.valueid',
-                DB::raw('COUNT(DISTINCT ' . DB::getTablePrefix() . 'pac.product) as count')
-            )->leftJoin('s_product_attribute_values as pac', function ($join) use ($productIds) {
-                $join->on('pac.value', '=', 'pav.value')
-                    ->on('pac.attribute', '=', 'pav.attribute')
-                    ->whereIn('pac.product', $productIds);
-            })->join('s_attributes as sa', function ($join) {
+        // OPTIMIZATION: Split into two queries to avoid complex JOIN with whereIn
+        // Step 1: Get unique attribute/value/valueid combinations for products
+        $uniqueAttributes = DB::table('s_product_attribute_values as pav')
+            ->select('pav.attribute', 'pav.value', 'pav.valueid')
+            ->join('s_attributes as sa', function ($join) {
                 $join->on('pav.attribute', '=', 'sa.id')
                     ->where('sa.asfilter', '=', 1);
-            })->whereIn('pav.product', $productIds)
+            })
+            ->whereIn('pav.product', $productIds)
             ->groupBy('pav.attribute', 'pav.value', 'pav.valueid')
             ->get();
+
+        // Step 2: Count products for each combination
+        if ($uniqueAttributes->isEmpty()) {
+            $values = collect();
+        } else {
+            // Build conditions for all unique combinations
+            $values = DB::table('s_product_attribute_values')
+                ->select(
+                    'attribute',
+                    'value',
+                    'valueid',
+                    DB::raw('COUNT(DISTINCT product) as count')
+                )
+                ->whereIn('product', $productIds)
+                ->where(function ($query) use ($uniqueAttributes) {
+                    foreach ($uniqueAttributes as $attr) {
+                        $query->orWhere(function ($q) use ($attr) {
+                            $q->where('attribute', $attr->attribute)
+                                ->where('value', $attr->value)
+                                ->where('valueid', $attr->valueid);
+                        });
+                    }
+                })
+                ->groupBy('attribute', 'value', 'valueid')
+                ->get();
+        }
 
         // Retrieve attributes that are marked as filters (asfilter=1)
         // and attributes that belong to these categories
