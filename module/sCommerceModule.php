@@ -606,7 +606,7 @@ switch ($get) {
 
         if (isset($product->getChanges()['alias']) || $primaryCategoriesChanged) {
             // Primary categories or alias changed - trigger cache rebuild
-            sTask::create('s_products_listing_cache', 'make');
+            sTask::create('sProductsListingCache', 'make');
         }
 
         $_SESSION['itemaction'] = 'Saving Product';
@@ -745,7 +745,7 @@ switch ($get) {
             $product->delete();
         }
 
-        sTask::create('s_products_listing_cache', 'make');
+        sTask::create('sProductsListingCache', 'make');
         $back = '&get=products';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "modifications":
@@ -1094,7 +1094,7 @@ switch ($get) {
             if (!$product->id) {
                 $product->alias = $sCommerceController->validateAlias(trim($content->pagetitle) ?: 'new-product', $requestId);
                 $product->save();
-                sTask::create('s_products_listing_cache', 'make');
+                sTask::create('sProductsListingCache', 'make');
             }
             $content->product = $product->id;
         }

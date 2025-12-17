@@ -19,7 +19,7 @@ return new class extends Migration {
         */
         $integrations = [
             [
-                'identifier' => 's_products_listing_cache',
+                'identifier' => 'sProductsListingCache',
                 'scope' => 'sCommerce',
                 'class' => 'Seiger\sCommerce\Integration\ProductsListingCache',
                 'active' => true,
@@ -47,7 +47,7 @@ return new class extends Migration {
         | Delete a default Integrations
         |--------------------------------------------------------------------------
         */
-        sWorker::where('identifier', 's_products_listing_cache')->delete();
+        sWorker::where('identifier', 'sProductsListingCache')->delete();
         sWorker::where('identifier', 's_import_export_csv')->delete();
     }
 };
