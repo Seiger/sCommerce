@@ -12,6 +12,7 @@
     "additional_fields_to_products_tab" => "Additional fields",
     "address" => "Address",
     "after_sum" => "After the amount",
+    "all_domains" => "All domains",
     "all_products" => "All products",
     "all_statuses" => "All statuses",
     "alternative_text" => "Alternative text",

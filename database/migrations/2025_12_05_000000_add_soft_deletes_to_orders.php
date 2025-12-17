@@ -5,10 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Migration to add soft delete support to orders table
- * 
- * This migration adds the deleted_at column to s_orders table
- * to enable soft delete functionality for orders.
+ * @deprecated
+ * @since 1.0.6
+ * @todo [remove@1.5] Remove in sCommerce v1.5
  */
 return new class extends Migration
 {
@@ -21,6 +20,9 @@ return new class extends Migration
             Schema::table('s_orders', function (Blueprint $table) {
                 if (!Schema::hasColumn('s_orders', 'deleted_at')) {
                     $table->timestamp('deleted_at')->nullable()->after('updated_at')->index();
+                }
+                if (!Schema::hasColumn('s_orders', 'domain')) {
+                    $table->string('domain', 50)->after('lang')->index()->default('default');
                 }
             });
         }
@@ -36,9 +38,10 @@ return new class extends Migration
                 if (Schema::hasColumn('s_orders', 'deleted_at')) {
                     $table->dropColumn('deleted_at');
                 }
+                if (Schema::hasColumn('s_orders', 'domain')) {
+                    $table->dropColumn('domain');
+                }
             });
         }
     }
 };
-
-

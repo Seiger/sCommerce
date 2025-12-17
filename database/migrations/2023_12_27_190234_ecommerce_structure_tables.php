@@ -189,6 +189,7 @@ return new class extends Migration
             $table->boolean('do_not_call')->default(false)->comment('"Do not call back" option');
             $table->text('comment')->nullable()->comment('Comment on the order');
             $table->string('lang', 10)->index()->default('base');
+            $table->string('domain', 50)->index()->default('default');
             $table->jsonb('manager_info')->default(new Expression('(JSON_ARRAY())'))->comment('Manager information (JSON)');
             $table->jsonb('manager_notes')->default(new Expression('(JSON_ARRAY())'))->comment('Hidden Manager comments (available only in admin panel)');
             $table->jsonb('history')->default(new Expression('(JSON_ARRAY())'))->comment('History of changes');

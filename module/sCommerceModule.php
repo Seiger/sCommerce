@@ -87,10 +87,17 @@ switch ($get) {
         $dbStatuses = array_flip(sOrder::select('status')->distinct()->pluck('status')->toArray());
         $status = request()->input('status', 0);
         $status = isset($dbStatuses[$status]) ? $status : 0;
+        $domain = request()->input('domain', '');
         $order = request()->input('order', 'id');
         $direc = request()->input('direc', 'desc');
 
+        $domains = null;
+        if (evo()->getConfig('check_sMultisite', false)) {
+            $domains = \Seiger\sMultisite\Models\sMultisite::all()->keyBy('key');
+        }
+
         $query = sOrder::query()->select('*');
+        if ($domains && trim($domain)) {$query->where('domain', $domain);}
         $query->orderBy($order, $direc);
 
         $unprocessedes = [
@@ -124,6 +131,7 @@ switch ($get) {
         $data['unprocessed'] = sOrder::whereIn('status', $unprocessedes)->count();
         $data['working'] = sOrder::whereIn('status', $workings)->count();
         $data['completed'] = sOrder::whereIn('status', $completeds)->count();
+        $data['domains'] = $domains;
         $_SESSION['itemaction'] = 'Viewing a list of orders';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;

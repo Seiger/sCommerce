@@ -49,6 +49,12 @@
     @foreach($statuses as $id => $name)
         <a @class(['btn', 'btn-info' => $status == $id, 'btn-light' => $status != $id]) href="{!!sCommerce::moduleUrl()!!}&get=orders&status={{$id}}">{{$name}}</a>
     @endforeach
+    @if($domains)
+        <a class="btn domain-btn" @style(['background-color:#60a5fa', 'border-color:#60a5fa']) href="{!!sCommerce::moduleUrl()!!}&get=orders">@lang('sCommerce::global.all_domains')</a>
+        @foreach($domains as $domain)
+            <a class="btn domain-btn" @style(['background-color:'.($domain->site_color ?? '#60a5fa'), 'border-color:'.($domain->site_color ?? '#60a5fa')]) href="{!!sCommerce::moduleUrl()!!}&get=orders&domain={{$domain->key}}">{{$domain->domain}}</a>
+        @endforeach
+    @endif
 </div>
 <div class="table-responsive seiger__module-table">
     <table class="table table-condensed table-hover sectionTrans scom-table">
@@ -77,7 +83,7 @@
         </thead>
         <tbody>
         @foreach($items as $item)
-            <tr style="height: 42px;" id="order-{{$item->id}}">
+            <tr id="order-{{$item->id}}" style="position:relative;height:42px;@if($domains)border-left:30px solid {{$domains[$item->domain]->site_color ?? '#60a5fa'}}@endif;">
                 <td><b>#{{$item->id}}</b>@if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif</td>
                 <td>
                     {{implode(' ', array_diff([
@@ -147,3 +153,54 @@
         </div>
     </div>
 </div>
+@push('scripts.bot')
+    <script>
+        // Automatic contrast text color for domain buttons
+        $(document).ready(function() {
+            function hexToRgb(hex) {
+                hex = hex.replace('#', '');
+                if (hex.length === 3) {
+                    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+                }
+                return {
+                    r: parseInt(hex.substr(0, 2), 16),
+                    g: parseInt(hex.substr(2, 2), 16),
+                    b: parseInt(hex.substr(4, 2), 16)
+                };
+            }
+
+            function getContrastTextColor(r, g, b) {
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                return luminance > 0.5 ? '#000000' : '#ffffff';
+            }
+
+            function setButtonTextColor(btn) {
+                // Try to get color from inline style first
+                const style = btn.getAttribute('style') || '';
+                const match = style.match(/background-color:\s*([^;]+)/);
+                if (match) {
+                    const colorStr = match[1].trim();
+                    if (colorStr.startsWith('#')) {
+                        const rgb = hexToRgb(colorStr);
+                        btn.style.color = getContrastTextColor(rgb.r, rgb.g, rgb.b);
+                        return;
+                    }
+                }
+
+                // Fallback: try computed style
+                const bgColor = window.getComputedStyle(btn).backgroundColor;
+                const rgbMatch = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                if (rgbMatch) {
+                    const r = parseInt(rgbMatch[1]);
+                    const g = parseInt(rgbMatch[2]);
+                    const b = parseInt(rgbMatch[3]);
+                    btn.style.color = getContrastTextColor(r, g, b);
+                }
+            }
+
+            $('.domain-btn').each(function() {
+                setButtonTextColor(this);
+            });
+        });
+    </script>
+@endpush

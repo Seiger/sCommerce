@@ -15,8 +15,9 @@
         }
 
         // ============================================
-        // @deprecated since 1.0
-        // TODO: REMOVE IN v1.5
+        // @deprecated
+        // @since 1.0
+        // @todo [remove@1.5] Remove in sCommerce v1.5
         // Backward compatibility for CustomEvent API
         // Migration: Use sCommerce.onEventName = (data) => {}
         // instead of document.addEventListener('sCommerceEventName', ...)

@@ -12,6 +12,7 @@
     "additional_fields_to_products_tab" => "Додаткові поля",
     "address" => "Адреса",
     "after_sum" => "Після суми",
+    "all_domains" => "Всі домени",
     "all_products" => "Всі товари",
     "all_statuses" => "Усі статуси",
     "alternative_text" => "Альтернативний текст",
