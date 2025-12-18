@@ -391,6 +391,7 @@
     "to_list_payments" => "To list payments",
     "to_list_products" => "To list products",
     "to_list_reviews" => "To list reviews",
+    "total" => "Total",
     "total_orders" => "Total orders",
     "total_products" => "Total products",
     "total_reviews" => "Total reviews",

@@ -101,7 +101,7 @@
                     </span>
                 </td>
                 <td>
-                    <span @class(['badge', 'bg-active' => in_array($item->status, $unprocessedes), 'bg-progress' => in_array($item->status, $workings), 'bg-disactive' => in_array($item->status, $completeds)])>
+                    <span @class(['badge', 'bg-disactive' => in_array($item->status, $unprocessedes), 'bg-progress' => in_array($item->status, $workings), 'bg-active' => in_array($item->status, $completeds)])>
                         {{sOrder::getOrderStatusName($item->status)}}
                     </span>
                 </td>

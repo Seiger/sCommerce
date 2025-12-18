@@ -110,11 +110,11 @@ switch ($get) {
             sOrder::ORDER_STATUS_PACKING,
             sOrder::ORDER_STATUS_READY_FOR_SHIPMENT,
             sOrder::ORDER_STATUS_SHIPPED,
-            sOrder::ORDER_STATUS_DELIVERED,
             sOrder::ORDER_STATUS_ON_HOLD,
             sOrder::ORDER_STATUS_RETURN_REQUESTED,
         ];
         $completeds = [
+            sOrder::ORDER_STATUS_DELIVERED,
             sOrder::ORDER_STATUS_DELETED,
             sOrder::ORDER_STATUS_COMPLETED,
             sOrder::ORDER_STATUS_CANCELED,
@@ -156,11 +156,11 @@ switch ($get) {
             sOrder::ORDER_STATUS_PACKING,
             sOrder::ORDER_STATUS_READY_FOR_SHIPMENT,
             sOrder::ORDER_STATUS_SHIPPED,
-            sOrder::ORDER_STATUS_DELIVERED,
             sOrder::ORDER_STATUS_ON_HOLD,
             sOrder::ORDER_STATUS_RETURN_REQUESTED,
         ];
         $completeds = [
+            sOrder::ORDER_STATUS_DELIVERED,
             sOrder::ORDER_STATUS_DELETED,
             sOrder::ORDER_STATUS_COMPLETED,
             sOrder::ORDER_STATUS_CANCELED,
@@ -214,6 +214,42 @@ switch ($get) {
                 $item->manager_notes = $manager_notes;
             }
 
+            // Update products if provided
+            if (request()->has('products_data')) {
+                $productsDataJson = request()->string('products_data')->value();
+                $productsData = json_decode($productsDataJson, true);
+
+                if (json_last_error() === JSON_ERROR_NONE && is_array($productsData)) {
+                    $oldProducts = $item->products;
+                    $item->products = $productsData;
+
+                    // Recalculate order cost
+                    $totalCost = 0;
+                    foreach ($productsData as $product) {
+                        // Use priceNumber if available (numeric value), otherwise parse from formatted price
+                        if (isset($product['priceNumber']) && is_numeric($product['priceNumber'])) {
+                            $price = floatval($product['priceNumber']);
+                        } else {
+                            // Fallback: parse from formatted price string
+                            $priceValue = $product['price'] ?? 0;
+                            $price = sCommerce::convertPriceNumber($priceValue, $item->currency, $item->currency);
+                        }
+                        $quantity = intval($product['quantity'] ?? 1);
+                        $totalCost += $price * $quantity;
+                    }
+                    $item->cost = round($totalCost, 2);
+
+                    // Add history entry if products changed
+                    if (json_encode($oldProducts) !== json_encode($productsData)) {
+                        $history[] = [
+                            'products_updated' => true,
+                            'timestamp' => now()->toDateTimeString(),
+                            'user_id' => (int)evo()->getLoginUserID('mgr'),
+                        ];
+                    }
+                }
+            }
+
             $item->history = $history;
             $item->update();
         }
@@ -235,6 +271,43 @@ switch ($get) {
 
         $back = request()->back ?? '&get=orders';
         return header('Location: ' . sCommerce::moduleUrl() . $back);
+    case "orderSearchProducts":
+        $search = request()->string('search')->value();
+        $products = [];
+
+        if (strlen($search) >= 2) {
+            $locale = evo()->getLocale();
+            $productQuery = \Seiger\sCommerce\Models\sProduct::lang($locale)
+                ->where(function($q) use ($search) {
+                    $q->where('s_products.sku', 'like', '%' . $search . '%')
+                        ->orWhere('spt.pagetitle', 'like', '%' . $search . '%')
+                        ->orWhere('spt.longtitle', 'like', '%' . $search . '%');
+                })
+                ->active()
+                ->limit(20)
+                ->get();
+
+            $orderCurrency = request()->string('currency', sCommerce::currentCurrency())->value();
+
+            foreach ($productQuery as $product) {
+                $productData = sCommerce::getProduct($product->id, $locale);
+                $priceNumber = $productData->price_regular ?? $product->price_regular ?? 0;
+                $priceFormatted = sCommerce::convertPrice($priceNumber, $orderCurrency);
+                $products[] = [
+                    'id' => $product->id,
+                    'title' => $productData->pagetitle ?? $product->pagetitle ?? '',
+                    'sku' => $product->sku ?? '',
+                    'price' => $priceFormatted,
+                    'priceNumber' => $priceNumber, // Store numeric price for calculations
+                    'coverSrc' => $productData->coverSrc ?? '/assets/site/noimage.png',
+                    'link' => $productData->link ?? '#',
+                ];
+            }
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'products' => $products]);
+        exit;
     /*
     |--------------------------------------------------------------------------
     | Products

@@ -391,6 +391,7 @@
     "to_list_payments" => "К списку платежей",
     "to_list_products" => "К списку товаров",
     "to_list_reviews" => "К списку отзывов",
+    "total" => "Итого",
     "total_orders" => "Общее количество заказов",
     "total_products" => "Общее количество товаров",
     "total_reviews" => "Общее количество отзывов",
