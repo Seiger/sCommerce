@@ -42,11 +42,13 @@ if (!file_exists(EVO_CORE_PATH . 'custom/config/seiger/settings/sCommerce.php'))
 
 $sCommerceController = new sCommerceController();
 Paginator::defaultView('sCommerce::partials.pagination');
-$get = request()->get ?? (sCommerce::config('basic.orders_on', 1) == 1 ? "orders" : "products");
+$get = request()->get ?? "dashboard";
 $iUrl = (int)request()->input('i', 0) > 0 ? '&i=' . (int)request()->input('i', 0) : '';
 $pUrl = (int)request()->input('page', 1) > 1 ? '&page=' . (int)request()->input('page', 1) : '';
 $editor = [];
 $tabs = [];
+
+$tabs[] = 'dashboard';
 
 if (sCommerce::config('basic.orders_on', 1) == 1) {
     $tabs[] = 'orders';
@@ -71,7 +73,7 @@ if (evo()->hasPermission('settings')) {
 switch ($get) {
     /*
     |--------------------------------------------------------------------------
-    | Orders
+    | Dashboard
     |--------------------------------------------------------------------------
     */
     default:
@@ -82,6 +84,152 @@ switch ($get) {
                 }
             }
         }
+    case "dashboard":
+        $unprocessedes = [
+            sOrder::ORDER_STATUS_NEW,
+            sOrder::ORDER_STATUS_FAILED,
+        ];
+        $workings = [
+            sOrder::ORDER_STATUS_PROCESSING,
+            sOrder::ORDER_STATUS_CONFIRMED,
+            sOrder::ORDER_STATUS_PACKING,
+            sOrder::ORDER_STATUS_READY_FOR_SHIPMENT,
+            sOrder::ORDER_STATUS_SHIPPED,
+            sOrder::ORDER_STATUS_ON_HOLD,
+            sOrder::ORDER_STATUS_RETURN_REQUESTED,
+        ];
+        $completeds = [
+            sOrder::ORDER_STATUS_DELIVERED,
+            sOrder::ORDER_STATUS_DELETED,
+            sOrder::ORDER_STATUS_COMPLETED,
+            sOrder::ORDER_STATUS_CANCELED,
+            sOrder::ORDER_STATUS_RETURNED,
+        ];
+
+        // Orders statistics
+        $totalOrders = sOrder::count();
+        $newOrders = sOrder::whereIn('status', $unprocessedes)->count();
+        $workingOrders = sOrder::whereIn('status', $workings)->count();
+        $completedOrders = sOrder::whereIn('status', $completeds)->count();
+
+        // Today's statistics
+        $todayOrders = sOrder::whereDate('created_at', today())->count();
+        $todayRevenue = sOrder::whereDate('created_at', today())
+            ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
+            ->sum('cost');
+
+        // This month statistics
+        $monthOrders = sOrder::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+        $monthRevenue = sOrder::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
+            ->sum('cost');
+
+        // Total revenue (paid orders)
+        $totalRevenue = sOrder::where('payment_status', sOrder::PAYMENT_STATUS_PAID)->sum('cost');
+
+        // Products statistics
+        $totalProducts = sProduct::count();
+        $publishedProducts = sProduct::where('published', 1)->count();
+        $unpublishedProducts = $totalProducts - $publishedProducts;
+
+        // Payment statistics
+        $paidOrders = sOrder::where('payment_status', sOrder::PAYMENT_STATUS_PAID)->count();
+        $pendingOrders = sOrder::where('payment_status', sOrder::PAYMENT_STATUS_PENDING)->count();
+
+        // Sales chart data (last 30 days)
+        $salesChartData = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $dayRevenue = sOrder::whereDate('created_at', $date)
+                ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
+                ->sum('cost');
+            $dayOrders = sOrder::whereDate('created_at', $date)->count();
+            $salesChartData[] = [
+                'date' => $date->format('Y-m-d'),
+                'label' => $date->format('d.m'),
+                'revenue' => (float)$dayRevenue,
+                'orders' => $dayOrders,
+            ];
+        }
+
+        // Recent orders
+        $recentOrders = sOrder::orderBy('created_at', 'desc')->limit(10)->get();
+
+        // Top products (by order count) - simplified version
+        $topProductsData = [];
+        try {
+            $allOrders = sOrder::select('products')->get();
+            $productCounts = [];
+            foreach ($allOrders as $order) {
+                if (is_array($order->products)) {
+                    foreach ($order->products as $product) {
+                        if (isset($product['id'])) {
+                            $productId = $product['id'];
+                            $productCounts[$productId] = ($productCounts[$productId] ?? 0) + 1;
+                        }
+                    }
+                }
+            }
+            arsort($productCounts);
+            $topProductIds = array_slice(array_keys($productCounts), 0, 5, true);
+
+            if (count($topProductIds) > 0) {
+                $topProducts = sProduct::whereIn('id', $topProductIds)->get()->keyBy('id');
+                foreach ($topProductIds as $productId) {
+                    if (isset($topProducts[$productId])) {
+                        $product = $topProducts[$productId];
+                        $topProductsData[] = [
+                            'id' => $product->id,
+                            'title' => $product->pagetitle ?? 'N/A',
+                            'count' => $productCounts[$productId] ?? 0,
+                        ];
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // If error occurs, just skip top products
+            $topProductsData = [];
+        }
+
+        $data['totalOrders'] = $totalOrders;
+        $data['newOrders'] = $newOrders;
+        $data['workingOrders'] = $workingOrders;
+        $data['completedOrders'] = $completedOrders;
+        $data['todayOrders'] = $todayOrders;
+        $data['todayRevenue'] = $todayRevenue;
+        $data['monthOrders'] = $monthOrders;
+        $data['monthRevenue'] = $monthRevenue;
+        $data['totalRevenue'] = $totalRevenue;
+        $data['totalProducts'] = $totalProducts;
+        $data['publishedProducts'] = $publishedProducts;
+        $data['unpublishedProducts'] = $unpublishedProducts;
+        $data['paidOrders'] = $paidOrders;
+        $data['pendingOrders'] = $pendingOrders;
+        $data['salesChartData'] = $salesChartData;
+        $data['recentOrders'] = $recentOrders;
+        $data['topProducts'] = $topProductsData ?? [];
+        $data['unprocessedes'] = $unprocessedes;
+        $data['workings'] = $workings;
+        $data['completeds'] = $completeds;
+
+        $domains = null;
+        if (evo()->getConfig('check_sMultisite', false)) {
+            $domains = \Seiger\sMultisite\Models\sMultisite::all()->keyBy('key');
+        }
+        $data['domains'] = $domains;
+
+        $_SESSION['itemaction'] = 'Viewing Dashboard';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        break;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Orders
+    |--------------------------------------------------------------------------
+    */
     case "orders":
         $perpage = Cookie::get('scom_orders_page_items', 50);
         $dbStatuses = array_flip(sOrder::select('status')->distinct()->pluck('status')->toArray());
