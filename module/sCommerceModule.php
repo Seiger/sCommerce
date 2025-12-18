@@ -141,6 +141,11 @@ switch ($get) {
         $requestId = (int)request()->input('i', 0);
         $item = sOrder::find($requestId);
 
+        $domains = null;
+        if (evo()->getConfig('check_sMultisite', false)) {
+            $domains = \Seiger\sMultisite\Models\sMultisite::all()->keyBy('key');
+        }
+
         $unprocessedes = [
             sOrder::ORDER_STATUS_NEW,
             sOrder::ORDER_STATUS_FAILED,
@@ -168,6 +173,7 @@ switch ($get) {
         $data['completeds'] = $completeds;
         $data['payment'] = isset($item->payment_info['method']) && trim($item->payment_info['method']) ? sCheckout::getPayment($item->payment_info['method']) : false;
         $data['delivery'] = isset($item->delivery_info['method']) && trim($item->delivery_info['method']) ? sCheckout::getDelivery($item->delivery_info['method']) : false;
+        $data['domains'] = $domains;
         $_SESSION['itemaction'] = 'Editing a Order of #' . $item->id;
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;

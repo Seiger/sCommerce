@@ -100,6 +100,7 @@
     "click_to_import_products_to_csv" => "Нажмите <strong>Импорт товаров из CSV</strong> — чтобы импортировать из CSV, или перетащите файл CSV в это поле.",
     "client" => "Клиент",
     "code" => "Код",
+    "comment_to_order" => "Комментарий к заказу",
     "comments_and_notes" => "Комментарии и заметки",
     "completed_orders" => "Завершенные",
     "confirm_copy" => "Подтвердить копирование",
