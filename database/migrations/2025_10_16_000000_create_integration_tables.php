@@ -27,7 +27,7 @@ return new class extends Migration {
                 'hidden' => 1,
             ],
             [
-                'identifier' => 's_import_export_csv',
+                'identifier' => 'sImportExportCSV',
                 'scope' => 'sCommerce',
                 'class' => 'Seiger\sCommerce\Integration\ImportExportCSV',
                 'active' => true,
