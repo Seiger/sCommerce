@@ -2,6 +2,14 @@
 
 use EvolutionCMS\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
+use Seiger\sCommerce\Api\Contracts\OrderListQueryApplierInterface;
+use Seiger\sCommerce\Api\Contracts\OrderUpdateApplierInterface;
+use Seiger\sCommerce\Api\Contracts\OrderUpdateMapperInterface;
+use Seiger\sCommerce\Api\Contracts\OrderUpdateValidatorInterface;
+use Seiger\sCommerce\Api\Services\OrderListQueryApplier;
+use Seiger\sCommerce\Api\Services\OrderUpdateMapper;
+use Seiger\sCommerce\Api\Services\OrderUpdateValidator;
+use Seiger\sCommerce\Api\Services\SCommerceOrderUpdateApplier;
 use Seiger\sCommerce\Cart\sCart;
 use Seiger\sCommerce\Checkout\sCheckout;
 use Seiger\sCommerce\Wishlist\sWishlist;
@@ -104,6 +112,23 @@ class sCommerceServiceProvider extends ServiceProvider
                 'days' => env('LOG_DAILY_DAYS', 14),
                 'replace_placeholders' => true,
             ]);
+        }
+
+        // Orders API update flow (standard-first, DI override-friendly)
+        // Keep sApi optional: don't register API-specific services when sApi isn't installed.
+        if (interface_exists(\Seiger\sApi\Contracts\RouteProviderInterface::class)) {
+            if (!$this->app->bound(OrderListQueryApplierInterface::class)) {
+                $this->app->singleton(OrderListQueryApplierInterface::class, OrderListQueryApplier::class);
+            }
+            if (!$this->app->bound(OrderUpdateMapperInterface::class)) {
+                $this->app->singleton(OrderUpdateMapperInterface::class, OrderUpdateMapper::class);
+            }
+            if (!$this->app->bound(OrderUpdateValidatorInterface::class)) {
+                $this->app->singleton(OrderUpdateValidatorInterface::class, OrderUpdateValidator::class);
+            }
+            if (!$this->app->bound(OrderUpdateApplierInterface::class)) {
+                $this->app->singleton(OrderUpdateApplierInterface::class, SCommerceOrderUpdateApplier::class);
+            }
         }
     }
 
