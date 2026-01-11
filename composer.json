@@ -32,10 +32,8 @@
   "extra": {
     "sapi": {
       "route_providers": [
-        {
-          "class": "Seiger\\sCommerce\\Api\\Routes\\OrdersRouteProvider",
-          "endpoint": "orders"
-        }
+        {"class": "Seiger\\sCommerce\\Api\\Routes\\OrdersRouteProvider", "endpoint": "orders"},
+        {"class": "Seiger\\sCommerce\\Api\\Routes\\StatusesRouteProvider", "endpoint": "statuses"}
       ]
     },
     "laravel": {
