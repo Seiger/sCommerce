@@ -48,6 +48,6 @@ return new class extends Migration {
         |--------------------------------------------------------------------------
         */
         sWorker::where('identifier', 'sProductsListingCache')->delete();
-        sWorker::where('identifier', 's_import_export_csv')->delete();
+        sWorker::where('identifier', 'sImportExportCSV')->delete();
     }
 };
