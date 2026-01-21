@@ -9,6 +9,7 @@
 [![Issues](https://img.shields.io/github/issues/Seiger/sCommerce)](https://github.com/Seiger/sCommerce/issues)
 [![Stars](https://img.shields.io/packagist/stars/Seiger/scommerce)](https://packagist.org/packages/seiger/scommerce)
 [![Total Downloads](https://img.shields.io/packagist/dt/seiger/scommerce)](https://packagist.org/packages/seiger/scommerce)
+[![Liberapay](https://img.shields.io/liberapay/patrons/seigerkornelyuk.svg?logo=liberapay)](https://packagist.org/packages/seiger/scommerce)
 
 # Welcome to sCommerce!
 
@@ -88,6 +89,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] **[sLang](https://github.com/Seiger/sLang)** Integration.
 - [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
 - [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.
+- [x] **[sApi](https://github.com/Seiger/sApi)** Integration.
 - [ ] Personalized Recommendations.
 - [ ] Social Media Integration.
 - [ ] Automated Email Marketing.
