@@ -108,11 +108,6 @@
         </div>
     </div>
 </div>
-@push('scripts.top')
-    <script>
-        const cookieName = "scom_attributes_page_items";
-    </script>
-@endpush
 @push('scripts.bot')
     <div id="actions">
         <div class="btn-group">
