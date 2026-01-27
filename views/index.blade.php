@@ -10,11 +10,14 @@
         <div class="tab-pane" id="resourcesPane">
             <script>tpResources = new WebFXTabPane(document.getElementById('resourcesPane'), false);</script>
             @foreach($tabs as $tab)
+                @php($normalizedTab = sCommerce::normalizeTab($tab))
+                @php($tabId = $normalizedTab['tabId'])
+                @php($tabTpl = $normalizedTab['tabTpl'])
                 @if($tab == 'content')
                     @foreach($sCommerceController->langList() as $idx => $lang)
                         <div class="tab-page content{{$lang}}Tab" id="content{{$lang}}Tab">
                             <h2 class="tab">
-                                <a onclick="javascript:tabSave('&get={{$tab}}&lang={{$lang}}{{$iUrl}}');" href="{!!$moduleUrl!!}&get={{$tab}}&lang={{$lang}}{{$iUrl}}">
+                                <a onclick="javascript:tabSave('&get={{$tabId}}&lang={{$lang}}{{$iUrl}}');" href="{!!$moduleUrl!!}&get={{$tabId}}&lang={{$lang}}{{$iUrl}}">
                                     <i class="fa fa-flag"></i>
                                     @lang('sCommerce::global.content')
                                     @if($lang != 'base')
@@ -23,16 +26,16 @@
                                 </a>
                             </h2>
                             <script>tpResources.addTabPage(document.getElementById('content{{$lang}}Tab'));</script>
-                            @if($get == $tab && $lang == request()->lang)
-                                @include('sCommerce::'.$tab.'Tab')
+                            @if($get == $tabId && $lang == request()->lang)
+                                @include('sCommerce::'.$tabId.'Tab')
                                 @php($get = 'content' . $lang)
                             @endif
                         </div>
                     @endforeach
                 @else
-                    {!!sCommerce::tabRender($tab, 'sCommerce::'.$tab.'Tab', $sCommerceController->getData())!!}
+                    {!!sCommerce::tabRender($tabId, $tabTpl ?: ('sCommerce::'.$tabId.'Tab'), $sCommerceController->getData())!!}
                 @endif
-                @if(is_array($events = evo()->invokeEvent('sCommerceManagerAddTabEvent', ['currentTab' => $tab, 'dataInput' => $sCommerceController->getData()])))
+                @if(is_array($events = evo()->invokeEvent('sCommerceManagerAddTabEvent', ['currentTab' => $tabId, 'dataInput' => $sCommerceController->getData()])))
                     @foreach($events as $event){!!$event['view']!!}@endforeach
                 @endif
             @endforeach

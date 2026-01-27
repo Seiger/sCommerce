@@ -367,15 +367,87 @@ class sCommerce
      */
     public function tabRender($tabId, $tabTpl = null, $dataInput = [], $tabName = null, $tabIcon = null, $tabHelp = null, $fullUrl = null)
     {
+        // Allow passing a view name instead of a tab id (e.g. "sStore::storeTab").
+        if (is_string($tabId) && Str::contains($tabId, '::') && $tabTpl === null) {
+            $normalized = $this->normalizeTab($tabId);
+            $tabId = $normalized['tabId'];
+            $tabTpl = $normalized['tabTpl'];
+        }
+
         $saveUri = '&get=' . $tabId . ($dataInput['iUrl'] ?? '') . ($dataInput['pUrl'] ?? '');
         $fullUrl = $fullUrl ?: $this->moduleUrl() . $saveUri;
         $tabName = $tabName ?: __('sCommerce::global.' . $tabId);
         $tabIcon = $tabIcon ?: __('sCommerce::global.' . $tabId . '_icon');
         $tabHelp = $tabHelp ?: __('sCommerce::global.' . $tabId . '_help');
 
+        // Resolve tab template (without cross-namespace auto-search).
+        if ($tabTpl && !View::exists($tabTpl)) {
+            $tabTpl = null;
+        }
+        if (!$tabTpl) {
+            $defaultTabTpl = 'sCommerce::' . $tabId . 'Tab';
+            if (View::exists($defaultTabTpl)) {
+                $tabTpl = $defaultTabTpl;
+            }
+        }
+
+        // If sCommerce translations are missing, try the tab template namespace, then fall back.
+        $tabNamespace = is_string($tabTpl) && Str::contains($tabTpl, '::') ? Str::before($tabTpl, '::') : null;
+        if ($tabNamespace) {
+            if ($tabName === 'sCommerce::global.' . $tabId) {
+                $tabName = __($tabNamespace . '::global.' . $tabId);
+            }
+            if ($tabIcon === 'sCommerce::global.' . $tabId . '_icon') {
+                $tabIcon = __($tabNamespace . '::global.' . $tabId . '_icon');
+            }
+            if ($tabHelp === 'sCommerce::global.' . $tabId . '_help') {
+                $tabHelp = __($tabNamespace . '::global.' . $tabId . '_help');
+            }
+        }
+
+        if ($tabName === 'sCommerce::global.' . $tabId || ($tabNamespace && $tabName === $tabNamespace . '::global.' . $tabId)) {
+            $tabName = Str::headline((string)$tabId);
+        }
+        if ($tabIcon === 'sCommerce::global.' . $tabId . '_icon' || ($tabNamespace && $tabIcon === $tabNamespace . '::global.' . $tabId . '_icon')) {
+            $tabIcon = 'fa fa-folder';
+        }
+        if ($tabHelp === 'sCommerce::global.' . $tabId . '_help' || ($tabNamespace && $tabHelp === $tabNamespace . '::global.' . $tabId . '_help')) {
+            $tabHelp = '';
+        }
+
         $data = compact(['tabId', 'tabTpl', 'saveUri', 'fullUrl', 'tabName', 'tabIcon', 'tabHelp']);
 
         return view('sCommerce::partials.tabRender', array_merge($data, $dataInput))->render();
+    }
+
+    /**
+     * Normalize a tab definition into an ID + template.
+     *
+     * Supported input:
+     * - "orders" => ["tabId" => "orders", "tabTpl" => null]
+     * - "sStore::storeTab" => ["tabId" => "store", "tabTpl" => "sStore::storeTab"]
+     *
+     * @param mixed $tab
+     * @return array{tabId:string, tabTpl:?string}
+     */
+    public function normalizeTab($tab): array
+    {
+        if (!is_string($tab)) {
+            return ['tabId' => (string)$tab, 'tabTpl' => null];
+        }
+
+        if (!Str::contains($tab, '::')) {
+            return ['tabId' => $tab, 'tabTpl' => null];
+        }
+
+        $viewName = $tab;
+        $viewPart = Str::afterLast($viewName, '::');
+        $base = Str::afterLast($viewPart, '.');
+
+        $tabId = Str::endsWith($base, 'Tab') ? Str::beforeLast($base, 'Tab') : $base;
+        $tabId = preg_replace('/[^A-Za-z0-9_-]/', '_', (string)$tabId);
+
+        return ['tabId' => (string)$tabId, 'tabTpl' => $viewName];
     }
 
     /**

@@ -5,5 +5,5 @@
         </a>
     </h2>
     <script>tpResources.addTabPage(document.getElementById('{{$tabId}}Tab'));</script>
-    @if($tabTpl && $get == $tabId)@include($tabTpl)@endif
+    @if($tabTpl && $get == $tabId)@includeIf($tabTpl)@endif
 </div>
