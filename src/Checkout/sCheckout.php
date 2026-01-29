@@ -668,6 +668,14 @@ class sCheckout
         $order->is_quick = true;
         $order->manager_notes = $adminNotes;
         $order->history = $history;
+
+        // Generate an immutable business reference for integrations (prefix + sequence).
+        if (empty($order->reference)) {
+            /** @var \Seiger\sCommerce\Services\OrderReferenceGenerator $gen */
+            $gen = app(\Seiger\sCommerce\Services\OrderReferenceGenerator::class);
+            $order->reference = $gen->generate();
+        }
+
         $order->save();
 
         if ($data['productId'] == 0) {
@@ -861,6 +869,14 @@ class sCheckout
         $order->lang = evo()->getLocale();
         $order->identifier = $identifier;
         $order->history = $history;
+
+        // Generate an immutable business reference for integrations (prefix + sequence).
+        if (empty($order->reference)) {
+            /** @var \Seiger\sCommerce\Services\OrderReferenceGenerator $gen */
+            $gen = app(\Seiger\sCommerce\Services\OrderReferenceGenerator::class);
+            $order->reference = $gen->generate();
+        }
+
         $order->save();
 
         $_SESSION['orderNumber'] = $order->id;
