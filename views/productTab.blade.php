@@ -1,9 +1,18 @@
 @php
     use Carbon\Carbon;
     use Illuminate\Support\Str;
+    use Seiger\sCommerce\Controllers\sCommerceController;
     use Seiger\sCommerce\Facades\sCommerce;
     use Seiger\sCommerce\Models\sAttribute;
     use Seiger\sCommerce\Models\sProduct;
+
+    $lang = (new sCommerceController)->langDefault();
+    $tr = static function ($v) use ($lang) {
+        if (is_array($v)) {
+            return (string)($v[$lang] ?? $v['base'] ?? (count($v) ? reset($v) : ''));
+        }
+        return (string)($v ?? '');
+    };
 @endphp
 <h3>{{(int)request()->input('i', 0) == 0 ? __('sCommerce::global.new_product') : ($item->pagetitle ?? __('sCommerce::global.no_text'))}}</h3>
 <div class="split my-3"></div>
@@ -126,17 +135,19 @@
                 </div>
             @endif
             @if(sCommerce::config('product.inventory_on', 1) == 2)
-                <div class="row-col col-lg-3 col-md-6 col-12">
-                    <div class="row form-row">
-                        <div class="col-auto col-title">
-                            <label for="inventory">@lang('sCommerce::global.inventory')</label>
-                            <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.inventory_help')"></i>
-                        </div>
-                        <div class="col">
-                            <input id="inventory" class="form-control" name="inventory" value="{{$item->inventory ?? ''}}" onblur="documentDirty=true;">
+                @if(!isset($stores) || !$stores || !$stores->count())
+                    <div class="row-col col-lg-3 col-md-6 col-12">
+                        <div class="row form-row">
+                            <div class="col-auto col-title">
+                                <label for="inventory">@lang('sCommerce::global.inventory')</label>
+                                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.inventory_help')"></i>
+                            </div>
+                            <div class="col">
+                                <input id="inventory" class="form-control" name="inventory" value="{{$item->inventory ?? ''}}" onblur="documentDirty=true;">
+                            </div>
                         </div>
                     </div>
-                </div>
+                @endif
             @endif
             @if(sCommerce::config('product.show_field_sku', 1) == 1)
                 <div class="row-col col-lg-3 col-md-6 col-12">
@@ -169,6 +180,48 @@
                 </div>
             @endif
         </div>
+        @if(isset($stores) && $stores instanceof \Illuminate\Support\Collection && $stores->count())
+            @php
+                $stocks = (isset($storeStocks) && $storeStocks instanceof \Illuminate\Support\Collection) ? $storeStocks : collect();
+            @endphp
+            <div class="split my-3"></div>
+            <h4 style="margin:0 0 10px 0;">@lang('sStore::global.stores')</h4>
+            <div class="table-responsive seiger__module-table">
+                <table class="table table-condensed table-hover sectionTrans scom-table">
+                    <thead>
+                    <tr>
+                        <th style="width:70px;">ID</th>
+                        <th>@lang('sStore::global.stores')</th>
+                        <th style="width:140px;">@lang('sCommerce::global.inventory')</th>
+                        <th style="width:140px;">@lang('sCommerce::global.visibility')</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($stores as $store)
+                        @php
+                            $storeName = $tr($store->name ?? []) ?: __('sCommerce::global.no_text');
+                            $qty = (int)($stocks[$store->id]->qty ?? 0);
+                            $isActive = (bool)($store->is_active ?? false);
+                        @endphp
+                        <tr>
+                            <td>{{$store->id}}</td>
+                            <td>
+                                <a href="{!!$moduleUrl!!}&get=store&i={{(int)$store->id}}" target="_blank">{{$storeName}}</a>
+                            </td>
+                            <td><b>{{$qty}}</b></td>
+                            <td>
+                                @if($isActive)
+                                    <span class="badge badge-success">@lang('global.page_data_published')</span>
+                                @else
+                                    <span class="badge badge-dark">@lang('global.page_data_unpublished')</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
         <div class="split my-3"></div>
         <div class="row form-row">
             <div class="row-col col-lg-3 col-md-6 col-12">

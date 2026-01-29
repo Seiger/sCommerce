@@ -687,6 +687,20 @@ switch ($get) {
         $data['categories'] = $product->categories->pluck('id')->toArray();
         $data['item'] = $product;
 
+        // sStore integration (read-only for now): provide stores list for product view.
+        if (
+            class_exists(\Seiger\sStore\Models\sStore::class) &&
+            class_exists(\Seiger\sStore\Models\sProductStoreStock::class) &&
+            Schema::hasTable('s_stores') &&
+            Schema::hasTable('s_product_store_stocks')
+        ) {
+            $data['stores'] = \Seiger\sStore\Models\sStore::query()
+                ->orderByDesc('is_default')->orderBy('priority')->orderBy('id')->get();
+
+            $data['storeStocks'] = \Seiger\sStore\Models\sProductStoreStock::query()
+                ->where('product_id', (int)($product->id ?? 0))->get()->keyBy('store_id');
+        }
+
         $tabs[] = 'content';
 
         if ($requestId > 0) {
