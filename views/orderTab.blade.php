@@ -8,7 +8,7 @@
         <div class="row">
             <div class="col-md">
                 <h3>
-                    <b>#{{$item->id}}</b>
+                    <b>#{{$item->order_number ?? $item->id}}</b>
                     @if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif
                     <b>{{implode(' ', array_diff([$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? ''], ['']))}} {{$item->user_info['phone']}}</b>
                 </h3>

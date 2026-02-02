@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use ReflectionClass;
+use Seiger\sCommerce\Services\OrderReferenceFormatter;
 
 /**
  * Class sOrder
@@ -116,6 +117,25 @@ class sOrder extends Model
     }
 
     /**
+     * Get the formatted order number for display purposes.
+     *
+     * This accessor returns a human-readable order number derived from the
+     * immutable `reference` field using {@see OrderReferenceFormatter}.
+     *
+     * The returned value is intended for UI, emails, and external integrations.
+     * It does NOT represent the internal primary key (`id`) and MUST NOT be used
+     * for database lookups or mutations.
+     *
+     * If the order does not have a reference assigned, the method returns null.
+     *
+     * @return string|null Formatted order number or null if reference is missing.
+     */
+    public function getOrderNumberAttribute(): ?string
+    {
+        return OrderReferenceFormatter::orderNumber($this->reference ?? null);
+    }
+
+    /**
      * Apply search filters to the query
      *
      * @param \Illuminate\Database\Eloquent\Builder $query The query builder object
@@ -124,24 +144,51 @@ class sOrder extends Model
      */
     public function scopeSearch($query)
     {
-        if (request()->has('search')) {
-            $fields = collect(['pagetitle', 'longtitle', 'introtext', 'content']);
-
-            $search = Str::of(request('search'))
-                ->stripTags()
-                ->replaceMatches('/[^\p{L}\p{N}\@\.!#$%&\'*+-\/=?^_`{|}~]/iu', ' ') // allowed symbol in email
-                ->replaceMatches('/(\s){2,}/', '$1') // removing extra spaces
-                ->trim()->explode(' ')
-                ->filter(fn($word) => mb_strlen($word) > 2);
-
-            $select = collect([0]);
-
-            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN \"{$field}\" LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate points source
-
-            return $query->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
-                ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
-                ->orderByDesc('points');
+        $raw = trim((string)request()->input('search', ''));
+        if ($raw === '') {
+            return $query;
         }
+
+        $raw = strip_tags($raw);
+        $raw = preg_replace('/\s{2,}/', ' ', $raw) ?? $raw;
+
+        $start = OrderReferenceFormatter::startDefault();
+
+        return $query->where(function ($q) use ($raw, $start) {
+            $digits = OrderReferenceFormatter::extractTrailingDigits($raw);
+
+            if (ctype_digit($raw)) {
+                $num = (int)$raw;
+                $q->orWhere('id', $num);
+
+                $q->orWhere('reference', $raw)->orWhere('reference', 'like', '%' . $raw);
+            } elseif ($digits !== null) {
+                $q->orWhere('reference', $digits)->orWhere('reference', 'like', '%' . $digits);
+            }
+
+            if ($digits !== null && $start > 0) {
+                $dNum = (int)ltrim($digits, '0');
+
+                if ($dNum > $start) {
+                    $ordinal = $dNum - $start;
+                    if ($ordinal > 0) {
+                        $ordStr = (string)$ordinal;
+                        $q->orWhere('reference', $ordStr)->orWhere('reference', 'like', '%' . $ordStr);
+                    }
+                } elseif ($dNum > 0 && $dNum < $start) {
+                    $display = (string)($start + $dNum);
+                    $q->orWhere('reference', $display)->orWhere('reference', 'like', '%' . $display);
+                }
+            }
+
+            $q->orWhere('reference', 'like', '%' . $raw . '%')
+                ->orWhere('identifier', 'like', '%' . $raw . '%')
+                ->orWhere('uuid', 'like', '%' . $raw . '%')
+                ->orWhere('comment', 'like', '%' . $raw . '%')
+                ->orWhere('user_info', 'like', '%' . $raw . '%')
+                ->orWhere('delivery_info', 'like', '%' . $raw . '%')
+                ->orWhere('payment_info', 'like', '%' . $raw . '%');
+        });
     }
 
     /**

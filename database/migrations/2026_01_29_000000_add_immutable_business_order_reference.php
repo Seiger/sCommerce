@@ -21,6 +21,7 @@ return new class extends Migration
     {
         // 1) Add reference to orders
         Schema::table('s_orders', function (Blueprint $table) {
+            $table->uuid('uuid')->unique()->nullable()->after('id');
             $table->string('reference', 64)->nullable()->unique()->after('identifier');
         });
 
@@ -47,6 +48,7 @@ return new class extends Migration
         Schema::table('s_orders', function (Blueprint $table) {
             $table->dropUnique(['reference']);
             $table->dropColumn('reference');
+            $table->dropColumn('uuid');
         });
     }
 };

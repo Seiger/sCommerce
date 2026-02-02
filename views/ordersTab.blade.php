@@ -84,7 +84,7 @@
         <tbody>
         @foreach($items as $item)
             <tr id="order-{{$item->id}}" style="position:relative;height:42px;@if($domains)border-left:30px solid {{$domains[$item->domain]->site_color ?? '#60a5fa'}}@endif;">
-                <td><b>#{{$item->id}}</b>@if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif</td>
+                <td><b>#{{$item->order_number ?? $item->id}}</b>@if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif</td>
                 <td>
                     {{implode(' ', array_diff([
                         $item->user_info['first_name'] ?? '',

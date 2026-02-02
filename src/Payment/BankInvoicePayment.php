@@ -2,6 +2,7 @@
 
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Payment\BasePaymentMethod;
+use Seiger\sCommerce\Services\OrderReferenceFormatter;
 
 /**
  * Class BankInvoicePayment
@@ -176,7 +177,7 @@ class BankInvoicePayment extends BasePaymentMethod
             'tax_id' => $this->getSettings()['tax_id'] ?? '',
             'cost' => $order->cost ?? 0,
             'currency' => $order->currency ?? 'UAH',
-            'order_id' => $order->id ?? 0,
+            'order_id' => OrderReferenceFormatter::orderNumber($order->reference ?? null) ?? ($order->id ?? 0),
             'payment_terms' => $this->getSettings()['payment_terms'] ?? 7,
             'info' => $this->getSettings()['info'] ?? '',
         ];

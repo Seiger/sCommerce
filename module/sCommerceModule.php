@@ -246,6 +246,7 @@ switch ($get) {
 
         $query = sOrder::query()->select('*');
         if ($domains && trim($domain)) {$query->where('domain', $domain);}
+        if (request()->filled('search')) {$query->search();}
         $query->orderBy($order, $direc);
 
         $unprocessedes = [
