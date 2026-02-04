@@ -7,10 +7,12 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sProduct;
+use Seiger\sGallery\Models\sGalleryModel as sGalleryModel;
 use Seiger\sLang\Facades\sLang;
 use Seiger\sTask\Models\sTaskModel;
 use Seiger\sTask\Workers\BaseWorker;
@@ -157,9 +159,10 @@ class GoogleMerchantFeed extends BaseWorker
                 'domain' => '',
                 'lang' => $defaultLanguage,
                 'currency' => 'UAH',
-                'country' => '0',
+                'country' => 'UA',
                 'chunk' => self::DEFAULT_CHUNK,
                 'include_out_of_stock' => false,
+                'include_without_images' => false,
                 'google_product_category' => '',
                 'site_key' => '',
                 'enabled' => true,
@@ -296,6 +299,7 @@ class GoogleMerchantFeed extends BaseWorker
                     $title = ($feed["slug"] ?? "") ? htmlspecialchars($feed["slug"]) : "Новий фід";
                     $enabledChecked = !isset($feed["enabled"]) || $feed["enabled"] ? "checked" : "";
                     $stockChecked = ($feed["include_out_of_stock"] ?? false) ? "checked" : "";
+                    $withoutImagesChecked = ($feed["include_without_images"] ?? false) ? "checked" : "";
                     $slugRequiredAttr = $slugRequired ? "required" : "";
                     $slugAsterisk = $slugRequired ? "<span style=\"color:#dc3545;\">*</span>" : "";
                     $showDeleteButton = $feedsCount > 1;
@@ -312,10 +316,10 @@ class GoogleMerchantFeed extends BaseWorker
                             @endif
                         </div>
                     </div>
-                    <div class="row">
+                        <div class="row">
                         <div class="col-sm-6">
                             <label>
-                                Slug {!! $slugAsterisk !!}
+                                Слаг {!! $slugAsterisk !!}
                                 <i data-lucide="help-circle" class="settings-icon" data-tooltip="Унікальний ідентифікатор фіду. Використовується для генерації назв файлів XML." style="width:14px;height:14px;"></i>
                             </label>
                             <input type="text" name="slug[]" class="form-control" value="{{$feed["slug"]?? ""}}" {{$slugRequiredAttr}}>
@@ -323,7 +327,7 @@ class GoogleMerchantFeed extends BaseWorker
                         @if($isMultisite && !empty($multisiteSites))
                             <div class="col-sm-6">
                                 <label>
-                                    Domain <span style="color:#dc3545;">*</span>
+                                    Домен <span style="color:#dc3545;">*</span>
                                     <i data-lucide="help-circle" class="settings-icon" data-tooltip="Домен сайту для генерації посилань на товари в XML фіді." style="width:14px;height:14px;"></i>
                                 </label>
                                 <select name="domain[]" class="form-control" required>
@@ -338,7 +342,7 @@ class GoogleMerchantFeed extends BaseWorker
                         @if($isLang && !empty($languages))
                             <div class="col-sm-4">
                                 <label>
-                                    Language
+                                    Мова
                                     <i data-lucide="help-circle" class="settings-icon" data-tooltip="Мова для перекладів товарів у фіді. Визначає, які переклади будуть використовуватись." style="width:14px;height:14px;"></i>
                                 </label>
                                 <select name="lang[]" class="form-control">
@@ -355,7 +359,7 @@ class GoogleMerchantFeed extends BaseWorker
                         @endif
                         <div class="col-sm-4">
                             <label>
-                                Currency <span style="color:#dc3545;">*</span>
+                                Валюта <span style="color:#dc3545;">*</span>
                                 <i data-lucide="help-circle" class="settings-icon" data-tooltip="Валюта для відображення цін у Google Merchant. Має відповідати валюті, налаштованій в sCommerce." style="width:14px;height:14px;"></i>
                             </label>
                             <select name="currency[]" class="form-control" required>
@@ -366,19 +370,18 @@ class GoogleMerchantFeed extends BaseWorker
                         </div>
                         <div class="col-sm-4">
                             <label>
-                                Country <span style="color:#dc3545;">*</span>
+                                Країна <span style="color:#dc3545;">*</span>
                                 <i data-lucide="help-circle" class="settings-icon" data-tooltip="Країна призначення фіду. Використовується для g:target_country в XML." style="width:14px;height:14px;"></i>
                             </label>
                             <select name="country[]" class="form-control" required>
-                                <option value="0" {{($feed["country"] ?? "0") === $code ? "selected" : ""}}></option>
                                 @foreach($countries as $code => $name)
-                                    <option value="{{$code}}" {{($feed["country"] ?? "0") === $code ? "selected" : ""}}>{{$name}}</option>
+                                    <option value="{{$code}}" {{ ($feed["country"] ?? "UA") === $code ? "selected" : ""}}>{{$name}}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-sm-4">
                             <label>
-                                Chunk size
+                                Розмір блоку
                                 <i data-lucide="help-circle" class="settings-icon" data-tooltip="Кількість товарів в одному XML файлі (100-10000). При великій кількості товарів створюється кілька файлів." style="width:14px;height:14px;"></i>
                             </label>
                             <input type="number" name="chunk[]" class="form-control" min="100" max="10000" value="{{$feed["chunk"] ?? $defaultChunk}}">
@@ -388,7 +391,7 @@ class GoogleMerchantFeed extends BaseWorker
                         @endif
                         <div class="col-sm-6">
                             <label>
-                                Google Product Category
+                                Категорія товару Google
                                 <i data-lucide="help-circle" class="settings-icon" data-tooltip="Категорія товарів Google (наприклад: Apparel & Accessories > Clothing). Використовується для g:google_product_category в XML." style="width:14px;height:14px;"></i>
                             </label>
                             <select name="category[]" class="form-control" style="width:100%;">
@@ -400,15 +403,21 @@ class GoogleMerchantFeed extends BaseWorker
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-sm-3">
+                        <div class="col-sm-4">
                             <label>
-                                <input type="checkbox" name="out_of_stock[]" {{$stockChecked}}> Include out of stock
+                                <input type="checkbox" name="out_of_stock[]" {{$stockChecked}}> Включати товари без залишку
                                 <i data-lucide="help-circle" class="settings-icon" data-tooltip="Якщо увімкнено, товари з нульовим залишком також будуть включені в фід." style="width:14px;height:14px;"></i>
                             </label>
                         </div>
-                        <div class="col-sm-3">
+                        <div class="col-sm-4">
                             <label>
-                                <input type="checkbox" name="enabled[]" {{$enabledChecked}}> Enabled
+                                <input type="checkbox" name="without_images[]" {{$withoutImagesChecked}}> Включити з відсутніми зображеннями
+                                <i data-lucide="help-circle" class="settings-icon" data-tooltip="Якщо вимкнено, товари без власного зображення (тільки заглушка) не потраплять у фід." style="width:14px;height:14px;"></i>
+                            </label>
+                        </div>
+                        <div class="col-sm-4">
+                            <label>
+                                <input type="checkbox" name="enabled[]" {{$enabledChecked}}> Увімкнено
                                 <i data-lucide="help-circle" class="settings-icon" data-tooltip="Увімкнути або вимкнути генерацію цього фіду." style="width:14px;height:14px;"></i>
                             </label>
                         </div>
@@ -585,6 +594,9 @@ class GoogleMerchantFeed extends BaseWorker
                         // Get out_of_stock checkbox
                         const outOfStockInput = feedBlock.querySelector("[name=\"out_of_stock[]\"]");
                         feed.include_out_of_stock = outOfStockInput && outOfStockInput.checked;
+
+                        const withoutImagesInput = feedBlock.querySelector("[name=\"without_images[]\"]");
+                        feed.include_without_images = withoutImagesInput && withoutImagesInput.checked;
                         
                         // Set slug in feed object
                         feed.slug = slug;
@@ -1041,16 +1053,19 @@ class GoogleMerchantFeed extends BaseWorker
         // Support both 'include_out_of_stock' field name
         $includeOutOfStock = $feed['include_out_of_stock'] ?? false;
 
+        $includeWithoutImages = $feed['include_without_images'] ?? false;
+
         return [
             'slug' => $slug ?: Str::slug($siteKey . '-' . ($language ?? 'base')),
             'domain' => $this->normalizeDomain($feed['domain'] ?? EVO_SITE_URL),
             'language' => $language,
             'currency' => strtoupper($feed['currency'] ?? sCommerce::config('basic.main_currency', 'USD')),
-            'country' => strtoupper($feed['country'] ?? '0'),
+            'country' => strtoupper($feed['country'] ?? 'UA'),
             'title' => $feed['title'] ?? (evo()->getConfig('site_name', 'Store') . ' | Google Merchant'),
             'description' => $feed['description'] ?? 'Automatically generated Google Merchant feed.',
             'chunk' => $chunk,
             'include_out_of_stock' => (bool)$includeOutOfStock,
+            'include_without_images' => (bool)$includeWithoutImages,
             'google_product_category' => $googleProductCategory,
             'site_key' => $siteKey,
             'directory' => $directory,
@@ -1082,13 +1097,15 @@ class GoogleMerchantFeed extends BaseWorker
                 'slug' => $config['slug'] ?? 'unknown',
                 'domain' => $config['domain'] ?? 'unknown',
                 'include_out_of_stock' => $config['include_out_of_stock'] ?? false,
+                'include_without_images' => $config['include_without_images'] ?? false,
             ]);
 
             $task->update([
                 'message' => sprintf(
-                    'Feed "%s": No products found matching criteria (include_out_of_stock: %s)',
+                    'Feed "%s": No products found matching criteria (include_out_of_stock: %s, include_without_images: %s)',
                     $config['slug'] ?? 'unknown',
-                    $config['include_out_of_stock'] ? 'yes' : 'no'
+                    $config['include_out_of_stock'] ? 'yes' : 'no',
+                    ($config['include_without_images'] ?? false) ? 'yes' : 'no'
                 ),
             ]);
 
@@ -1102,6 +1119,8 @@ class GoogleMerchantFeed extends BaseWorker
         $estimatedChunks = ceil($totalProducts / $config['chunk']);
         $isSingleFile = $estimatedChunks == 1;
 
+        $galleryEnabled = class_exists(sGalleryModel::class) && class_exists(Schema::class) && Schema::hasTable('s_galleries');
+
         $query->chunk($config['chunk'], function ($products) use (
             $config,
             &$chunkCounter,
@@ -1111,9 +1130,28 @@ class GoogleMerchantFeed extends BaseWorker
             $totalFeeds,
             &$filenames,
             $task,
-            $isSingleFile
+            $isSingleFile,
+            $galleryEnabled
         ) {
             $chunkCounter++;
+
+            // Load gallery images for products in this chunk (optional)
+            $galleryImages = [];
+            if ($galleryEnabled) {
+                $productIds = $products->pluck('id')->toArray();
+                if (!empty($productIds)) {
+                    $images = sGalleryModel::whereIn('parent', $productIds)
+                        ->where('item_type', 'product')
+                        ->where('type', sGalleryModel::TYPE_IMAGE)
+                        ->orderBy('parent')
+                        ->orderBy('position')
+                        ->get();
+
+                    foreach ($images as $image) {
+                        $galleryImages[$image->parent][] = $image;
+                    }
+                }
+            }
 
             // If single file, use slug-based name or feed.xml if slug is empty
             if ($isSingleFile) {
@@ -1126,7 +1164,7 @@ class GoogleMerchantFeed extends BaseWorker
             $tmpPath = $config['directory'] . DIRECTORY_SEPARATOR . $fileName . '.tmp';
             $finalPath = $config['directory'] . DIRECTORY_SEPARATOR . $fileName;
 
-            $this->writeXmlChunk($tmpPath, $products, $config);
+            $this->writeXmlChunk($tmpPath, $products, $config, $galleryImages);
             $this->atomicReplace($tmpPath, $finalPath);
 
             $filenames[] = $fileName;
@@ -1164,12 +1202,20 @@ class GoogleMerchantFeed extends BaseWorker
      */
     protected function buildProductQuery(array $config): Builder
     {
+        $galleryEnabled = class_exists(sGalleryModel::class) && class_exists(Schema::class) && Schema::hasTable('s_galleries');
+
         $query = sProduct::query()
             ->select('s_products.*')
             ->active()
             ->orderBy('s_products.id')
             ->with([
-                'texts',
+                'texts' => function ($relation) use ($config) {
+                    $langs = ['base'];
+                    if (!empty($config['language'])) {
+                        $langs[] = $config['language'];
+                    }
+                    $relation->whereIn('lang', array_unique($langs));
+                },
                 'categories',
             ]);
 
@@ -1177,6 +1223,27 @@ class GoogleMerchantFeed extends BaseWorker
             $query->where(function ($builder) {
                 $builder->where('s_products.availability', sProduct::AVAILABILITY_IN_STOCK)
                     ->orWhere('s_products.inventory', '>', 0);
+            });
+        }
+
+        if (!($config['include_without_images'] ?? false)) {
+            $query->where(function ($builder) use ($galleryEnabled) {
+                $builder->where(function ($b) {
+                    $b->whereNotNull('s_products.cover')
+                        ->where('s_products.cover', '!=', '');
+                });
+
+                if ($galleryEnabled) {
+                    $builder->orWhereExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('s_galleries')
+                            ->whereColumn('s_galleries.parent', 's_products.id')
+                            ->where('s_galleries.item_type', 'product')
+                            ->where('s_galleries.type', sGalleryModel::TYPE_IMAGE)
+                            ->whereNotNull('s_galleries.file')
+                            ->where('s_galleries.file', '!=', '');
+                    });
+                }
             });
         }
 
@@ -1192,7 +1259,7 @@ class GoogleMerchantFeed extends BaseWorker
      * @param array $config
      * @return void
      */
-    protected function writeXmlChunk(string $tmpPath, iterable $products, array $config): void
+    protected function writeXmlChunk(string $tmpPath, iterable $products, array $config, array $galleryImages = []): void
     {
         $writer = new \XMLWriter();
 
@@ -1212,7 +1279,8 @@ class GoogleMerchantFeed extends BaseWorker
         $writer->writeElement('description', $config['description']);
 
         foreach ($products as $product) {
-            $this->writeItem($writer, $product, $config);
+            $productImages = $galleryImages[$product->id] ?? [];
+            $this->writeItem($writer, $product, $config, $productImages);
         }
 
         $writer->endElement(); // channel
@@ -1229,20 +1297,59 @@ class GoogleMerchantFeed extends BaseWorker
      * @param array $config
      * @return void
      */
-    protected function writeItem(\XMLWriter $writer, sProduct $product, array $config): void
+    protected function writeItem(\XMLWriter $writer, sProduct $product, array $config, array $productImages = []): void
     {
         $translation = $this->resolveTranslation($product, $config['language']);
         $title = $this->sanitizeText($translation['title'] ?? $product->alias, 150);
         $description = $this->sanitizeText(trim($translation['introtext'] ?? '') ?: ($translation['content'] ?? ''), 5000);
         $link = $this->buildProductLink($product->link ?? '', $config['domain']);
-        $image = $this->buildProductLink($product->coverSrc ?? '', $config['domain']);
+
+        // Build images: cover + gallery (skip placeholders)
+        $images = [];
+
+        $coverSrc = (string)($product->coverSrc ?? '');
+        if ($coverSrc !== '' && !$this->isPlaceholderImage($coverSrc)) {
+            $coverImage = $this->buildProductLink($coverSrc, $config['domain']);
+            if ($coverImage && !in_array($coverImage, $images, true)) {
+                $images[] = $coverImage;
+            }
+        }
+
+        foreach ($productImages as $galleryImage) {
+            $imageSrc = (string)($galleryImage->src ?? '');
+            if ($imageSrc === '' || $this->isPlaceholderImage($imageSrc)) {
+                continue;
+            }
+
+            $imageUrl = $this->buildProductLink($imageSrc, $config['domain']);
+            if ($imageUrl && !in_array($imageUrl, $images, true)) {
+                $images[] = $imageUrl;
+            }
+        }
+
+        if (empty($images)) {
+            if (!($config['include_without_images'] ?? false)) {
+                return;
+            }
+
+            if ($coverSrc === '') {
+                $coverSrc = EVO_SITE_URL . 'assets/images/noimage.png';
+            }
+
+            $fallback = $this->buildProductLink($coverSrc, $config['domain']);
+            if ($fallback) {
+                $images[] = $fallback;
+            }
+        }
+
+        $image = $images[0] ?? '';
         $price = $this->formatPrice($product->priceToNumber($config['currency']), $config['currency']);
         $salePrice = $product->price_special > 0 && $product->price_special < $product->price_regular
             ? $this->formatPrice($product->specialPriceToNumber($config['currency']), $config['currency'])
             : null;
         $availability = $this->mapAvailability($product->availability);
         $identifier = $this->buildProductId($product);
-        $brand = $product->attribute('brand')?->label ?? $product->attribute('manufacturer')?->label ?? evo()->getConfig('site_name', 'Brand');
+        $brand = $translation['brand'] ?? evo()->getConfig('site_name', 'Brand');
         $productType = $this->resolveProductType($product);
 
         $writer->startElement('item');
@@ -1251,6 +1358,10 @@ class GoogleMerchantFeed extends BaseWorker
         $writer->writeElement('description', $description);
         $writer->writeElement('link', $link);
         $writer->writeElement('g:image_link', $image);
+
+        foreach (array_slice($images, 1, 10) as $additionalImage) {
+            $writer->writeElement('g:additional_image_link', $additionalImage);
+        }
         $writer->writeElement('g:availability', $availability);
         $writer->writeElement('g:price', $price);
 
@@ -1263,7 +1374,7 @@ class GoogleMerchantFeed extends BaseWorker
         $writer->writeElement('g:mpn', $this->sanitizeText($product->sku ?: $identifier, 70));
         $writer->writeElement('g:identifier_exists', $product->sku ? 'true' : 'false');
 
-        if (!empty($config['country']) && $config['country'] != '0') {
+        if (!empty($config['country'])) {
             $writer->writeElement('g:target_country', $config['country']);
         }
 
@@ -1280,6 +1391,21 @@ class GoogleMerchantFeed extends BaseWorker
         }
 
         $writer->endElement(); // item
+    }
+
+    /**
+     * Detect placeholder "noimage" URLs (local or absolute).
+     *
+     * @param string $url
+     * @return bool
+     */
+    protected function isPlaceholderImage(string $url): bool
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        $path = $path !== null ? (string)$path : $url;
+
+        return str_ends_with($path, '/assets/images/noimage.png')
+            || str_ends_with($path, '/assets/site/noimage.png');
     }
 
     /**
