@@ -46,6 +46,7 @@ use Seiger\sTask\Contracts\TaskInterface;
 class ImportExportCSV extends BaseWorker
 {
     const ALLOWED_EXTENSIONS = ['csv'];
+    private const TEXT_FIELDS = ['pagetitle', 'longtitle', 'introtext', 'content'];
     /** Directory where this integration puts its CSV exports. */
     private const EXPORT_DIR = 'stask/uploads';
     /** Directory where uploaded CSV files are stored for import. */
@@ -240,6 +241,7 @@ class ImportExportCSV extends BaseWorker
 
             $processed = 0;
             $headerRow = array_keys($this->headerRow());
+            $useMultilang = $this->shouldUseMultilangCsv();
 
             $task->update([
                 'status'  => sTaskModel::TASK_STATUS_RUNNING,
@@ -256,11 +258,15 @@ class ImportExportCSV extends BaseWorker
             $lastPct  = -1;              // last emitted percent
             $lastBeat = microtime(true); // last heartbeat time
             $startTime = microtime(true); // start time for ETA calculation
-            $maxExecutionTime = 300; // 5 minutes max execution time
+            $maxExecutionTime = 600; // 10 minutes max execution time
             $eta = '—'; // default ETA display
 
             // Process products in chunks to avoid memory issues
-            sProduct::with(['categories'])->orderBy('id')->chunk(50, function ($products) use ($fh, $opt, $headerRow, &$processed, $total, $task, &$lastPct, &$lastBeat, $startTime, $maxExecutionTime, &$eta) {
+            $with = ['categories'];
+            if ($useMultilang) {
+                $with[] = 'texts';
+            }
+            sProduct::with($with)->orderBy('id')->chunk(50, function ($products) use ($fh, $opt, $headerRow, &$processed, $total, $task, &$lastPct, &$lastBeat, $startTime, $maxExecutionTime, &$eta, $useMultilang) {
                 foreach ($products as $p) {
                     // Check execution time limit
                     if ((microtime(true) - $startTime) > $maxExecutionTime) {
@@ -272,6 +278,14 @@ class ImportExportCSV extends BaseWorker
                         $a = [];
                         foreach ($headerRow as $field) {
                             try {
+                                if ($useMultilang) {
+                                    $parsed = $this->parseLangIndexedTextKey($field);
+                                    if ($parsed) {
+                                        $value = $this->getProductTranslateField($p, $parsed['lang'], $parsed['field']);
+                                        $a[$field] = $this->sanitizeCsvValue($value);
+                                        continue;
+                                    }
+                                }
                                 switch ($field) {
                                     case 'published':
                                     case 'availability':
@@ -289,7 +303,7 @@ class ImportExportCSV extends BaseWorker
                                     case str_starts_with($field, 'attribute:'):
                                         $alias = substr($field, strlen('attribute:'));
                                         $value = $p?->attribute($alias)?->label ?? '';
-                                        $a[$field] = str_replace(['"', "'", "\n", "\r", "\t"], ['""', "''", ' ', ' ', ' '], $value);
+                                        $a[$field] = $this->sanitizeCsvValue($value);
                                         break;
                                     case 'category':
                                         if (evo()->getConfig('check_sMultisite', false)) {
@@ -319,7 +333,7 @@ class ImportExportCSV extends BaseWorker
                                         break;
                                     default:
                                         $value = $p?->{$field} ?? '';
-                                        $a[$field] = str_replace(['"', "'", "\n", "\r", "\t"], ['""', "''", ' ', ' ', ' '], $value);
+                                        $a[$field] = $this->sanitizeCsvValue($value);
                                         break;
                                 }
                             } catch (\Exception $e) {
@@ -568,6 +582,12 @@ class ImportExportCSV extends BaseWorker
      */
     private function headerRow(): array
     {
+        $sCommerceController = new sCommerceController();
+        return $this->buildHeaderRow($this->shouldUseMultilangCsv(), $sCommerceController);
+    }
+
+    private function buildHeaderRow(bool $useMultilang, sCommerceController $sCommerceController): array
+    {
         $product = [
             // Basic product information
             'id' => 'ID',
@@ -605,12 +625,6 @@ class ImportExportCSV extends BaseWorker
             // 'relevants' => __('sCommerce::global.relevant'),
             // 'similar' => __('sCommerce::global.relevant'),
 
-            // Product translations
-            'pagetitle' => __('sCommerce::global.product_name'),
-            'longtitle' => __('global.long_title'),
-            'introtext' => __('global.resource_summary'),
-            'content' => __('sCommerce::global.content'),
-
             // Additional data
             // 'tmplvars' => __('sCommerce::global.additional_fields_main_product_tab'),
             // 'additional' => __('sCommerce::global.additional_fields_to_products_tab'),
@@ -621,9 +635,25 @@ class ImportExportCSV extends BaseWorker
             // 'updated_at' => __('sCommerce::global.created'),
         ];
 
+        // Product translations
+        if ($useMultilang) {
+            foreach ($this->csvLanguagesList($sCommerceController) as $lang) {
+                $langTag = '[' . $lang . ']';
+                $product['pagetitle_' . $lang] = __('sCommerce::global.product_name') . ' ' . $langTag;
+                $product['longtitle_' . $lang] = __('global.long_title') . ' ' . $langTag;
+                $product['introtext_' . $lang] = __('global.resource_summary') . ' ' . $langTag;
+                $product['content_' . $lang] = __('sCommerce::global.content') . ' ' . $langTag;
+            }
+        } else {
+            $product['pagetitle'] = __('sCommerce::global.product_name');
+            $product['longtitle'] = __('global.long_title');
+            $product['introtext'] = __('global.resource_summary');
+            $product['content'] = __('sCommerce::global.content');
+        }
+
         // Related Attributes
         $attributes = [];
-        $attributesQuery = sAttribute::lang((new sCommerceController)->langDefault())->active()->get();
+        $attributesQuery = sAttribute::lang($sCommerceController->langDefault())->active()->get();
 
         if ($attributesQuery) {
             foreach ($attributesQuery as $attr) {
@@ -704,7 +734,7 @@ class ImportExportCSV extends BaseWorker
             'total'     => $totalLines,
         ]);
 
-        $headerKeys = array_flip($this->headerRow());
+        $headerKeys = $this->importHeaderLabelToFieldMap();
 
         // Process each row in batches
         while (($row = fgetcsv($fh, 0, $opt['delimiter'], $opt['enclosure'], $opt['escape'])) !== false) {
@@ -1196,30 +1226,35 @@ class ImportExportCSV extends BaseWorker
         if (isset($data['tmplvars'])) $product->tmplvars = json_encode(($data['tmplvars'] ?? []), JSON_UNESCAPED_UNICODE);
         $product->save();
 
-        // Process text fields (pagetitle, longtitle, introtext, content)
+        // Process text fields (pagetitle, longtitle, introtext, content) incl. multilang
         if ($product->id) {
-            $lang = $sCommerceController->langDefault();
-            $translate = sProductTranslate::whereProduct($product->id)->whereLang($lang)->first();
             \View::getFinder()->setPaths([EVO_BASE_PATH . 'assets/modules/scommerce/builder']);
+            $payloadByLang = $this->extractTextPayloadByLang($data, $sCommerceController->langDefault());
 
-            if (!$translate) {
-                $translate = new sProductTranslate();
-                $translate->product = $product->id;
-                $translate->lang = $lang;
+            foreach ($payloadByLang as $lang => $payload) {
+                $lang = strtolower(trim((string)$lang));
+                if ($lang === '') continue;
+
+                $translate = sProductTranslate::whereProduct($product->id)->whereLang($lang)->first();
+                if (!$translate) {
+                    $translate = new sProductTranslate();
+                    $translate->product = $product->id;
+                    $translate->lang = $lang;
+                }
+
+                if (array_key_exists('pagetitle', $payload)) $translate->pagetitle = trim((string)($payload['pagetitle'] ?? ''));
+                if (array_key_exists('longtitle', $payload)) $translate->longtitle = trim((string)($payload['longtitle'] ?? ''));
+                if (array_key_exists('introtext', $payload)) $translate->introtext = trim((string)($payload['introtext'] ?? ''));
+                if (array_key_exists('content', $payload)) {
+                    $contentField = view('richtext.render', ['id' => 'richtext', 'value' => trim((string)($payload['content'] ?? ''))])->render();
+                    $contentField = str_replace([chr(9), chr(10), chr(13), '  '], '', $contentField);
+
+                    $translate->content = $contentField;
+                    $translate->builder = json_encode([["richtext" => $contentField]], JSON_UNESCAPED_UNICODE);
+                }
+
+                $translate->save();
             }
-
-            if (isset($data['pagetitle'])) $translate->pagetitle = trim($data['pagetitle'] ?? '');
-            if (isset($data['longtitle'])) $translate->longtitle = trim($data['longtitle'] ?? '');
-            if (isset($data['introtext'])) $translate->introtext = trim($data['introtext'] ?? '');
-            if (isset($data['content'])) {
-                $contentField = view('richtext.render', ['id' => 'richtext', 'value' => trim($data['content'] ?? '')])->render();
-                $contentField = str_replace([chr(9), chr(10), chr(13), '  '], '', $contentField);
-
-                $translate->content = $contentField;
-                $translate->builder = json_encode([["richtext" => $contentField]], JSON_UNESCAPED_UNICODE);
-            }
-
-            $translate->save();
         }
 
         // Process category field (domain:id format for multisite, simple IDs for single site)
@@ -1465,6 +1500,111 @@ class ImportExportCSV extends BaseWorker
                 }
             }
         }
+    }
+
+    private function shouldUseMultilangCsv(): bool
+    {
+        $enabled = (bool)evo()->getConfig('check_sLang', false);
+        if (!$enabled) {
+            return false;
+        }
+
+        // Soft check: avoid fatal if package is missing despite config.
+        return class_exists(\Seiger\sLang\Facades\sLang::class);
+    }
+
+    private function csvLanguagesList(sCommerceController $controller): array
+    {
+        $langs = $controller->langList();
+        $langs = array_values(array_unique(array_filter(array_map(function ($lang) {
+            $lang = strtolower(trim((string)$lang));
+            return $lang !== '' ? $lang : null;
+        }, $langs))));
+
+        if (empty($langs)) {
+            $def = strtolower(trim($controller->langDefault()));
+            return $def !== '' ? [$def] : ['base'];
+        }
+
+        return $langs;
+    }
+
+    /**
+     * Map CSV header labels to internal field keys.
+     *
+     * Supports both:
+     * - legacy single-language columns (e.g. "Назва товару")
+     * - multilang columns with language index (e.g. "Назва товару [uk]")
+     */
+    private function importHeaderLabelToFieldMap(): array
+    {
+        $sCommerceController = new sCommerceController();
+
+        // Build legacy header map (single-language text columns)
+        $legacy = $this->buildHeaderRow(false, $sCommerceController);
+        $map = array_flip($legacy);
+
+        // Build multilang header map
+        $multilang = $this->buildHeaderRow(true, $sCommerceController);
+        foreach (array_flip($multilang) as $label => $field) {
+            $map[$label] = $field;
+        }
+
+        return $map;
+    }
+
+    private function parseLangIndexedTextKey(string $key): ?array
+    {
+        if (!preg_match('/^(pagetitle|longtitle|introtext|content)_([a-z0-9_\\-]+)$/i', $key, $m)) {
+            return null;
+        }
+        return [
+            'field' => strtolower($m[1]),
+            'lang' => strtolower($m[2]),
+        ];
+    }
+
+    private function extractTextPayloadByLang(array $data, string $defaultLang): array
+    {
+        $defaultLang = strtolower(trim($defaultLang)) ?: 'base';
+        $payloadByLang = [];
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, self::TEXT_FIELDS, true)) {
+                $payloadByLang[$defaultLang][$key] = $value;
+                continue;
+            }
+
+            $parsed = $this->parseLangIndexedTextKey((string)$key);
+            if ($parsed && in_array($parsed['field'], self::TEXT_FIELDS, true)) {
+                $payloadByLang[$parsed['lang']][$parsed['field']] = $value;
+            }
+        }
+
+        return $payloadByLang;
+    }
+
+    private function getProductTranslateField(sProduct $product, string $lang, string $field)
+    {
+        $lang = strtolower(trim($lang));
+        $field = strtolower(trim($field));
+        if ($lang === '' || !in_array($field, self::TEXT_FIELDS, true)) {
+            return '';
+        }
+
+        // Prefer already eager-loaded translations to avoid N+1 queries.
+        if ($product->relationLoaded('texts')) {
+            $translate = $product->texts->firstWhere('lang', $lang);
+            return $translate?->{$field} ?? '';
+        }
+
+        return sProductTranslate::whereProduct($product->id)->whereLang($lang)->first()?->{$field} ?? '';
+    }
+
+    private function sanitizeCsvValue($value): string
+    {
+        $value = (string)($value ?? '');
+        return str_replace(['"', "'", "\n", "\r", "\t"], ['""', "''", ' ', ' ', ' '], $value);
     }
 
     /**
