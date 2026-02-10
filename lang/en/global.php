@@ -480,4 +480,11 @@
     "today" => "Today",
     "today_statistics" => "Today Statistics",
     "top_products" => "Top Products",
+    "changed" => "changed",
+    "first_name" => "First name",
+    "middle_name" => "Middle name",
+    "last_name" => "Last name",
+    "phone" => "Phone",
+    "email" => "Email",
+    "this_action_affects_only_order" => "This action changes only the customer data stored in the order and does not affect the user in the database.",
 ];

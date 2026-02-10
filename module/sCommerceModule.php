@@ -332,6 +332,9 @@ switch ($get) {
 
         if ($item) {
             $history = $item->history;
+            if (!is_array($history)) {
+                $history = [];
+            }
 
             $payment_status = request()->integer('payment_status', $item->payment_status);
             if ($payment_status != $item->payment_status) {
@@ -355,12 +358,52 @@ switch ($get) {
 
             if (request()->string('note')->isNotEmpty()) {
                 $manager_notes = $item->manager_notes;
+                if (!is_array($manager_notes)) {
+                    $manager_notes = [];
+                }
                 $manager_notes[] = [
                     'comment' => request()->string('note')->value(),
                     'timestamp' => now()->toDateTimeString(),
                     'user_id' => (int)evo()->getLoginUserID('mgr'),
                 ];
                 $item->manager_notes = $manager_notes;
+            }
+
+            // Update order customer info (does not update user in DB)
+            $userInfoInput = request()->input('user_info', null);
+            if (is_array($userInfoInput)) {
+                $allowedKeys = ['first_name', 'middle_name', 'last_name', 'email', 'phone'];
+                $userInfo = $item->user_info;
+                if (!is_array($userInfo)) {
+                    $userInfo = [];
+                }
+
+                $changed = [];
+                foreach ($allowedKeys as $key) {
+                    if (!array_key_exists($key, $userInfoInput)) {
+                        continue;
+                    }
+
+                    $newValue = trim((string)($userInfoInput[$key] ?? ''));
+                    if ($key === 'email') {
+                        $newValue = function_exists('mb_strtolower') ? mb_strtolower($newValue) : strtolower($newValue);
+                    }
+
+                    $oldValue = (string)($userInfo[$key] ?? '');
+                    if ($oldValue !== $newValue) {
+                        $userInfo[$key] = $newValue;
+                        $changed[] = $key;
+                    }
+                }
+
+                if (!empty($changed)) {
+                    $item->user_info = $userInfo;
+                    $history[] = [
+                        'user_info_updated' => $changed,
+                        'timestamp' => now()->toDateTimeString(),
+                        'user_id' => (int)evo()->getLoginUserID('mgr'),
+                    ];
+                }
             }
 
             // Update products if provided

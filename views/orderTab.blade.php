@@ -1,4 +1,20 @@
-@php use Seiger\sCommerce\Models\sOrder; @endphp
+@php
+    use Seiger\sCommerce\Models\sOrder;
+
+    $userInfo = $item->user_info ?? [];
+    if (!is_array($userInfo)) {
+        $userInfo = json_decode((string)$userInfo, true);
+    }
+    $userInfo = is_array($userInfo) ? $userInfo : [];
+
+    $userFullName = trim(implode(' ', array_diff([
+        $userInfo['first_name'] ?? '',
+        $userInfo['middle_name'] ?? '',
+        $userInfo['last_name'] ?? '',
+    ], [''])));
+
+    $userId = (int)($userInfo['id'] ?? 0);
+@endphp
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!sCommerce::moduleUrl()!!}&get=orderSave" onsubmit="documentDirty=false;">
     <input type="hidden" name="back" value="&get=order&i={{(int)request()->input('i', 0)}}"/>
     <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}"/>
@@ -10,7 +26,7 @@
                 <h3>
                     <b>#{{$item->order_number ?? $item->id}}</b>
                     @if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif
-                    <b>{{implode(' ', array_diff([$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? ''], ['']))}} {{$item->user_info['phone']}}</b>
+                    <b>{{$userFullName}} {{$userInfo['phone'] ?? ''}}</b>
                 </h3>
                 @if($domains)
                     <p>
@@ -74,22 +90,26 @@
                 <div class="split my-3"></div>
             </div>
         </div>
-
         <div class="row">
             <div class="col-md-4">
-                <h3>@lang('sCommerce::global.customer_information')</h3>
+                <h3 class="d-flex justify-content-between align-items-center">
+                    <span>@lang('sCommerce::global.customer_information')</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="open-edit-customer-modal" title="@lang('global.edit')">
+                        <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
+                    </button>
+                </h3>
                 <p>
                     <strong>@lang('global.user_full_name'):</strong>
-                    @if((int)$item->user_info['id'] > 0)
-                        <a href="/manager/index.php?a=88&id={{(int)$item->user_info['id']}}" target="_blank">
-                            {{implode(' ', array_diff([$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? ''], ['']))}}
+                    @if($userId > 0)
+                        <a href="/manager/index.php?a=88&id={{$userId}}" target="_blank">
+                            {{$userFullName ?: '—'}}
                         </a>
                     @else
-                        {{implode(' ', array_diff([$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? ''], ['']))}}
+                        {{$userFullName ?: '—'}}
                     @endif
                 </p>
-                <p><strong>@lang('global.user_phone'):</strong> {{$item->user_info['phone'] ?? ''}}</p>
-                <p><strong>@lang('global.user_email'):</strong> {{$item->user_info['email'] ?? ''}}</p>
+                <p><strong>@lang('global.user_phone'):</strong> {{$userInfo['phone'] ?? '—'}}</p>
+                <p><strong>@lang('global.user_email'):</strong> {{$userInfo['email'] ?? '—'}}</p>
                 <div class="split my-3"></div>
             </div>
             <div class="col-md-8">
@@ -163,6 +183,52 @@
         </tfoot>
     </table>
     <div class="split my-3"></div>
+
+    <!-- Edit customer info modal (updates order->user_info only) -->
+    <div id="editCustomerModalBackdrop" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1060; display: none;"></div>
+    <div id="editCustomerModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1070; display: none; overflow: auto;">
+        <div class="modal-dialog" style="position: relative; margin: 30px auto; max-width: 640px; width: 90%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@lang('sCommerce::global.customer_information')</h5>
+                    <button type="button" class="close close-customer-modal-btn" aria-label="Close" style="cursor: pointer; float: right; font-size: 28px; font-weight: bold; line-height: 1; color: #000; opacity: 0.5;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@lang('sCommerce::global.first_name')</label>
+                            <input type="text" class="form-control" name="user_info[first_name]" value="{{e($userInfo['first_name'] ?? '')}}" maxlength="255">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@lang('sCommerce::global.middle_name')</label>
+                            <input type="text" class="form-control" name="user_info[middle_name]" value="{{e($userInfo['middle_name'] ?? '')}}" maxlength="255">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">@lang('sCommerce::global.last_name')</label>
+                            <input type="text" class="form-control" name="user_info[last_name]" value="{{e($userInfo['last_name'] ?? '')}}" maxlength="255">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">@lang('sCommerce::global.phone')</label>
+                            <input type="text" class="form-control" name="user_info[phone]" value="{{e($userInfo['phone'] ?? '')}}" maxlength="50">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">@lang('sCommerce::global.email')</label>
+                            <input type="email" class="form-control" name="user_info[email]" value="{{e($userInfo['email'] ?? '')}}" maxlength="255">
+                        </div>
+                    </div>
+                    <small class="text-muted">@lang('sCommerce::global.this_action_affects_only_order')</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary close-customer-modal-btn">@lang('global.cancel')</button>
+                    <button type="button" class="btn btn-success" id="save-customer-info-btn">
+                        <i class="fa fa-floppy-o"></i> <span>@lang('global.save')</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </form>
 
 <!-- Modal backdrop -->
@@ -217,7 +283,11 @@
                         </span>
                     @elseif(isset($history['products_updated']) && $history['products_updated'])
                         <span class="badge bg-info">
-                            @lang('sCommerce::global.products_in_order') змінено
+                            @lang('sCommerce::global.products_in_order') @lang('sCommerce::global.changed')
+                        </span>
+                    @elseif(isset($history['user_info_updated']))
+                        <span class="badge bg-info">
+                            @lang('sCommerce::global.customer_information') @lang('sCommerce::global.changed')
                         </span>
                     @endif
                 </td>
@@ -235,14 +305,8 @@
 </div>
 
 <style>
-    .history-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    .history-table th, .history-table td {
-        padding: 8px;
-        border: 1px solid #ddd;
-    }
+    .history-table {width: 100%; border-collapse: collapse;}
+    .history-table th, .history-table td {padding: 8px; border: 1px solid #ddd;}
 </style>
 
 @push('scripts.bot')
@@ -332,6 +396,48 @@
                     $('#addProductModalBackdrop').hide();
                     $('#addProductModal').hide();
                     $('body').css('overflow', '');
+                }
+            });
+
+            // Customer info modal handlers
+            function openEditCustomerModal() {
+                $('#editCustomerModalBackdrop').show();
+                $('#editCustomerModal').show();
+                $('body').css('overflow', 'hidden');
+            }
+
+            function closeEditCustomerModal() {
+                $('#editCustomerModalBackdrop').hide();
+                $('#editCustomerModal').hide();
+                $('body').css('overflow', '');
+            }
+
+            $('#open-edit-customer-modal').on('click', function(e) {
+                e.preventDefault();
+                openEditCustomerModal();
+            });
+
+            $(document).on('click', '.close-customer-modal-btn', function(e) {
+                e.preventDefault();
+                closeEditCustomerModal();
+            });
+
+            $(document).on('click', '#editCustomerModalBackdrop', function(e) {
+                if (e.target === this) {
+                    closeEditCustomerModal();
+                }
+            });
+
+            $('#editCustomerModal').on('input', 'input', function() {
+                documentDirty = true;
+            });
+
+            $('#save-customer-info-btn').on('click', function(e) {
+                e.preventDefault();
+                if (typeof saveForm === 'function') {
+                    saveForm('#form');
+                } else {
+                    $('#form').trigger('submit');
                 }
             });
 
