@@ -204,11 +204,10 @@ class ProductsListingCache extends BaseWorker
 
                 foreach ($products as $product) {
                     $scope = trim(str_replace('primary', '', $product->scope), '_');
-                    $link = str_replace([EVO_SITE_URL, EVO_CORE_PATH], '|', $product->getLinkAttribute(intval($product->catId)));
-                    $link = explode('|', $link);
-                    $link = end($link);
-                    $link = ltrim($link, '.');
-                    $productsListing[$scope][trim($link, '/')] = $product->id;
+                    $url = $product->getLinkAttribute((int)$product->catId);
+                    $path = parse_url($url, PHP_URL_PATH) ?? $url;
+                    $path = ltrim($path, './');
+                    $productsListing[$scope][trim($path, '/')] = $product->id;
                 }
 
                 $totalProcessed += $products->count();
