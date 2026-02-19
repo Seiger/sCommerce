@@ -91,7 +91,7 @@
                         $item->user_info['middle_name'] ?? '',
                         $item->user_info['last_name'] ?? ''],
                     ['']))}}
-                    ({{$item->user_info['phone'] ?? ''}})
+                    @if(trim($item->user_info['phone'] ?? ''))({{$item->user_info['phone'] ?? ''}})@endif
                 </td>
                 <td>{{$item->created_at}}</td>
                 <td>{{sCommerce::convertPrice($item->cost, $item->currency)}}@if(($currencies[$item->currency]['show'] ?? 0) == 0) {{$item->currency}}@endif</td>

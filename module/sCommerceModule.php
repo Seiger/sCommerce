@@ -320,8 +320,41 @@ switch ($get) {
         $data['unprocessedes'] = $unprocessedes;
         $data['workings'] = $workings;
         $data['completeds'] = $completeds;
-        $data['payment'] = isset($item->payment_info['method']) && trim($item->payment_info['method']) ? sCheckout::getPayment($item->payment_info['method']) : false;
-        $data['delivery'] = isset($item->delivery_info['method']) && trim($item->delivery_info['method']) ? sCheckout::getDelivery($item->delivery_info['method']) : false;
+        $paymentMethod = false;
+        $paymentMethodName = '';
+        if ($item && isset($item->payment_info['method'])) {
+            $paymentMethodName = trim((string)$item->payment_info['method']);
+        }
+        if ($paymentMethodName !== '') {
+            try {
+                $paymentMethod = sCheckout::getPayment($paymentMethodName);
+            } catch (\Throwable $e) {
+                Log::warning("sCommerce order view: payment method '{$paymentMethodName}' is unavailable", [
+                    'order_id' => $item->id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+                $paymentMethod = false;
+            }
+        }
+        $data['payment'] = $paymentMethod;
+
+        $deliveryMethod = false;
+        $deliveryMethodName = '';
+        if ($item && isset($item->delivery_info['method'])) {
+            $deliveryMethodName = trim((string)$item->delivery_info['method']);
+        }
+        if ($deliveryMethodName !== '') {
+            try {
+                $deliveryMethod = sCheckout::getDelivery($deliveryMethodName);
+            } catch (\Throwable $e) {
+                Log::warning("sCommerce order view: delivery method '{$deliveryMethodName}' is unavailable", [
+                    'order_id' => $item->id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+                $deliveryMethod = false;
+            }
+        }
+        $data['delivery'] = $deliveryMethod;
         $data['domains'] = $domains;
         $_SESSION['itemaction'] = 'Editing a Order of #' . $item->id;
         $_SESSION['itemname'] = __('sCommerce::global.title');

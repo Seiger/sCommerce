@@ -210,7 +210,7 @@
                             @endforeach
                             {!!implode(' || ', $cts)!!}
                         @elseif($item->category > 1)
-                            <a href="@makeUrl($item->category)" target="_blank">{{$resources[$item->category]}}</a>
+                            <a href="@makeUrl($item->category)" target="_blank">{{$resources[$item->category]??''}}</a>
                         @else
                             <a href="@makeUrl(1)" target="_blank">{{evo()->getConfig('site_name')}}</a>
                         @endif

@@ -7,19 +7,13 @@
     }
     $userInfo = is_array($userInfo) ? $userInfo : [];
 
-    $userFullName = trim(implode(' ', array_diff([
-        $userInfo['first_name'] ?? '',
-        $userInfo['middle_name'] ?? '',
-        $userInfo['last_name'] ?? '',
-    ], [''])));
-
-    $userId = (int)($userInfo['id'] ?? 0);
+    $userFullName = trim(implode(' ', array_diff([$userInfo['first_name'] ?? '', $userInfo['middle_name'] ?? '', $userInfo['last_name'] ?? ''], [''])));
+    $userId = (int)($item?->user_id ?? 0);
 @endphp
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!sCommerce::moduleUrl()!!}&get=orderSave" onsubmit="documentDirty=false;">
     <input type="hidden" name="back" value="&get=order&i={{(int)request()->input('i', 0)}}"/>
     <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}"/>
     <input type="hidden" name="products_data" id="products-data" value="{{json_encode($item->products)}}"/>
-
     <div class="container-fluid">
         <div class="row">
             <div class="col-md">
@@ -130,7 +124,6 @@
             </div>
         </div>
     </div>
-
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="mb-0">@lang('sCommerce::global.products_in_order')</h3>
         <button type="button" class="btn btn-primary" id="open-add-product-modal" onclick="openAddProductModal(); return false;">
@@ -141,6 +134,7 @@
         <thead>
         <tr>
             <th>@lang('sCommerce::global.product_name')</th>
+            <th>@lang('sCommerce::global.sku')</th>
             <th>@lang('sCommerce::global.price')</th>
             <th>@lang('sCommerce::global.quantity')</th>
             <th>@lang('sCommerce::global.sum')</th>
@@ -158,9 +152,10 @@
             <tr data-product-index="{{$index}}" style="height: 42px;">
                 <td>
                     <img src="{{$product['coverSrc']}}" class="product-thumbnail">
-                    <a href="{{$product['link']}}" target="_blank"><b>{{$product['title']}}</b></a>
+                    <a @if(trim($product['link'])) href="{{$product['link']}}" @endif target="_blank"><b>{{$product['title']}}</b></a>
                     @if(trim($info))<i class="fa fa-question-circle" data-tooltip="{!!$info!!}"></i>@endif
                 </td>
+                <td>{{$product['sku']}}</td>
                 <td>{{$product['price']}}</td>
                 <td>
                     <input type="number" name="products[{{$index}}][quantity]" class="form-control product-quantity" value="{{$product['quantity']}}" min="1" style="width: 70px;">
