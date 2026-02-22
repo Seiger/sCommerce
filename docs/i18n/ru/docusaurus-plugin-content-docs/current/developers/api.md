@@ -15,11 +15,11 @@ sCommerce сам по себе не регистрирует роуты `/{base}
 - Route provider: `Seiger\sCommerce\Api\Routes\OrdersRouteProvider`
 - Роуты:
   - `GET  /{base}/{version}/orders`
-  - `PUT  /{base}/{version}/orders/&#123;order_id&#125;`
+  - `PUT  /{base}/{version}/orders/{orderId}`
 
 Точные `{base}` и `{version}` определяются конфигурацией/дискавери sApi.
 
-### Update flow (PUT /orders/&#123;order_id&#125;)
+### Update flow (PUT /orders/{orderId})
 
 `Seiger\sCommerce\Api\Controllers\OrdersController@update` сделан намеренно “тонким”:
 

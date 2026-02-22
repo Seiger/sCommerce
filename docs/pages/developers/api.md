@@ -15,11 +15,11 @@ The package provides the `orders` endpoint via:
 - Route provider: `Seiger\sCommerce\Api\Routes\OrdersRouteProvider`
 - Routes:
   - `GET  /{base}/{version}/orders`
-  - `PUT  /{base}/{version}/orders/&#123;order_id&#125;`
+  - `PUT  /{base}/{version}/orders/{orderId}`
 
 Exact `{base}` and `{version}` are defined by sApi configuration/discovery.
 
-### Update flow (PUT /orders/&#123;order_id&#125;)
+### Update flow (PUT /orders/{orderId})
 
 `Seiger\sCommerce\Api\Controllers\OrdersController@update` is intentionally thin:
 
