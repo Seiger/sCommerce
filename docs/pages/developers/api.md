@@ -19,7 +19,7 @@ The package provides the `orders` endpoint via:
 
 Exact `{base}` and `{version}` are defined by sApi configuration/discovery.
 
-### Update flow (PUT /orders/{orderId})
+### Update flow (PUT /orders/orderId)
 
 `Seiger\sCommerce\Api\Controllers\OrdersController@update` is intentionally thin:
 

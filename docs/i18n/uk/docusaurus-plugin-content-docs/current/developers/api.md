@@ -19,7 +19,7 @@ sCommerce сам по собі не реєструє роути `/{base}/{versio
 
 Точні `{base}` та `{version}` визначаються конфігурацією/дискавері sApi.
 
-### Update flow (PUT /orders/{orderId})
+### Update flow (PUT /orders/orderId)
 
 `Seiger\sCommerce\Api\Controllers\OrdersController@update` зроблено навмисно “тонким”:
 
