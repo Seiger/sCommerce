@@ -331,9 +331,9 @@ If you encounter issues:
 
 1. Check the [GitHub Issues](https://github.com/Seiger/sCommerce/issues)
 2. Join the [GitHub Discussions](https://github.com/Seiger/sCommerce/discussions)
-3. Review the [Developer Guide](./developers.md) for advanced configuration
+3. Review the [Developer Guide](./developers/index.md) for advanced configuration
 
 ## What's Next?
 
-- **[Developer Guide](./developers.md)** - Advanced configuration and customization
-- **[Admin Guide](./admin.md)** - Managing your store through the admin panel
+- **[Developer Guide](./developers/index.md)** - Advanced configuration and customization
+- **[Admin Guide](./admin/index.md)** - Managing your store through the admin panel
