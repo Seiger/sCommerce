@@ -487,4 +487,5 @@
     "phone" => "Phone",
     "email" => "Email",
     "this_action_affects_only_order" => "This action changes only the customer data stored in the order and does not affect the user in the database.",
+    "recipient" => "Recipient of the order",
 ];

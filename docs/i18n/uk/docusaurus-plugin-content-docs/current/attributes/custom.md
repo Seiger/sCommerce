@@ -31,8 +31,8 @@ sidebar_position: 1
  * Файл: assets/modules/scommerce/views/attributes/custom_field.php
  */
 
-$value = $attribute->value ?? '';
-$label = $attribute->label ?? '';
+$value = $attribute?->value ?? '';
+$label = $attribute?->label ?? '';
 ?>
 
 <div class="form-group">
@@ -55,7 +55,7 @@ $label = $attribute->label ?? '';
 ```php
 $product = sProduct::find(1);
 $customValue = $product->attribute('custom_field');
-echo $customValue->value ?? '';
+echo $customValue?->value ?? '';
 ```
 
 ### Відображення в Blade шаблоні:
@@ -63,8 +63,8 @@ echo $customValue->value ?? '';
 ```php
 @if($product->attribute('custom_field'))
     <div class="custom-attribute">
-        <strong>{{ $product->attribute('custom_field')->label }}:</strong>
-        {{ $product->attribute('custom_field')->value }}
+        <strong>{{$product->attribute('custom_field')?->label ?? ''}}:</strong>
+        {{$product->attribute('custom_field')?->value ?? ''}}
     </div>
 @endif
 ```
@@ -75,10 +75,7 @@ echo $customValue->value ?? '';
 
 ```php
 // Отримання товарів з певним значенням атрибута
-$products = sProduct::whereHas('attributes', function($query) {
-    $query->where('alias', 'custom_field')
-          ->where('value', 'specific_value');
-})->get();
+$products = sProduct::whereHas('attrValues', function($q) {$q->where('alias', 'custom_field')->where('value', 'specific_value');})->get();
 ```
 
 ## Приклади типів полів

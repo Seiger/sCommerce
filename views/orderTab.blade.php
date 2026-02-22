@@ -104,6 +104,10 @@
                 </p>
                 <p><strong>@lang('global.user_phone'):</strong> {{$userInfo['phone'] ?? '—'}}</p>
                 <p><strong>@lang('global.user_email'):</strong> {{$userInfo['email'] ?? '—'}}</p>
+                @if(isset($userInfo['recipient_person']) || isset($userInfo['recipient_phone'])))
+                    <p style="margin-bottom:0"><strong style="color:red;text-transform:uppercase">@lang('sCommerce::global.recipient')</strong></p>
+                    <p>{{$userInfo['recipient_person'] ?? ''}}<br>{{$userInfo['recipient_phone'] ??}}</p>
+                @endif
                 <div class="split my-3"></div>
             </div>
             <div class="col-md-8">

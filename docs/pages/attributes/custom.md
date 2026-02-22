@@ -103,7 +103,7 @@ file `/var/www/html/my-site.com/assets/modules/scommerce/attribute/dates.blade.p
 ```php
 @php
 $values = [];
-$vals = json_decode($attribute->value ?? '', true);
+$vals = json_decode($attribute?->value ?? '', true);
 if ($vals) {
     foreach ($vals as $v) {
         if (count(array_diff($v, [""]))) {

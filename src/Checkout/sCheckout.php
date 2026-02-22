@@ -86,6 +86,14 @@ class sCheckout
             'payment.method' => 'required|string|in:' . implode(',', $paymentMethods),
             'comment' => 'nullable|string|max:1000',
             'do_not_call' => 'nullable|boolean',
+            'delivery.courier.recipient_region' => 'sometimes|string|max:255',
+            'delivery.courier.recipient_city' => 'sometimes|string|max:255',
+            'delivery.courier.recipient_street' => 'sometimes|string|max:255',
+            'delivery.courier.recipient_build' => 'sometimes|string|max:10',
+            'delivery.courier.recipient_room' => 'sometimes|string|max:10',
+            'delivery.courier.recipient_zip' => 'sometimes|string|max:10',
+            'user.recipient_person' => 'nullable|string|max:255',
+            'user.recipient_phone' => 'nullable|string|max:20|regex:/^\+?[1-9]\d{7,14}$/',
         ];
 
         if (!empty($data['delivery']['method']) && isset($this->deliveryMethods[$data['delivery']['method']])) {
