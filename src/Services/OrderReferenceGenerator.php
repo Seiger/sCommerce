@@ -13,6 +13,7 @@ class OrderReferenceGenerator
     /**
      * Generate the next order reference string using a global counter scope ("default").
      *
+     * @since 1.0.11
      * @return string
      */
     public function generate(): string
@@ -32,18 +33,31 @@ class OrderReferenceGenerator
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+                $row = DB::table('s_order_counters')->where('scope', $scope)->lockForUpdate()->first();
             }
 
             $currentRaw = (int)($row->current ?? 0);
-            // Backward compatibility: if `current` ever stored the display number, convert it back to ordinal.
-            $currentOrdinal = ($start > 0 && $currentRaw >= $start) ? max(0, $currentRaw - $start) : $currentRaw;
-            $ordinalNext = $currentOrdinal + 1;
-            $displayNumber = $start > 0 ? ($start + $ordinalNext) : $ordinalNext;
+            $startNumber = max(1, $start);
+
+            // Keep sequence monotonic even if counter format changed earlier
+            // or references already exist in orders table.
+            $maxReferenceFromOrders = (int)(
+                DB::table('s_orders')
+                    ->selectRaw('MAX(CAST(reference AS UNSIGNED)) AS max_reference')
+                    ->value('max_reference') ?? 0
+            );
+
+            // `current` stores the last issued display number.
+            $displayNumber = max(
+                $startNumber,
+                $currentRaw + 1,
+                $maxReferenceFromOrders + 1
+            );
 
             DB::table('s_order_counters')
                 ->where('scope', $scope)
                 ->update([
-                    'current' => $ordinalNext,
+                    'current' => $displayNumber,
                     'updated_at' => now(),
                 ]);
 

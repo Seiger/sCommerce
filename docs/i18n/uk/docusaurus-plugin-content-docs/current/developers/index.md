@@ -15,12 +15,12 @@ sCommerce слідує модульній архітектурі з чітким
 ```
 sCommerce/
 ├── src/
-│   ├── Models/           # Eloquent моделі
-│   ├── Controllers/      # HTTP контролери
-│   ├── Services/         # Бізнес-логіка
-│   ├── Facades/          # Фасади сервісів
+│   ├── Models/          # Eloquent моделі
+│   ├── Controllers/     # HTTP контролери
+│   ├── Services/        # Бізнес-логіка
+│   ├── Facades/         # Фасади сервісів
 │   ├── Http/            # Маршрути та middleware
-│   └── Integration/      # Зовнішні інтеграції
+│   └── Integration/     # Зовнішні інтеграції
 ├── views/               # Blade шаблони
 ├── assets/              # CSS, JS, зображення
 └── database/            # Міграції та сідери

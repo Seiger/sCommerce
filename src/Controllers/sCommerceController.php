@@ -860,7 +860,7 @@ class sCommerceController
         if ($dept) {
             if ($resource->hasChildren()) {
                 foreach ($resource->children as $item) {
-                    $this->categoryCrumb($item, $crumb, $dept--);
+                    $this->categoryCrumb($item, $crumb, $dept - 1);
                 }
             }
         }
@@ -881,7 +881,7 @@ class sCommerceController
         if (count($res)) {
             $this->categories = array_merge($this->categories, $res);
             if ($dept) {
-                $this->getActiveChildIds($res, $dept--);
+                $this->getActiveChildIds($res, $dept - 1);
             }
         }
 

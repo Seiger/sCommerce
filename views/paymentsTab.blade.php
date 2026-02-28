@@ -27,7 +27,7 @@
                     <td>{!!$item->type!!}</td>
                     <td>{{$item->title}} @if(trim($item->description))<i class="fa fa-question-circle" data-tooltip="{!!$item->description!!}"></i>@endif</td>
                     <td>{{$item->position}}</td>
-                    <td>{{$item->mode}}</td>
+                    <td>@php($mode = __('sCommerce::global.mode_'.$item->mode)){{str_contains($mode, '::') ? $item->mode : $mode}}</td>
                     <td>
                         @if($item->active)
                             <span class="badge badge-success">@lang('global.page_data_published')</span>

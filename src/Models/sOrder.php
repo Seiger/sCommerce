@@ -65,6 +65,7 @@ class sOrder extends Model
         'delivery_info' => 'array',
         'payment_info' => 'array',
         'products' => 'array',
+        'manager_info' => 'array',
         'manager_notes' => 'array',
         'history' => 'array',
         'do_not_call' => 'boolean',

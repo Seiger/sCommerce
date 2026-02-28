@@ -138,7 +138,7 @@
         <thead>
         <tr>
             <th>@lang('sCommerce::global.product_name')</th>
-            <th>@lang('sCommerce::global.sku')</th>
+            @if (sCommerce::config('product.show_field_sku', 1))<th>@lang('sCommerce::global.sku')</th>@endif
             <th>@lang('sCommerce::global.price')</th>
             <th>@lang('sCommerce::global.quantity')</th>
             <th>@lang('sCommerce::global.sum')</th>
@@ -150,17 +150,17 @@
             @php($info = '')
             @foreach($product as $p)
                 @if(is_array($p) && isset($p['title']))
-                    @php($info .= '<b>' . htmlentities($p['title']) . ':</b> ' . htmlentities($p['label'] ?? '') . '<br>')
+                    @php($info .= '<br><b>' . htmlentities($p['title']) . ':</b> ' . htmlentities($p['label'] ?? ''))
                 @endif
             @endforeach
             <tr data-product-index="{{$index}}" style="height: 42px;">
                 <td>
                     <img src="{{$product['coverSrc']}}" class="product-thumbnail">
                     <a @if(trim($product['link'])) href="{{$product['link']}}" @endif target="_blank"><b>{{$product['title']}}</b></a>
-                    @if(trim($info))<i class="fa fa-question-circle" data-tooltip="{!!$info!!}"></i>@endif
+                    @if(trim($info)){!!$info!!}@endif
                 </td>
-                <td>{{$product['sku']}}</td>
-                <td>{{$product['price']}}</td>
+                @if (sCommerce::config('product.show_field_sku', 1))<td>{{$product['sku']}}</td>@endif
+                <td>{{sCommerce::convertPrice($product['price'])}}</td>
                 <td>
                     <input type="number" name="products[{{$index}}][quantity]" class="form-control product-quantity" value="{{$product['quantity']}}" min="1" style="width: 70px;">
                 </td>

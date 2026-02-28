@@ -42,11 +42,10 @@ sidebar_position: 1
 **Передумови:**
 ```bash
 # Системні вимоги
-- Evolution CMS 3.7+
+- Evolution CMS 3.5+
 - PHP 8.3+
 - MySQL 8.0+ / MariaDB 10.5+ / PostgreSQL 10+ / SQLite 3.25+
 - Composer 2.2+
-- Node.js 18+ (для frontend інструментів збірки)
 ```
 
 **Встановлення:**
