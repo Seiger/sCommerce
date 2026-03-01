@@ -29,6 +29,7 @@ use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sCommerce\Models\sReview;
+use Seiger\sCommerce\Payment\PaymentFlow;
 use Seiger\sGallery\Facades\sGallery;
 use Seiger\sGallery\Models\sGalleryField;
 use Seiger\sGallery\Models\sGalleryModel;
@@ -371,12 +372,100 @@ switch ($get) {
 
             $payment_status = request()->integer('payment_status', $item->payment_status);
             if ($payment_status != $item->payment_status) {
-                $item->payment_status = $payment_status;
-                $history[] = [
-                    'payment_status' => $payment_status,
-                    'timestamp' => now()->toDateTimeString(),
-                    'user_id' => (int)evo()->getLoginUserID('mgr'),
-                ];
+                if ((new PaymentFlow())->ledgerAvailable()) {
+                    $mgrUserId = (int) evo()->getLoginUserID('mgr');
+
+                    DB::transaction(function () use ($item, $payment_status, $mgrUserId, &$history) {
+
+                        $flow = new PaymentFlow();
+                        $ledgerStatus = $flow->mapOrderStatusToLedgerStatus($payment_status);
+
+                        /** @var sOrderPayment|null $payment */
+                        $payment = sOrderPayment::query()
+                            ->where('order_id', $item->id)
+                            ->orderByDesc('sequence')
+                            ->orderByDesc('id')
+                            ->first();
+
+                        if ($payment) {
+                            $meta = $payment->metadata ?? [];
+
+                            $meta['admin_override'] = [
+                                'manager_user_id' => $mgrUserId,
+                                'changed_at' => now(),
+                                'from' => (string) $payment->status,
+                                'to' => $ledgerStatus,
+                            ];
+
+                            $payment->status = $ledgerStatus;
+                            $payment->metadata = $meta;
+                            $payment->save();
+
+                            $history[] = [
+                                'payment_ledger_updated' => [
+                                    'payment_id' => (int) $payment->id,
+                                    'status' => $ledgerStatus,
+                                ],
+                                'timestamp' => now()->toDateTimeString(),
+                                'user_id' => $mgrUserId,
+                            ];
+                        } else {
+                            $maxSeq = (int) sOrderPayment::query()
+                                ->where('order_id', $item->id)
+                                ->max('sequence');
+
+                            $seq = $maxSeq + 1;
+
+                            $amount = 0.0;
+                            if (in_array($payment_status, [
+                                sOrder::PAYMENT_STATUS_PAID,
+                                sOrder::PAYMENT_STATUS_PARTIALLY_PAID,
+                            ], true)) {
+                                $amount = (float) $item->cost;
+                            }
+
+                            $payment = sOrderPayment::query()->create([
+                                'order_id' => $item->id,
+                                'sequence' => $seq,
+                                'kind' => 'manual',
+                                'status' => $ledgerStatus,
+                                'amount' => $amount,
+                                'currency' => (string) ($item->currency ?? 'UAH'),
+                                'provider' => 'manual',
+                                'provider_ref' => null,
+                                'metadata' => [
+                                    'admin_override' => [
+                                        'manager_user_id' => $mgrUserId,
+                                        'changed_at' => now(),
+                                        'note' => 'Created by manager via orderSave payment_status change',
+                                    ],
+                                ],
+                                'captured_at' => $ledgerStatus === 'captured' ? now() : null,
+                            ]);
+
+                            $history[] = [
+                                'payment_ledger_created' => [
+                                    'payment_id' => (int) $payment->id,
+                                    'sequence' => $seq,
+                                    'kind' => 'manual',
+                                    'status' => $ledgerStatus,
+                                    'amount' => $amount,
+                                ],
+                                'timestamp' => now()->toDateTimeString(),
+                                'user_id' => $mgrUserId,
+                            ];
+                        }
+
+                        $flow->syncOrderPaymentStatusFromLedger($item);
+                    });
+                } else {
+                    $item->payment_status = $payment_status;
+                    $history[] = [
+                        'payment_status' => $payment_status,
+                        'timestamp' => now()->toDateTimeString(),
+                        'user_id' => (int) evo()->getLoginUserID('mgr'),
+                    ];
+                }
             }
 
             $status = request()->integer('status', $item->status);
