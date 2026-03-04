@@ -49,10 +49,20 @@ class PaymentFlow
      */
     public function ledgerAvailable(): bool
     {
-        // Schema::hasTable expects the real table name in the DB (including prefix).
+        // Schema::hasTable applies connection prefix internally, so model table name
+        // should be passed without manual prefix concatenation.
+        $table = (new sOrderPayment())->getTable();
+        if (Schema::hasTable($table)) {
+            return true;
+        }
+
+        // Backward-compat fallback for cases when model table is already prefixed.
         $prefix = DB::getTablePrefix();
-        $table = $prefix . (new sOrderPayment())->getTable();
-        return Schema::hasTable($table);
+        if ($prefix !== '' && !str_starts_with($table, $prefix)) {
+            return Schema::hasTable($prefix . $table);
+        }
+
+        return false;
     }
 
     /**

@@ -64,8 +64,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] Dynamic Filters for Product Search.
 - [x] Dynamic Sort Products in Catalog.
 - [ ] AI-Powered Product Search.
-- [ ] Customer Reviews and Ratings.
-- [ ] Wishlist and Favorites.
+- [x] Customer Reviews and Ratings.
+- [x] Wishlist and Favorites.
 - [x] Checkout.
 - [x] One Click Checkout.
 - [ ] Promo Code System.

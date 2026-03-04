@@ -225,47 +225,151 @@ class sCommerceController
      * Retrieve the list of categories and their respective IDs.
      *
      * @param int $category The ID of the category to retrieve sub-categories for.
-     * @return array An associative array where the keys are the category IDs and the values are the category titles.
+     * @param int $dept Max depth for descendants (1 = direct children only).
+     * @return array An associative array where the keys are the category IDs and the values are breadcrumb titles.
      */
     public function listCategories(int $category = 0, int $dept = 10): array
     {
         $this->categories = [];
-        $dept--;
+        $isArrayInput = ($category === 0 && evo()->getConfig('check_sMultisite', false));
+        $rootCategories = $this->resolveCategoryRoots($category);
+        $depth = max(0, $dept - 1);
 
-        if ($category == 0) {
-            if (evo()->getConfig('check_sMultisite', false)) {
-                $category = [];
-                $basic = sCommerce::config('basic', ['basic.catalog_root' => evo()->getConfig('site_start', 1)]);
-                foreach ($basic as $k => $v) {
-                    if (str_starts_with($k, 'catalog_root')) {
-                        $category[] = $v;
-                    }
-                }
+        $cacheKey = md5(json_encode([
+            'rootCategories' => $rootCategories,
+            'depth' => $depth,
+            'locale' => app()->getLocale(),
+            'isArrayInput' => $isArrayInput,
+        ]));
+        if (isset(static::$listCategoriesCache[$cacheKey])) {
+            $this->categories = static::$listCategoriesCache[$cacheKey];
+            return $this->categories;
+        }
+
+        if (!count($rootCategories)) {
+            return [];
+        }
+
+        $roots = SiteContent::withTrashed()
+            ->select(['id', 'pagetitle'])
+            ->whereIn('id', $rootCategories)
+            ->get()
+            ->keyBy('id');
+
+        $childrenByParent = $this->loadCategoriesChildrenByDepth($rootCategories, $depth);
+
+        foreach ($rootCategories as $rootId) {
+            if (!isset($roots[$rootId])) {
+                continue;
+            }
+
+            $root = $roots[$rootId];
+            if ($isArrayInput) {
+                $this->categories[$root->id] = __('sCommerce::global.catalog_root') . ' (' . $root->id . ')';
             } else {
-                $category = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1));
+                $this->categories[$root->id] = __('sCommerce::global.catalog_root') . ($root->id > 0 ? ' (' . $root->pagetitle . ')' : '');
+            }
+
+            $this->appendCategoryCrumbsFromMap($root->id, '', $depth, $childrenByParent);
+        }
+
+        static::$listCategoriesCache[$cacheKey] = $this->categories;
+        return $this->categories;
+    }
+
+    /**
+     * Resolve root category IDs for category listing.
+     *
+     * When `$category` is not zero, returns it as a single-item array.
+     * When `$category` is zero, resolves roots from sCommerce config:
+     * - multisite mode: all `catalog_root*` values from `basic` config
+     * - single-site mode: `basic.catalog_root` (or `site_start` fallback)
+     *
+     * @param int $category Requested category ID (0 means "default roots from config").
+     * @return int[] Root category IDs.
+     */
+    protected function resolveCategoryRoots(int $category): array
+    {
+        if ($category !== 0) {
+            return [$category];
+        }
+
+        if (evo()->getConfig('check_sMultisite', false)) {
+            $categories = [];
+            $basic = sCommerce::config('basic', ['basic.catalog_root' => evo()->getConfig('site_start', 1)]);
+            foreach ($basic as $k => $v) {
+                if (str_starts_with((string)$k, 'catalog_root')) {
+                    $categories[] = (int)$v;
+                }
+            }
+            return array_values(array_unique($categories));
+        }
+
+        return [(int)sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1))];
+    }
+
+    /**
+     * Load category descendants in batches, level by level, up to the provided depth.
+     *
+     * The returned structure groups loaded nodes by their parent ID and preserves
+     * sibling ordering by `menuindex` and `id`.
+     *
+     * @param int[] $rootIds Root category IDs to start traversal from.
+     * @param int $depth Number of descendant levels to fetch.
+     * @return array<int, array<int, SiteContent>> Map: parentId => list of child SiteContent models.
+     */
+    protected function loadCategoriesChildrenByDepth(array $rootIds, int $depth): array
+    {
+        $childrenByParent = [];
+        $parentIds = $rootIds;
+
+        for ($level = 0; $level <= $depth && count($parentIds); $level++) {
+            $children = SiteContent::withTrashed()
+                ->select(['id', 'parent', 'pagetitle', 'menuindex'])
+                ->whereIn('parent', $parentIds)
+                ->orderBy('parent')
+                ->orderBy('menuindex')
+                ->orderBy('id')
+                ->get();
+
+            if (!$children->count()) {
+                break;
+            }
+
+            $parentIds = [];
+            foreach ($children as $child) {
+                $childrenByParent[$child->parent][] = $child;
+                $parentIds[] = (int)$child->id;
             }
         }
 
-        if (is_array($category)) {
-            foreach ($category as $c) {
-                $root = SiteContent::find($c);
-                $this->categories[$root->id] = __('sCommerce::global.catalog_root') . ' ('.$root->id.')';
-                if ($root->hasChildren()) {
-                    foreach ($root->children as $item) {
-                        $this->categoryCrumb($item, '', $dept);
-                    }
-                }
-            }
-        } else {
-            $root = SiteContent::find($category);
-            $this->categories[$root->id] = __('sCommerce::global.catalog_root') . ($root->id > 0 ? ' (' . $root->pagetitle . ')' : '');
-            if ($root->hasChildren()) {
-                foreach ($root->children as $item) {
-                    $this->categoryCrumb($item, '', $dept);
-                }
+        return $childrenByParent;
+    }
+
+    /**
+     * Build flat breadcrumb labels recursively using a preloaded children map.
+     *
+     * Appends entries to `$this->categories` in traversal order.
+     *
+     * @param int $parentId Current parent node ID.
+     * @param string $crumb Current breadcrumb prefix.
+     * @param int $depth Remaining traversal depth.
+     * @param array<int, array<int, SiteContent>> $childrenByParent Map: parentId => list of child models.
+     * @return void
+     */
+    protected function appendCategoryCrumbsFromMap(int $parentId, string $crumb, int $depth, array $childrenByParent): void
+    {
+        if (!isset($childrenByParent[$parentId])) {
+            return;
+        }
+
+        foreach ($childrenByParent[$parentId] as $child) {
+            $nextCrumb = trim($crumb) ? $crumb . ' > ' . $child->pagetitle : $child->pagetitle;
+            $this->categories[$child->id] = $nextCrumb;
+            if ($depth > 0) {
+                $this->appendCategoryCrumbsFromMap((int)$child->id, $nextCrumb, $depth - 1, $childrenByParent);
             }
         }
-        return $this->categories;
     }
 
     /**

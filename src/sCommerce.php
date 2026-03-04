@@ -18,6 +18,7 @@ use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 use View;
 
 /**
@@ -535,6 +536,226 @@ class sCommerce
 
         return static::$currentCurrency;
     }
+
+    /**
+     * Dispatch incoming payment callback to an enabled payment gateway.
+     *
+     * Resolution order:
+     * 1) URL/query method (payment-callback/{method} or ?method=...)
+     * 2) Payment matcher rules from settings.webhook_match (DB)
+     * 3) Optional matcher method on payment class (canHandleWebhook/matchWebhook/webhookMatches)
+     * 4) Legacy signatures for known gateways (stripe/wayforpay/portmone)
+     */
+    public function handlePaymentCallback(?string $method = null): HttpResponse
+    {
+        $resolvedMethod = trim((string)($method ?? request()->input('method', '')));
+        $paymentMethod = $resolvedMethod !== '' ? $this->findPaymentMethodByName($resolvedMethod) : null;
+
+        if (!$paymentMethod) {
+            $paymentMethod = $this->resolvePaymentMethodFromWebhookRequest();
+            $resolvedMethod = (string)($paymentMethod->name ?? '');
+        }
+
+        if (!$paymentMethod) {
+            return response('CALLBACK METHOD NOT RESOLVED', 400);
+        }
+
+        $className = trim((string)$paymentMethod->class);
+        if ($className === '' || !class_exists($className)) {
+            return response('PAYMENT METHOD NOT FOUND', 404);
+        }
+
+        try {
+            $instance = new $className((string)($paymentMethod->identifier ?? ''));
+        } catch (\Throwable $e) {
+            Log::error('payment-callback dispatcher failed', [
+                'method' => $resolvedMethod,
+                'class' => $className,
+                'error' => $e->getMessage(),
+            ]);
+            return response('CALLBACK ERROR', 500);
+        }
+
+        if (!method_exists($instance, 'handleWebhook')) {
+            return response('WEBHOOK NOT IMPLEMENTED', 501);
+        }
+
+        try {
+            $response = $instance->handleWebhook();
+            if ($response instanceof HttpResponse) {
+                return $response;
+            }
+
+            return response('NO PAYLOAD', 200);
+        } catch (\Throwable $e) {
+            Log::error('payment-callback dispatcher failed', [
+                'method' => $resolvedMethod,
+                'class' => $className,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response('CALLBACK ERROR', 500);
+        }
+    }
+
+    protected function findPaymentMethodByName(string $method): ?sPaymentMethod
+    {
+        $method = trim($method);
+        if ($method === '') {
+            return null;
+        }
+
+        return sPaymentMethod::query()
+            ->where('name', $method)
+            ->orderByDesc('active')
+            ->orderBy('position')
+            ->orderBy('id')
+            ->first();
+    }
+
+    protected function resolvePaymentMethodFromWebhookRequest(): ?sPaymentMethod
+    {
+        $paymentMethods = sPaymentMethod::query()
+            ->orderByDesc('active')
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($paymentMethods as $paymentMethod) {
+            if ($this->matchesWebhookSettings($paymentMethod)) {
+                return $paymentMethod;
+            }
+
+            $className = trim((string)$paymentMethod->class);
+            if ($className === '' || !class_exists($className)) {
+                continue;
+            }
+
+            try {
+                $instance = new $className((string)($paymentMethod->identifier ?? ''));
+            } catch (\Throwable $e) {
+                Log::warning('payment-callback matcher init failed', [
+                    'method' => (string)$paymentMethod->name,
+                    'class' => $className,
+                    'error' => $e->getMessage(),
+                ]);
+                continue;
+            }
+
+            foreach (['canHandleWebhook', 'matchWebhook', 'webhookMatches'] as $matcherMethod) {
+                if (!method_exists($instance, $matcherMethod)) {
+                    continue;
+                }
+
+                try {
+                    if ((bool)$instance->{$matcherMethod}(request())) {
+                        return $paymentMethod;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('payment-callback matcher failed', [
+                        'method' => (string)$paymentMethod->name,
+                        'class' => $className,
+                        'matcher' => $matcherMethod,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if ($this->matchesLegacyWebhookSignature((string)$paymentMethod->name)) {
+                return $paymentMethod;
+            }
+        }
+
+        return null;
+    }
+
+    protected function matchesWebhookSettings(sPaymentMethod $paymentMethod): bool
+    {
+        $settings = json_decode((string)($paymentMethod->settings ?? ''), true);
+        if (!is_array($settings)) {
+            return false;
+        }
+
+        $match = $settings['webhook_match'] ?? null;
+        if (!is_array($match)) {
+            return false;
+        }
+
+        $headers = $this->normalizeWebhookKeys($match['headers'] ?? []);
+        $inputs = $this->normalizeWebhookKeys($match['inputs'] ?? []);
+        $query = $this->normalizeWebhookKeys($match['query'] ?? []);
+        $server = $this->normalizeWebhookKeys($match['server'] ?? []);
+
+        $hasRules = false;
+
+        foreach ($headers as $headerName) {
+            $hasRules = true;
+            $serverHeaderName = 'HTTP_' . strtoupper(str_replace('-', '_', $headerName));
+            $value = request()->header($headerName, request()->server($serverHeaderName));
+            if ($value === null || trim((string)$value) === '') {
+                return false;
+            }
+        }
+
+        foreach ($inputs as $inputName) {
+            $hasRules = true;
+            if (trim((string)request()->input($inputName, '')) === '') {
+                return false;
+            }
+        }
+
+        foreach ($query as $queryName) {
+            $hasRules = true;
+            if (trim((string)request()->query($queryName, '')) === '') {
+                return false;
+            }
+        }
+
+        foreach ($server as $serverName) {
+            $hasRules = true;
+            if (trim((string)request()->server($serverName, '')) === '') {
+                return false;
+            }
+        }
+
+        return $hasRules;
+    }
+
+    protected function normalizeWebhookKeys(mixed $value): array
+    {
+        if (is_string($value)) {
+            $value = array_map('trim', explode(',', $value));
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($value as $item) {
+            if (!is_scalar($item)) {
+                continue;
+            }
+            $item = trim((string)$item);
+            if ($item !== '') {
+                $normalized[] = $item;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    protected function matchesLegacyWebhookSignature(string $paymentName): bool
+    {
+        return match (strtolower(trim($paymentName))) {
+            'stripe' => request()->header('Stripe-Signature') !== null || isset($_SERVER['HTTP_STRIPE_SIGNATURE']),
+            'wayforpay' => trim((string)request()->input('merchantSignature', '')) !== ''
+                && trim((string)request()->input('merchantAccount', '')) !== '',
+            'portmone' => trim((string)request()->input('SHOPBILLID', '')) !== '',
+            default => false,
+        };
+    }
+
 
     /**
      * Render the payment button for the order.

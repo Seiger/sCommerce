@@ -65,6 +65,19 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
     }
 });
 
+Route::middleware('web')->match(['GET', 'POST'], 'payment-callback/{method?}', function (?string $method = null) {
+    try {
+        $service = app(sCommerce::class);
+        if (!method_exists($service, 'handlePaymentCallback')) {
+            return response('PAYMENT CALLBACK DISABLED', 503);
+        }
+
+        return $service->handlePaymentCallback($method);
+    } catch (\Throwable) {
+        return response('PAYMENT CALLBACK UNAVAILABLE', 503);
+    }
+})->name('payment.callback');
+
 Route::middleware('mgr')->prefix('scommerce/integrations')->name('sCommerce.integrations.')->group(function () {
     Route::get('servlimits', [IntegrationActionController::class, 'serverLimits'])->name('serverLimits');
     Route::post('{key}/tasks/{action}', [IntegrationActionController::class, 'start'])->whereAlpha('action')->name('task.start');

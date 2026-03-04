@@ -278,8 +278,9 @@
                             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_product_help')"></i>
                         </div>
                         <div class="col">
+                            @php($listCategories = $listCategories ?? $sCommerceController->listCategories())
                             <select id="parent" class="form-control select2" name="parent" onchange="documentDirty=true;">
-                                @foreach($sCommerceController->listCategories() as $key => $value)
+                                @foreach($listCategories as $key => $value)
                                     <option value="{{$key}}" @if($key == ($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))) selected @endif>{{$value}}</option>
                                 @endforeach
                             </select>
@@ -295,8 +296,9 @@
                             <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.categories_help')"></i>
                         </div>
                         <div class="col">
+                            @php($listCategories = $listCategories ?? $sCommerceController->listCategories())
                             <select id="categories" class="form-control select2" name="categories[]" multiple onchange="documentDirty=true;">
-                                @foreach($sCommerceController->listCategories() as $key => $value)
+                                @foreach($listCategories as $key => $value)
                                     <option value="{{$key}}" @if(in_array($key, $categories)) selected @endif>{{$value}}</option>
                                 @endforeach
                             </select>
