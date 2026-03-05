@@ -2189,7 +2189,7 @@ switch ($get) {
             $data['item'] = $item;
 
             $_SESSION['itemaction'] = 'Editing Payment';
-            $_SESSION['itemname'] = $item->title;
+            $_SESSION['itemname'] = $item->type;
         } else {
             return header('Location: ' . sCommerce::moduleUrl() . (request()->back ?? '&get=payments'));
         }

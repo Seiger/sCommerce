@@ -673,6 +673,7 @@ class sCheckout
         $order->cost = $cost;
         $order->currency = sCommerce::currentCurrency();
         $order->lang = evo()->getLocale();
+        $order->domain = trim((string)evo()->getConfig('site_key', 'default'));
         $order->is_quick = true;
         $order->manager_notes = $adminNotes;
         $order->history = $history;
@@ -875,6 +876,7 @@ class sCheckout
         $order->do_not_call = intval($this->orderData['do_not_call'] ?? 0);
         $order->comment = $this->orderData['comment'] ?? '';
         $order->lang = evo()->getLocale();
+        $order->domain = trim((string)evo()->getConfig('site_key', 'default'));
         $order->identifier = $identifier;
         $order->history = $history;
 
