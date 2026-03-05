@@ -1668,6 +1668,11 @@ class GoogleMerchantFeed extends BaseWorker
      */
     protected function buildProductLink(string $link, string $domain): string
     {
+        $link = trim($link);
+        if ($link === '') {
+            return rtrim($domain, '/');
+        }
+
         if (str_starts_with($link, 'http://') || str_starts_with($link, 'https://')) {
             $parsed = parse_url($link);
             $path = $parsed['path'] ?? '';
@@ -1675,13 +1680,41 @@ class GoogleMerchantFeed extends BaseWorker
             return rtrim($domain, '/') . '/' . ltrim($path, '/') . $query;
         }
 
-        $link = str_replace([EVO_SITE_URL, EVO_CORE_PATH], '|',$link);
-        $link = explode('|', $link);
-        $link = end($link);
-        $link = ltrim($link, '.');
-        $link = '/' . ltrim($link, '/');
+        $normalized = str_replace('\\', '/', $link);
+        $query = '';
 
-        return rtrim($domain, '/') . $link;
+        if (str_contains($normalized, '?')) {
+            $queryString = (string)parse_url($normalized, PHP_URL_QUERY);
+            $query = $queryString !== '' ? '?' . $queryString : '';
+            $normalized = (string)parse_url($normalized, PHP_URL_PATH);
+        }
+
+        $stripPrefixes = [];
+        $corePath = defined('MODX_CORE_PATH') ? MODX_CORE_PATH : null;
+        foreach ([EVO_BASE_PATH, EVO_CORE_PATH, MODX_BASE_PATH, $corePath] as $prefix) {
+            if (!is_string($prefix) || $prefix === '') {
+                continue;
+            }
+            $stripPrefixes[] = rtrim(str_replace('\\', '/', $prefix), '/');
+        }
+        usort($stripPrefixes, static fn (string $a, string $b) => strlen($b) <=> strlen($a));
+
+        foreach ($stripPrefixes as $prefix) {
+            if (str_starts_with($normalized, $prefix . '/')) {
+                $normalized = substr($normalized, strlen($prefix));
+                break;
+            }
+        }
+
+        $normalized = ltrim($normalized, '.');
+        $normalized = '/' . ltrim($normalized, '/');
+
+        // Map internal core assets path to public assets URL path.
+        if (str_starts_with($normalized, '/core/assets/')) {
+            $normalized = '/assets/' . ltrim(substr($normalized, strlen('/core/assets/')), '/');
+        }
+
+        return rtrim($domain, '/') . $normalized . $query;
     }
 
     /**
