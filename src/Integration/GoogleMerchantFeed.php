@@ -153,6 +153,8 @@ class GoogleMerchantFeed extends BaseWorker
         }
 
         $feeds = $this->loadFeedsFromSettings();
+        $defaultFeedTitle = evo()->getConfig('site_name', 'Store') . ' | Google Merchant';
+        $defaultFeedDescription = 'Automatically generated Google Merchant feed.';
         if (!count($feeds)) {
             $feeds = [[
                 'slug' => '',
@@ -160,6 +162,8 @@ class GoogleMerchantFeed extends BaseWorker
                 'lang' => $defaultLanguage,
                 'currency' => 'UAH',
                 'country' => 'UA',
+                'title' => $defaultFeedTitle,
+                'description' => $defaultFeedDescription,
                 'chunk' => self::DEFAULT_CHUNK,
                 'include_out_of_stock' => false,
                 'include_without_images' => false,
@@ -339,6 +343,20 @@ class GoogleMerchantFeed extends BaseWorker
                         @else
                             <input type="hidden" name="domain[]" value="{{htmlspecialchars($domainValue, ENT_QUOTES, "UTF-8")}}">
                         @endif
+                        <div class="col-sm-6">
+                            <label>
+                                Назва каналу
+                                <i data-lucide="help-circle" class="settings-icon" data-tooltip="Значення XML тега channel/title для Google Merchant фіда." style="width:14px;height:14px;"></i>
+                            </label>
+                            <input type="text" name="title[]" class="form-control" value="{{$feed["title"] ?? $defaultFeedTitle}}" placeholder="{{$defaultFeedTitle}}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label>
+                                Опис каналу
+                                <i data-lucide="help-circle" class="settings-icon" data-tooltip="Значення XML тега channel/description для Google Merchant фіда." style="width:14px;height:14px;"></i>
+                            </label>
+                            <input type="text" name="description[]" class="form-control" value="{{$feed["description"] ?? $defaultFeedDescription}}" placeholder="{{$defaultFeedDescription}}">
+                        </div>
                         @if($isLang && !empty($languages))
                             <div class="col-sm-4">
                                 <label>
@@ -438,6 +456,8 @@ class GoogleMerchantFeed extends BaseWorker
                 'isLang' => $isLang,
                 'defaultLanguage' => $defaultLanguage,
                 'feedsCount' => $feedsCount,
+                'defaultFeedTitle' => $defaultFeedTitle,
+                'defaultFeedDescription' => $defaultFeedDescription,
             ]);
         }
 
@@ -581,8 +601,15 @@ class GoogleMerchantFeed extends BaseWorker
                         // Get chunk
                         const chunkInput = feedBlock.querySelector("[name=\"chunk[]\"]");
                         feed.chunk = chunkInput ? chunkInput.value.trim() : "";
-                        
-                        
+
+                        // Get channel title
+                        const titleInput = feedBlock.querySelector("[name=\"title[]\"]");
+                        feed.title = titleInput ? titleInput.value.trim() : "";
+
+                        // Get channel description
+                        const descriptionInput = feedBlock.querySelector("[name=\"description[]\"]");
+                        feed.description = descriptionInput ? descriptionInput.value.trim() : "";
+
                         // Get category
                         const categoryInput = feedBlock.querySelector("[name=\"category[]\"]");
                         feed.category = categoryInput ? categoryInput.value.trim() : "";
@@ -1055,14 +1082,17 @@ class GoogleMerchantFeed extends BaseWorker
 
         $includeWithoutImages = $feed['include_without_images'] ?? false;
 
+        $feedTitle = trim((string)($feed['title'] ?? ''));
+        $feedDescription = trim((string)($feed['description'] ?? ''));
+
         return [
             'slug' => $slug ?: Str::slug($siteKey . '-' . ($language ?? 'base')),
             'domain' => $this->normalizeDomain($feed['domain'] ?? EVO_SITE_URL),
             'language' => $language,
             'currency' => strtoupper($feed['currency'] ?? sCommerce::config('basic.main_currency', 'USD')),
             'country' => strtoupper($feed['country'] ?? 'UA'),
-            'title' => $feed['title'] ?? (evo()->getConfig('site_name', 'Store') . ' | Google Merchant'),
-            'description' => $feed['description'] ?? 'Automatically generated Google Merchant feed.',
+            'title' => $feedTitle !== '' ? $feedTitle : (evo()->getConfig('site_name', 'Store') . ' | Google Merchant'),
+            'description' => $feedDescription !== '' ? $feedDescription : 'Automatically generated Google Merchant feed.',
             'chunk' => $chunk,
             'include_out_of_stock' => (bool)$includeOutOfStock,
             'include_without_images' => (bool)$includeWithoutImages,
@@ -1354,9 +1384,9 @@ class GoogleMerchantFeed extends BaseWorker
 
         $writer->startElement('item');
         $writer->writeElement('g:id', $identifier);
-        $writer->writeElement('title', $title);
-        $writer->writeElement('description', $description);
-        $writer->writeElement('link', $link);
+        $writer->writeElement('g:title', $title);
+        $writer->writeElement('g:description', $description);
+        $writer->writeElement('g:link', $link);
         $writer->writeElement('g:image_link', $image);
 
         foreach (array_slice($images, 1, 10) as $additionalImage) {
@@ -1655,7 +1685,9 @@ class GoogleMerchantFeed extends BaseWorker
     }
 
     /**
-     * Retrieve human readable product type based on first category.
+     * Build human-readable product type as a full category path.
+     *
+     * Example: "Cars > BMW > E36".
      *
      * @param sProduct $product
      * @return string|null
@@ -1671,7 +1703,53 @@ class GoogleMerchantFeed extends BaseWorker
             return null;
         }
 
-        return $this->sanitizeText($category->pagetitle ?? '', 750);
+        $categoryId = (int)($category->id ?? 0);
+        if ($categoryId <= 0) {
+            return null;
+        }
+
+        $parentIds = evo()->getParentIds($categoryId);
+        $pathIds = array_merge(array_reverse($parentIds), [$categoryId]);
+        $pathIds = array_values(array_unique(array_map('intval', $pathIds)));
+        $pathIds = array_values(array_filter($pathIds, static fn (int $id) => $id > 0));
+
+        if (count($pathIds) > 1) {
+            $siteKey = (string)evo()->getConfig('site_key', 'default');
+            $catalogRootId = (int)sCommerce::config(
+                'basic.catalog_root' . $siteKey,
+                sCommerce::config('basic.catalog_root', 0)
+            );
+            $siteStartId = (int)evo()->getConfig('site_start', 0);
+
+            $skipRootIds = array_values(array_filter(array_unique([$catalogRootId, $siteStartId])));
+            while (count($pathIds) > 1 && in_array($pathIds[0], $skipRootIds, true)) {
+                array_shift($pathIds);
+            }
+        }
+
+        if (empty($pathIds)) {
+            return $this->sanitizeText($category->pagetitle ?? '', 750);
+        }
+
+        $titlesById = SiteContent::query()
+            ->whereIn('id', $pathIds)
+            ->get(['id', 'pagetitle'])
+            ->keyBy('id');
+
+        $parts = [];
+        foreach ($pathIds as $id) {
+            $title = (string)($titlesById[$id]->pagetitle ?? '');
+            $title = $this->sanitizeText($title, 150);
+            if ($title !== '') {
+                $parts[] = $title;
+            }
+        }
+
+        if (empty($parts)) {
+            return null;
+        }
+
+        return $this->sanitizeText(implode(' > ', $parts), 750);
     }
 
     /**
