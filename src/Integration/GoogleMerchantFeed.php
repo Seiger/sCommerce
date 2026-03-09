@@ -1673,15 +1673,14 @@ class GoogleMerchantFeed extends BaseWorker
             return rtrim($domain, '/');
         }
 
-        if (str_starts_with($link, 'http://') || str_starts_with($link, 'https://')) {
-            $parsed = parse_url($link);
-            $path = $parsed['path'] ?? '';
-            $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
-            return rtrim($domain, '/') . '/' . ltrim($path, '/') . $query;
-        }
-
         $normalized = str_replace('\\', '/', $link);
         $query = '';
+
+        if (str_starts_with($normalized, 'http://') || str_starts_with($normalized, 'https://')) {
+            $parsed = parse_url($normalized);
+            $normalized = (string)($parsed['path'] ?? '');
+            $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
+        }
 
         if (str_contains($normalized, '?')) {
             $queryString = (string)parse_url($normalized, PHP_URL_QUERY);
