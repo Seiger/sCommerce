@@ -25,6 +25,7 @@ use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sDeliveryMethod;
 use Seiger\sCommerce\Models\sOrder;
+use Seiger\sCommerce\Models\sOrderPayment;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;

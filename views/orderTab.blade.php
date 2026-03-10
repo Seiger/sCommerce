@@ -147,10 +147,14 @@
         </thead>
         <tbody>
         @foreach($item->products as $index => $product)
-            @php($info = '')
+            @php
+                $info = '';
+            @endphp
             @foreach($product as $p)
                 @if(is_array($p) && isset($p['title']))
-                    @php($info .= '<br><b>' . htmlentities($p['title']) . ':</b> ' . htmlentities($p['label'] ?? ''))
+                    @php
+                        $info .= '<br><b>' . htmlentities($p['title']) . ':</b> ' . htmlentities($p['label'] ?? '');
+                    @endphp
                 @endif
             @endforeach
             <tr data-product-index="{{$index}}" style="height: 42px;">
@@ -272,23 +276,45 @@
             <tr>
                 <td>{{$history['timestamp'] ?? ''}}</td>
                 <td>
-                    @if(isset($history['status']))
-                        <span @class(['badge', 'bg-disactive' => in_array((int)$history['status'], $unprocessedes), 'bg-progress' => in_array((int)$history['status'], $workings), 'bg-active' => in_array((int)$history['status'], $completeds)])>
-                            {{sOrder::getOrderStatusName((int)$history['status'])}}
-                        </span>
-                    @elseif(isset($history['payment_status']))
-                        <span @class(['badge', 'bg-paid' => (int)$history['payment_status'] == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => (int)$history['payment_status'] != sOrder::PAYMENT_STATUS_PAID])>
-                            {{sOrder::getPaymentStatusName((int)$history['payment_status'])}}
-                        </span>
-                    @elseif(isset($history['products_updated']) && $history['products_updated'])
-                        <span class="badge bg-info">
-                            @lang('sCommerce::global.products_in_order') @lang('sCommerce::global.changed')
-                        </span>
-                    @elseif(isset($history['user_info_updated']))
-                        <span class="badge bg-info">
-                            @lang('sCommerce::global.customer_information') @lang('sCommerce::global.changed')
-                        </span>
-                    @endif
+                    @php
+                        $historyFallback = array_diff_key($history, array_flip([
+                            'timestamp',
+                            'user_id',
+                            'status',
+                            'payment_status',
+                            'products_updated',
+                            'user_info_updated',
+                        ]));
+                        $historyFallbackKey = array_key_first($historyFallback);
+                        $historyFallbackValue = $historyFallbackKey !== null ? $historyFallback[$historyFallbackKey] : null;
+                    @endphp
+                    @switch(true)
+                        @case(isset($history['status']))
+                            <span @class(['badge', 'bg-disactive' => in_array((int)$history['status'], $unprocessedes), 'bg-progress' => in_array((int)$history['status'], $workings), 'bg-active' => in_array((int)$history['status'], $completeds)])>
+                                {{sOrder::getOrderStatusName((int)$history['status'])}}
+                            </span>
+                            @break
+                        @case(isset($history['payment_status']))
+                            <span @class(['badge', 'bg-paid' => (int)$history['payment_status'] == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => (int)$history['payment_status'] != sOrder::PAYMENT_STATUS_PAID])>
+                                {{sOrder::getPaymentStatusName((int)$history['payment_status'])}}
+                            </span>
+                            @break
+                        @case(isset($history['products_updated']) && $history['products_updated'])
+                            <span class="badge bg-info">
+                                @lang('sCommerce::global.products_in_order') @lang('sCommerce::global.changed')
+                            </span>
+                            @break
+                        @case(isset($history['user_info_updated']))
+                            <span class="badge bg-info">
+                                @lang('sCommerce::global.customer_information') @lang('sCommerce::global.changed')
+                            </span>
+                            @break
+                        @case($historyFallbackKey !== null)
+                            <span class="badge bg-secondary">
+                                {{$historyFallbackKey}}: {{is_scalar($historyFallbackValue) || $historyFallbackValue === null ? (string)$historyFallbackValue : json_encode($historyFallbackValue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)}}
+                            </span>
+                            @break
+                    @endswitch
                 </td>
                 <td>
                     @if((int)$history['user_id'] > 0)

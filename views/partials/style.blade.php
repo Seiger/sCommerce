@@ -22,6 +22,7 @@
     .badge.bg-progress{background-color:var(--brand-orange, #fd7e14) !important;color:#fff;font-size:90%;}
     .badge.bg-pending{background-color:var(--brand-red, #d9534f) !important;color:#fff;font-size:90%;}
     .badge.bg-paid{background-color:var(--brand-green, #28a745) !important;color:#fff;font-size:90%;}
+    .badge.bg-secondary{background-color:var(--secondary-gray-dark, #63666B) !important;color:#fff;font-size:90%;}
     .badge.bg-super{vertical-align:super;font-size:60% !important;}
     .builder .row{display:flex;flex-wrap:wrap;margin-left:-.25rem;margin-right:-.25rem;cursor:default}
     .builder .col-4, .builder .col-8, .builder .col-12, .builder .col, .builder .col-auto{position:relative;width:100%;min-height:0;padding-left:.25rem;padding-right:.25rem}
