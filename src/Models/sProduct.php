@@ -384,6 +384,7 @@ class sProduct extends Model
                     $attribute->label = $value;
                     break;
                 case sAttribute::TYPE_ATTR_SELECT:
+                case sAttribute::TYPE_ATTR_MULTISELECT:
                     $avid = intval($attribute->pivot->valueid ?? 0);
                     $value = $attribute->values()->whereAvid($avid)->first();
                     $attribute->value = $value?->alias ?? '';
