@@ -102,10 +102,13 @@ switch ($get) {
         ];
         $completeds = [
             sOrder::ORDER_STATUS_DELIVERED,
-            sOrder::ORDER_STATUS_DELETED,
             sOrder::ORDER_STATUS_COMPLETED,
+        ];
+        $canceleds = [
             sOrder::ORDER_STATUS_CANCELED,
             sOrder::ORDER_STATUS_RETURNED,
+            sOrder::ORDER_STATUS_RETURN_REQUESTED,
+            sOrder::ORDER_STATUS_DELETED,
         ];
 
         // Orders statistics
@@ -113,6 +116,7 @@ switch ($get) {
         $newOrders = sOrder::whereIn('status', $unprocessedes)->count();
         $workingOrders = sOrder::whereIn('status', $workings)->count();
         $completedOrders = sOrder::whereIn('status', $completeds)->count();
+        $canceledOrders = sOrder::whereIn('status', $canceleds)->count();
 
         // Today's statistics
         $todayOrders = sOrder::whereDate('created_at', today())->count();
@@ -216,6 +220,7 @@ switch ($get) {
         $data['unprocessedes'] = $unprocessedes;
         $data['workings'] = $workings;
         $data['completeds'] = $completeds;
+        $data['canceleds'] = $canceleds;
 
         $domains = null;
         if (evo()->getConfig('check_sMultisite', false)) {
@@ -266,22 +271,27 @@ switch ($get) {
         ];
         $completeds = [
             sOrder::ORDER_STATUS_DELIVERED,
-            sOrder::ORDER_STATUS_DELETED,
             sOrder::ORDER_STATUS_COMPLETED,
+        ];
+        $canceleds = [
             sOrder::ORDER_STATUS_CANCELED,
             sOrder::ORDER_STATUS_RETURNED,
+            sOrder::ORDER_STATUS_RETURN_REQUESTED,
+            sOrder::ORDER_STATUS_DELETED,
         ];
 
         $data['items'] = $query->paginate($perpage);
         $data['unprocessedes'] = $unprocessedes;
         $data['workings'] = $workings;
         $data['completeds'] = $completeds;
+        $data['canceleds'] = $canceleds;
         $data['status'] = $status;
         $data['statuses'] = array_intersect_key(sOrder::listOrderStatuses(), $dbStatuses);
         $data['total'] = sOrder::count();
         $data['unprocessed'] = sOrder::whereIn('status', $unprocessedes)->count();
         $data['working'] = sOrder::whereIn('status', $workings)->count();
         $data['completed'] = sOrder::whereIn('status', $completeds)->count();
+        $data['canceled'] = sOrder::whereIn('status', $canceleds)->count();
         $data['domains'] = $domains;
         $_SESSION['itemaction'] = 'Viewing a list of orders';
         $_SESSION['itemname'] = __('sCommerce::global.title');
@@ -312,16 +322,20 @@ switch ($get) {
         ];
         $completeds = [
             sOrder::ORDER_STATUS_DELIVERED,
-            sOrder::ORDER_STATUS_DELETED,
             sOrder::ORDER_STATUS_COMPLETED,
+        ];
+        $canceleds = [
             sOrder::ORDER_STATUS_CANCELED,
             sOrder::ORDER_STATUS_RETURNED,
+            sOrder::ORDER_STATUS_RETURN_REQUESTED,
+            sOrder::ORDER_STATUS_DELETED,
         ];
 
         $data['item'] = $item;
         $data['unprocessedes'] = $unprocessedes;
         $data['workings'] = $workings;
         $data['completeds'] = $completeds;
+        $data['canceleds'] = $canceleds;
         $paymentMethod = false;
         $paymentMethodName = '';
         if ($item && isset($item->payment_info['method'])) {

@@ -173,7 +173,7 @@
                                 <td>{{$order->created_at->format('d.m.Y H:i')}}</td>
                                 <td>{{sCommerce::convertPrice($order->cost, $order->currency)}}</td>
                                 <td>
-                                    <span @class(['badge', 'bg-disactive' => in_array($order->status, $unprocessedes), 'bg-progress' => in_array($order->status, $workings), 'bg-active' => in_array($order->status, $completeds)])>
+                                    <span @class(['badge', 'bg-disactive' => in_array($order->status, $unprocessedes), 'bg-progress' => in_array($order->status, $workings), 'bg-active' => in_array($order->status, $completeds), 'bg-cancelled' => in_array($order->status, $canceleds)])>
                                         {{sOrder::getOrderStatusName($order->status)}}
                                     </span>
                                 </td>

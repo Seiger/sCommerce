@@ -31,7 +31,7 @@
                 @endif
                 <p>
                     <strong>@lang('sCommerce::global.created'):</strong>
-                    <span @class(['badge', 'bg-disactive' => in_array($item->status, $unprocessedes), 'bg-progress' => in_array($item->status, $workings), 'bg-active' => in_array($item->status, $completeds)])>
+                    <span @class(['badge', 'bg-disactive' => in_array($item->status, $unprocessedes), 'bg-progress' => in_array($item->status, $workings), 'bg-active' => in_array($item->status, $completeds), 'bg-cancelled' => in_array($item->status, $canceleds)])>
                         {{$item->created_at}} &mdash; {{sOrder::getOrderStatusName($item->status)}}
                     </span>
                 </p>
@@ -77,7 +77,8 @@
                     <p><strong>@lang('sCommerce::global.shipping_cost'):</strong> {{sCommerce::convertPrice(floatval($item->delivery_info['cost'] ?? 0), $item->currency)}}</p>
                     @if(isset($item->delivery_info[$item->delivery_info['method']]) && is_array($item->delivery_info[$item->delivery_info['method']]))
                         @foreach($item->delivery_info[$item->delivery_info['method']] as $key => $value)
-                            <p><strong>{{$key}}:</strong> {{$value}}</p>
+                            @php($translatedKey = __('sCommerce::global.' . $key))
+                            <p><strong>{{$translatedKey !== 'sCommerce::global.' . $key ? $translatedKey : $key}}:</strong> {{$value}}</p>
                         @endforeach
                     @endif
                 @endif
@@ -290,7 +291,7 @@
                     @endphp
                     @switch(true)
                         @case(isset($history['status']))
-                            <span @class(['badge', 'bg-disactive' => in_array((int)$history['status'], $unprocessedes), 'bg-progress' => in_array((int)$history['status'], $workings), 'bg-active' => in_array((int)$history['status'], $completeds)])>
+                            <span @class(['badge', 'bg-disactive' => in_array((int)$history['status'], $unprocessedes), 'bg-progress' => in_array((int)$history['status'], $workings), 'bg-active' => in_array((int)$history['status'], $completeds), 'bg-cancelled' => in_array((int)$history['status'], $canceleds)])>
                                 {{sOrder::getOrderStatusName((int)$history['status'])}}
                             </span>
                             @break
