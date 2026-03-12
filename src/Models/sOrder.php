@@ -153,9 +153,7 @@ class sOrder extends Model
         $raw = strip_tags($raw);
         $raw = preg_replace('/\s{2,}/', ' ', $raw) ?? $raw;
 
-        $start = OrderReferenceFormatter::startDefault();
-
-        return $query->where(function ($q) use ($raw, $start) {
+        return $query->where(function ($q) use ($raw) {
             $digits = OrderReferenceFormatter::extractTrailingDigits($raw);
 
             if (ctype_digit($raw)) {
@@ -165,21 +163,6 @@ class sOrder extends Model
                 $q->orWhere('reference', $raw)->orWhere('reference', 'like', '%' . $raw);
             } elseif ($digits !== null) {
                 $q->orWhere('reference', $digits)->orWhere('reference', 'like', '%' . $digits);
-            }
-
-            if ($digits !== null && $start > 0) {
-                $dNum = (int)ltrim($digits, '0');
-
-                if ($dNum > $start) {
-                    $ordinal = $dNum - $start;
-                    if ($ordinal > 0) {
-                        $ordStr = (string)$ordinal;
-                        $q->orWhere('reference', $ordStr)->orWhere('reference', 'like', '%' . $ordStr);
-                    }
-                } elseif ($dNum > 0 && $dNum < $start) {
-                    $display = (string)($start + $dNum);
-                    $q->orWhere('reference', $display)->orWhere('reference', 'like', '%' . $display);
-                }
             }
 
             $q->orWhere('reference', 'like', '%' . $raw . '%')

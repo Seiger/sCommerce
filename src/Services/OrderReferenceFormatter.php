@@ -5,12 +5,9 @@ use Seiger\sCommerce\sCommerce;
 /**
  * Order reference formatting rules.
  *
- * Current format:
- * - `s_orders.reference` stores ONLY the numeric order number (with pad_left applied), without prefix.
+ * Canonical format:
+ * - `s_orders.reference` stores the final numeric order number (with pad_left applied), without prefix.
  * - Integrations / API output add `prefix_default` in front of `s_orders.reference`.
- *
- * Legacy format (kept for compatibility):
- * - `s_orders.reference` could contain a prefix, e.g. "b2cukr_107293".
  */
 final class OrderReferenceFormatter
 {
@@ -59,12 +56,6 @@ final class OrderReferenceFormatter
         $digits = self::extractTrailingDigits($reference);
         if ($digits === null) {
             return null;
-        }
-
-        $start = self::startDefault();
-        $numeric = (int)ltrim($digits, '0');
-        if ($start > 0 && $numeric > 0 && $numeric < $start) {
-            $digits = (string)($start + $numeric);
         }
 
         $padLeft = $padLeft ?? self::padLeft();
