@@ -159,7 +159,7 @@
                             <tr>
                                 <td>
                                     <a href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$order->id}}">
-                                        <b>#{{$order->id}}</b>
+                                        <b>#{{$order->order_number ?? $order->id}}</b>
                                     </a>
                                 </td>
                                 <td>
@@ -168,7 +168,7 @@
                                         $order->user_info['middle_name'] ?? '',
                                         $order->user_info['last_name'] ?? ''
                                     ], ['']))}}
-                                    ({{$order->user_info['phone'] ?? ''}})
+                                    @if(trim($order->user_info['phone'] ?? ''))({{$order->user_info['phone'] ?? ''}})@endif
                                 </td>
                                 <td>{{$order->created_at->format('d.m.Y H:i')}}</td>
                                 <td>{{sCommerce::convertPrice($order->cost, $order->currency)}}</td>

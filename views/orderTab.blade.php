@@ -77,7 +77,9 @@
                     <p><strong>@lang('sCommerce::global.shipping_cost'):</strong> {{sCommerce::convertPrice(floatval($item->delivery_info['cost'] ?? 0), $item->currency)}}</p>
                     @if(isset($item->delivery_info[$item->delivery_info['method']]) && is_array($item->delivery_info[$item->delivery_info['method']]))
                         @foreach($item->delivery_info[$item->delivery_info['method']] as $key => $value)
-                            @php($translatedKey = __('sCommerce::global.' . $key))
+                            @php
+                                $translatedKey = __('sCommerce::global.' . $key);
+                            @endphp
                             <p><strong>{{$translatedKey !== 'sCommerce::global.' . $key ? $translatedKey : $key}}:</strong> {{$value}}</p>
                         @endforeach
                     @endif

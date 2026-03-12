@@ -29,6 +29,13 @@ class sCommerceController
      */
     protected static array $staticProductIdsCache = [];
 
+    /**
+     * Static cache for category list trees produced by listCategories().
+     *
+     * @var array<string, array<int, string>>
+     */
+    protected static array $listCategoriesCache = [];
+
     protected $data = [];
     protected $categories = [];
     protected $productIds = [];
