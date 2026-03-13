@@ -4,62 +4,45 @@ use Illuminate\Support\Facades\DB;
 use Seiger\sCommerce\sCommerce;
 
 /**
- * Generates sequential, immutable order references for integrations (prefix + sequence).
+ * Generates immutable business order references.
  *
- * Concurrency-safe implementation using a transaction and row-level locking.
+ * Local checkout orders prefer `s_orders.id + start_default`.
+ * If that candidate is already taken (for example by imported 1C references),
+ * the generator falls back to `MAX(reference) + 1`.
  */
 class OrderReferenceGenerator
 {
     /**
-     * Generate the next order reference string using a global counter scope ("default").
+     * Generate the next order reference string.
      *
      * @since 1.0.11
      * @return string
      */
-    public function generate(): string
+    public function generate(?int $orderId = null): string
     {
         $start = (int) sCommerce::config('orders.reference.start_default', 0);
         $padLeft = (int) sCommerce::config('orders.reference.pad_left', 0);
 
-        return DB::transaction(function () use ($start, $padLeft) {
-            $scope = 'default';
-
-            $row = DB::table('s_order_counters')->where('scope', $scope)->lockForUpdate()->first();
-
-            if (!$row) {
-                DB::table('s_order_counters')->insert([
-                    'scope' => $scope,
-                    'current' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                $row = DB::table('s_order_counters')->where('scope', $scope)->lockForUpdate()->first();
-            }
-
-            $currentRaw = (int)($row->current ?? 0);
-            $startNumber = max(1, $start);
-
-            // Keep sequence monotonic even if counter format changed earlier
-            // or references already exist in orders table.
+        return DB::transaction(function () use ($orderId, $start, $padLeft) {
             $maxReferenceFromOrders = (int)(
                 DB::table('s_orders')
                     ->selectRaw('MAX(CAST(reference AS UNSIGNED)) AS max_reference')
                     ->value('max_reference') ?? 0
             );
 
-            // `current` stores the last issued display number.
-            $displayNumber = max(
-                $startNumber,
-                $currentRaw + 1,
-                $maxReferenceFromOrders + 1
-            );
+            $displayNumber = max(1, $start);
+            $offset = max(0, $start - 1);
 
-            DB::table('s_order_counters')
-                ->where('scope', $scope)
-                ->update([
-                    'current' => $displayNumber,
-                    'updated_at' => now(),
-                ]);
+            if ($orderId !== null && $orderId > 0) {
+                $candidate = $orderId + $offset;
+                if (!$this->referenceExists((string)$candidate, $orderId)) {
+                    $displayNumber = $candidate;
+                } else {
+                    $displayNumber = $maxReferenceFromOrders + 1;
+                }
+            } else {
+                $displayNumber = max($displayNumber, $maxReferenceFromOrders + 1);
+            }
 
             $number = (string)$displayNumber;
             if ($padLeft > 0) {
@@ -70,5 +53,24 @@ class OrderReferenceGenerator
             // without any prefix. Prefix is added only for integrations / API output.
             return $number;
         });
+    }
+
+    /**
+     * Check whether the given business reference is already used by another order.
+     *
+     * @since 1.0.12
+     * @param string $reference Candidate numeric reference to validate.
+     * @param int|null $ignoreOrderId Existing order id to exclude from the lookup during post-insert assignment.
+     * @return bool True when the reference is already occupied by a different order.
+     */
+    private function referenceExists(string $reference, ?int $ignoreOrderId = null): bool
+    {
+        $query = DB::table('s_orders')->where('reference', $reference);
+
+        if ($ignoreOrderId !== null && $ignoreOrderId > 0) {
+            $query->where('id', '!=', $ignoreOrderId);
+        }
+
+        return $query->exists();
     }
 }

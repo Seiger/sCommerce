@@ -1,5 +1,6 @@
 <?php namespace Seiger\sCommerce\Checkout;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -678,14 +679,10 @@ class sCheckout
         $order->manager_notes = $adminNotes;
         $order->history = $history;
 
-        // Generate an immutable business reference for integrations (prefix + sequence).
-        if (empty($order->reference)) {
-            /** @var \Seiger\sCommerce\Services\OrderReferenceGenerator $gen */
-            $gen = app(\Seiger\sCommerce\Services\OrderReferenceGenerator::class);
-            $order->reference = $gen->generate();
-        }
-
-        $order->save();
+        DB::transaction(function () use ($order): void {
+            $order->save();
+            $this->assignBusinessReference($order);
+        });
 
         if ($data['productId'] == 0) {
             unset($_SESSION['sCheckout'], $_SESSION['sCart']);
@@ -880,17 +877,41 @@ class sCheckout
         $order->identifier = $identifier;
         $order->history = $history;
 
-        // Generate an immutable business reference for integrations (prefix + sequence).
-        if (empty($order->reference)) {
-            /** @var \Seiger\sCommerce\Services\OrderReferenceGenerator $gen */
-            $gen = app(\Seiger\sCommerce\Services\OrderReferenceGenerator::class);
-            $order->reference = $gen->generate();
-        }
-
-        $order->save();
+        DB::transaction(function () use ($order): void {
+            $order->save();
+            $this->assignBusinessReference($order);
+        });
 
         $_SESSION['orderNumber'] = $order->id;
 
         return $order;
+    }
+
+    /**
+     * Assign an immutable business reference after the order receives its database id.
+     *
+     * The reference is derived from the persisted order id and written only when empty.
+     * This keeps local checkout numbering stable while still allowing collision fallback
+     * against existing imported references.
+     *
+     * @since 1.0.12
+     * @param sOrder $order Persisted order model.
+     */
+    private function assignBusinessReference(sOrder $order): void
+    {
+        if (!empty($order->reference)) {
+            return;
+        }
+
+        /** @var \Seiger\sCommerce\Services\OrderReferenceGenerator $gen */
+        $gen = app(\Seiger\sCommerce\Services\OrderReferenceGenerator::class);
+        $reference = $gen->generate(is_numeric($order->id) ? (int)$order->id : null);
+
+        if ($reference === '') {
+            return;
+        }
+
+        $order->reference = $reference;
+        $order->save();
     }
 }

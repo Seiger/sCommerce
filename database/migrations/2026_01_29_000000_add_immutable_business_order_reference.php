@@ -26,12 +26,12 @@ return new class extends Migration
         });
 
         // 2) Create counters table
-        Schema::create('s_order_counters', function (Blueprint $table) {
+        /*Schema::create('s_order_counters', function (Blueprint $table) {
             $table->id();
             $table->string('scope', 50)->unique();
             $table->unsignedBigInteger('current')->default(0);
             $table->timestamps();
-        });
+        });*/
     }
 
     /**
@@ -42,7 +42,7 @@ return new class extends Migration
     public function down(): void
     {
         // Drop counters table first (independent).
-        Schema::dropIfExists('s_order_counters');
+        //Schema::dropIfExists('s_order_counters');
 
         // Remove reference from orders
         Schema::table('s_orders', function (Blueprint $table) {
