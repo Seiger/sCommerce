@@ -7,7 +7,7 @@
     }
     $userInfo = is_array($userInfo) ? $userInfo : [];
 
-    $userFullName = trim(implode(' ', array_diff([$userInfo['first_name'] ?? '', $userInfo['middle_name'] ?? '', $userInfo['last_name'] ?? ''], [''])));
+    $userFullName = preg_replace('/\s+/u', ' ', trim(html_entity_decode(implode(' ', [$userInfo['first_name'] ?? '', $userInfo['middle_name'] ?? '', $userInfo['last_name'] ?? '']), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
     $userId = (int)($item?->user_id ?? 0);
 @endphp
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!sCommerce::moduleUrl()!!}&get=orderSave" onsubmit="documentDirty=false;">

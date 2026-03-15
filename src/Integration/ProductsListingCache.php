@@ -205,9 +205,8 @@ class ProductsListingCache extends BaseWorker
                 foreach ($products as $product) {
                     $scope = trim(str_replace('primary', '', $product->scope), '_');
                     $url = $product->getLinkAttribute((int)$product->catId);
-                    $path = parse_url($url, PHP_URL_PATH) ?? $url;
-                    $path = ltrim($path, './');
-                    $productsListing[$scope][trim($path, '/')] = $product->id;
+                    $path = $this->normalizeListingPath($url);
+                    $productsListing[$scope][$path] = $product->id;
                 }
 
                 $totalProcessed += $products->count();
@@ -332,5 +331,53 @@ class ProductsListingCache extends BaseWorker
 
             throw $e;
         }
+    }
+
+    /**
+     * Normalize a product URL to the cache key format expected by sCommerce.
+     *
+     * Cache keys must be relative URL paths without a leading slash. Some
+     * environments may return filesystem paths from URL builders, so strip any
+     * known installation prefixes before persisting the key.
+     */
+    protected function normalizeListingPath(string $url): string
+    {
+        $path = str_replace('\\', '/', parse_url($url, PHP_URL_PATH) ?? $url);
+        $path = trim($path);
+        $path = ltrim($path, './');
+
+        $prefixes = [];
+        $corePath = defined('MODX_CORE_PATH') ? MODX_CORE_PATH : null;
+        $basePath = defined('MODX_BASE_PATH') ? MODX_BASE_PATH : null;
+
+        foreach ([EVO_CORE_PATH, EVO_BASE_PATH, $corePath, $basePath] as $prefix) {
+            if (!is_string($prefix) || trim($prefix) === '') {
+                continue;
+            }
+
+            $prefixes[] = trim(str_replace('\\', '/', $prefix), '/');
+        }
+
+        usort($prefixes, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        $trimmedPath = ltrim($path, '/');
+        foreach ($prefixes as $prefix) {
+            if ($trimmedPath === $prefix) {
+                $trimmedPath = '';
+                break;
+            }
+
+            if (str_starts_with($trimmedPath, $prefix . '/')) {
+                $trimmedPath = substr($trimmedPath, strlen($prefix) + 1);
+                break;
+            }
+        }
+
+        // Fallback for cases where URL generation leaks the internal core path.
+        if (str_starts_with($trimmedPath, 'core/')) {
+            $trimmedPath = substr($trimmedPath, strlen('core/'));
+        }
+
+        return trim($trimmedPath, '/');
     }
 }

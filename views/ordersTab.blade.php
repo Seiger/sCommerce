@@ -86,11 +86,7 @@
             <tr id="order-{{$item->id}}" style="position:relative;height:42px;@if($domains)border-left:30px solid {{$domains[$item->domain]->site_color ?? '#60a5fa'}}@endif;">
                 <td><b>#{{$item->order_number ?? $item->id}}</b>@if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif</td>
                 <td>
-                    {{implode(' ', array_diff([
-                        $item->user_info['first_name'] ?? '',
-                        $item->user_info['middle_name'] ?? '',
-                        $item->user_info['last_name'] ?? ''],
-                    ['']))}}
+                    {{preg_replace('/\s+/u', ' ', trim(html_entity_decode(implode(' ', [$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? '']), ENT_QUOTES | ENT_HTML5, 'UTF-8')))}}
                     @if(trim($item->user_info['phone'] ?? ''))({{$item->user_info['phone'] ?? ''}})@endif
                 </td>
                 <td>{{$item->created_at}}</td>
