@@ -31,7 +31,7 @@ Event::listen('evolution.OnPageNotFound', function() {
                 trim($product->link, '/') == trim('/' . evo()->getConfig('lang', 'base') . '/' . $alias, '/')
             )
         ) {
-            if (evo()->getLoginUserID('mgr')) {
+            if ((int)($product->published ?? 0) === 1 || evo()->getLoginUserID('mgr')) {
                 evo()->setPlaceholder('product', (int)$product?->id);
                 $goTo = true;
             }
