@@ -95,6 +95,7 @@
     <div class="col col-4 col-md-3 col-lg-2">
         <select id="basic__search" class="form-control" name="basic__search" onchange="documentDirty=true;">
             <option value="blurred" @if(sCommerce::config('basic.search', 'blurred') == 'blurred') selected @endif>@lang('sCommerce::global.blurred')</option>
+            <option value="all_words" @if(sCommerce::config('basic.search', 'blurred') == 'all_words') selected @endif>@lang('sCommerce::global.all_words')</option>
             <option value="focused" @if(sCommerce::config('basic.search', 'blurred') == 'focused') selected @endif>@lang('sCommerce::global.focused')</option>
         </select>
     </div>

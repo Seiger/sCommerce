@@ -207,8 +207,8 @@ class sProduct extends Model
     /**
      * Apply search filters to the query
      *
+     * @since 1.0.12
      * @param \Illuminate\Database\Eloquent\Builder $builder The query builder object
-     *
      * @return \Illuminate\Database\Eloquent\Builder The modified query builder object
      */
     public function scopeSearch($builder)
@@ -232,18 +232,38 @@ class sProduct extends Model
                 ->replaceMatches('/(\s){2,}/', '$1') // removing extra spaces
                 ->trim()->explode(' ')
                 ->filter(fn($word) => mb_strlen($word) > 0);
+            $searchMode = sCommerce::config('basic.search', 'blurred');
+            $searchPhrase = $search->implode(' ');
 
             $select = collect([0]);
 
-            $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$search->implode(' ')}%' THEN 10 ELSE 0 END)")); // Generate Exact match points source
+            $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$searchPhrase}%' THEN 10 ELSE 0 END)")); // Generate Exact match points source
             $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate Partial match points source
 
             $s = $builder->addSelect(DB::Raw('(' . $select->implode(' + ') . ') as points'));
-            if (sCommerce::config('basic.search', 'blurred') == 'blurred') {
-                $s->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))));
-            } else {
-                $s->when($search->count(), fn($query) => $query->where(fn($query) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$search->implode(' ')}%"))));
-            }
+            $s->when($search->count(), function ($query) use ($fields, $search, $searchMode, $searchPhrase) {
+                if ($searchMode === 'focused') {
+                    $query->where(function ($query) use ($fields, $searchPhrase) {
+                        $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$searchPhrase}%"));
+                    });
+                    return;
+                }
+
+                if ($searchMode === 'all_words') {
+                    $query->where(function ($query) use ($fields, $search) {
+                        $search->each(function ($word) use ($query, $fields) {
+                            $query->where(function ($query) use ($fields, $word) {
+                                $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%"));
+                            });
+                        });
+                    });
+                    return;
+                }
+
+                $query->where(function ($query) use ($fields, $search) {
+                    $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")));
+                });
+            });
             return $s->orderByDesc('points');
         }
     }
