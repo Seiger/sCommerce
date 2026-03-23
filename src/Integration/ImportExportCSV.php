@@ -639,10 +639,10 @@ class ImportExportCSV extends BaseWorker
         if ($useMultilang) {
             foreach ($this->csvLanguagesList($sCommerceController) as $lang) {
                 $langTag = '[' . $lang . ']';
-                $product['pagetitle_' . $lang] = __('sCommerce::global.product_name') . ' ' . $langTag;
-                $product['longtitle_' . $lang] = __('global.long_title') . ' ' . $langTag;
-                $product['introtext_' . $lang] = __('global.resource_summary') . ' ' . $langTag;
-                $product['content_' . $lang] = __('sCommerce::global.content') . ' ' . $langTag;
+                $product[$this->buildLangTextKey($lang, 'pagetitle')] = __('sCommerce::global.product_name') . ' ' . $langTag;
+                $product[$this->buildLangTextKey($lang, 'longtitle')] = __('global.long_title') . ' ' . $langTag;
+                $product[$this->buildLangTextKey($lang, 'introtext')] = __('global.resource_summary') . ' ' . $langTag;
+                $product[$this->buildLangTextKey($lang, 'content')] = __('sCommerce::global.content') . ' ' . $langTag;
             }
         } else {
             $product['pagetitle'] = __('sCommerce::global.product_name');
@@ -739,17 +739,10 @@ class ImportExportCSV extends BaseWorker
         // Process each row in batches
         while (($row = fgetcsv($fh, 0, $opt['delimiter'], $opt['enclosure'], $opt['escape'])) !== false) {
             try {
-                $dirtyData = array_combine($header, $row);
-                if (!$dirtyData) {
+                $data = $this->normalizeImportRowData($header, $row, $headerKeys);
+                if (!$data) {
                     $errors++;
                     continue;
-                }
-
-                $data = [];
-                foreach ($dirtyData as $key => $item) {
-                    if (isset($headerKeys[$key])) {
-                        $data[$headerKeys[$key]] = $item;
-                    }
                 }
 
                 $batch[] = $data;
@@ -902,6 +895,7 @@ class ImportExportCSV extends BaseWorker
     private function createTempTable(string $tableName): void
     {
         Schema::create($tableName, function ($table) {
+            $table->bigIncrements('row_id');
             $table->integer('id')->nullable();
             $table->string('sku', 255)->nullable();
             $table->string('alias', 255)->nullable();
@@ -917,6 +911,7 @@ class ImportExportCSV extends BaseWorker
             $table->string('longtitle', 255)->nullable();
             $table->text('introtext')->nullable();
             $table->longText('content')->nullable();
+            $table->longText('text_payload')->nullable();
             $table->json('attributes')->nullable();
             $table->boolean('processed')->default(0);
 
@@ -956,33 +951,39 @@ class ImportExportCSV extends BaseWorker
             throw new \RuntimeException('Cannot read CSV header');
         }
 
+        $headerKeys = $this->importHeaderLabelToFieldMap();
+        $defaultLang = $this->csvDefaultLanguage(new sCommerceController());
         $batch = [];
         $batchSize = 1000; // Larger batch for temp table loading
 
         // Process each row
         while (($row = fgetcsv($fh, 0, $opt['delimiter'], $opt['enclosure'], $opt['escape'])) !== false) {
-            $data = array_combine($header, $row);
+            $data = $this->normalizeImportRowData($header, $row, $headerKeys);
             if (!$data) {
                 continue;
             }
 
+            $textPayload = $this->extractTextPayloadByLang($data, $defaultLang, $this->shouldUseMultilangCsv());
+            $defaultPayload = $textPayload[$defaultLang] ?? [];
+
             // Prepare data for temp table
             $tempData = [
-                'id' => !empty($data['ID']) && is_numeric($data['ID']) ? (int)$data['ID'] : null,
-                'sku' => $data['Артикул'] ?? null,
-                'alias' => $data['Посилання на товар'] ?? null,
-                'published' => !empty($data['Видимість']) ? (int)$data['Видимість'] : 1,
-                'availability' => !empty($data['Доступність']) ? (int)$data['Доступність'] : 0,
-                'inventory' => !empty($data['Залишок']) ? (int)$data['Залишок'] : 0,
-                'price_regular' => !empty($data['Ціна']) ? (float)$data['Ціна'] : 0.00,
-                'price_special' => !empty($data['Спеціальна ціна']) ? (float)$data['Спеціальна ціна'] : null,
-                'currency' => $data['Валюта'] ?? 'UAH',
-                'cover' => $data['Обкладинка'] ?? null,
-                'category' => !empty($data['Категорія']) ? (int)$data['Категорія'] : null,
-                'pagetitle' => $data['Назва товару'] ?? null,
-                'longtitle' => $data['Розширений заголовок'] ?? null,
-                'introtext' => $data['Анотація (введення)'] ?? null,
-                'content' => $data['Контент'] ?? null,
+                'id' => isset($data['id']) && is_numeric($data['id']) ? (int)$data['id'] : null,
+                'sku' => $data['sku'] ?? null,
+                'alias' => $data['alias'] ?? null,
+                'published' => isset($data['published']) && $data['published'] !== '' ? (int)$data['published'] : 1,
+                'availability' => isset($data['availability']) && $data['availability'] !== '' ? (int)$data['availability'] : 0,
+                'inventory' => isset($data['inventory']) && $data['inventory'] !== '' ? (int)$data['inventory'] : 0,
+                'price_regular' => isset($data['price_regular']) && $data['price_regular'] !== '' ? (float)$data['price_regular'] : 0.00,
+                'price_special' => isset($data['price_special']) && $data['price_special'] !== '' ? (float)$data['price_special'] : null,
+                'currency' => $data['currency'] ?? 'UAH',
+                'cover' => $data['cover'] ?? null,
+                'category' => isset($data['category']) && is_numeric($data['category']) ? (int)$data['category'] : null,
+                'pagetitle' => $data['pagetitle'] ?? ($defaultPayload['pagetitle'] ?? null),
+                'longtitle' => $data['longtitle'] ?? ($defaultPayload['longtitle'] ?? null),
+                'introtext' => $data['introtext'] ?? ($defaultPayload['introtext'] ?? null),
+                'content' => $data['content'] ?? ($defaultPayload['content'] ?? null),
+                'text_payload' => $this->encodeJson($textPayload),
                 'attributes' => $this->prepareAttributesForTempTable($data),
                 'processed' => 0,
             ];
@@ -1015,15 +1016,18 @@ class ImportExportCSV extends BaseWorker
         $attributes = [];
 
         foreach ($data as $key => $value) {
-            if (str_starts_with($key, 'Атрибут ')) {
-                $attributeName = substr($key, 9); // Remove "Атрибут " prefix
-                if (!empty($value)) {
-                    $attributes[$attributeName] = $value;
-                }
+            if (!str_starts_with((string)$key, 'attribute:')) {
+                continue;
             }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $attributes[$key] = $value;
         }
 
-        return !empty($attributes) ? json_encode($attributes) : null;
+        return !empty($attributes) ? $this->encodeJson($attributes) : null;
     }
 
     /**
@@ -1076,10 +1080,10 @@ class ImportExportCSV extends BaseWorker
             $processed += $batch->count();
 
             // Mark as processed using Eloquent
-            $batchIds = $batch->pluck('id')->filter()->toArray();
+            $batchIds = $batch->pluck('row_id')->filter()->toArray();
             if (!empty($batchIds)) {
                 \DB::table($tableName)
-                    ->whereIn('id', $batchIds)
+                    ->whereIn('row_id', $batchIds)
                     ->update(['processed' => 1]);
             }
 
@@ -1157,7 +1161,7 @@ class ImportExportCSV extends BaseWorker
 
         foreach ($batch as $row) {
             try {
-                $data = (array) $row;
+                $data = $this->inflateTempTableRow((array)$row);
 
                 // Data from temp table already has correct field names
                 $result = $this->processProductRow($data);
@@ -1189,6 +1193,9 @@ class ImportExportCSV extends BaseWorker
     private function processProductRow(array $data): array
     {
         $sCommerceController = new sCommerceController();
+        $allowMultilang = $this->shouldUseMultilangCsv();
+        $defaultLang = $this->csvDefaultLanguage($sCommerceController);
+        $payloadByLang = $this->extractTextPayloadByLang($data, $defaultLang, $allowMultilang);
         $requestId = intval($data['id'] ?? 0);
         $alias = trim($data['alias'] ?? '') ?: 'new-product';
         $product = sCommerce::getProduct($requestId);
@@ -1201,7 +1208,7 @@ class ImportExportCSV extends BaseWorker
             if ($translate) {
                 $alias = trim($translate->pagetitle) ?: 'new-product';
             } else {
-                $alias = 'new-product';
+                $alias = $this->resolveAliasFromPayload($payloadByLang, $defaultLang);
             }
         }
 
@@ -1229,7 +1236,6 @@ class ImportExportCSV extends BaseWorker
         // Process text fields (pagetitle, longtitle, introtext, content) incl. multilang
         if ($product->id) {
             \View::getFinder()->setPaths([EVO_BASE_PATH . 'assets/modules/scommerce/builder']);
-            $payloadByLang = $this->extractTextPayloadByLang($data, $sCommerceController->langDefault());
 
             foreach ($payloadByLang as $lang => $payload) {
                 $lang = strtolower(trim((string)$lang));
@@ -1529,42 +1535,62 @@ class ImportExportCSV extends BaseWorker
         return $langs;
     }
 
+    private function csvDefaultLanguage(sCommerceController $controller): string
+    {
+        $default = strtolower(trim($controller->langDefault()));
+        return $default !== '' ? $default : 'base';
+    }
+
     /**
      * Map CSV header labels to internal field keys.
      *
-     * Supports both:
-     * - legacy single-language columns (e.g. "Назва товару")
+     * Supports:
+     * - single-language columns when multilingual mode is disabled
      * - multilang columns with language index (e.g. "Назва товару [uk]")
      */
     private function importHeaderLabelToFieldMap(): array
     {
         $sCommerceController = new sCommerceController();
 
-        // Build legacy header map (single-language text columns)
         $legacy = $this->buildHeaderRow(false, $sCommerceController);
         $map = array_flip($legacy);
+        foreach (array_keys($legacy) as $field) {
+            $map[$field] = $field;
+        }
 
-        // Build multilang header map
-        $multilang = $this->buildHeaderRow(true, $sCommerceController);
-        foreach (array_flip($multilang) as $label => $field) {
-            $map[$label] = $field;
+        if ($this->shouldUseMultilangCsv()) {
+            $multilang = $this->buildHeaderRow(true, $sCommerceController);
+            foreach (array_flip($multilang) as $label => $field) {
+                $map[$label] = $field;
+            }
+
+            foreach (array_keys($multilang) as $field) {
+                $map[$field] = $field;
+            }
         }
 
         return $map;
     }
 
+    private function buildLangTextKey(string $lang, string $field): string
+    {
+        return 'lang.' . strtolower(trim($lang)) . '.' . strtolower(trim($field));
+    }
+
+
     private function parseLangIndexedTextKey(string $key): ?array
     {
-        if (!preg_match('/^(pagetitle|longtitle|introtext|content)_([a-z0-9_\\-]+)$/i', $key, $m)) {
+        if (!preg_match('/^lang\.([a-z0-9_\-]+)\.(pagetitle|longtitle|introtext|content)$/i', $key, $m)) {
             return null;
         }
+
         return [
-            'field' => strtolower($m[1]),
-            'lang' => strtolower($m[2]),
+            'lang' => strtolower($m[1]),
+            'field' => strtolower($m[2]),
         ];
     }
 
-    private function extractTextPayloadByLang(array $data, string $defaultLang): array
+    private function extractTextPayloadByLang(array $data, string $defaultLang, bool $allowMultilang = true): array
     {
         $defaultLang = strtolower(trim($defaultLang)) ?: 'base';
         $payloadByLang = [];
@@ -1575,6 +1601,10 @@ class ImportExportCSV extends BaseWorker
                 continue;
             }
 
+            if (!$allowMultilang) {
+                continue;
+            }
+
             $parsed = $this->parseLangIndexedTextKey((string)$key);
             if ($parsed && in_array($parsed['field'], self::TEXT_FIELDS, true)) {
                 $payloadByLang[$parsed['lang']][$parsed['field']] = $value;
@@ -1582,6 +1612,104 @@ class ImportExportCSV extends BaseWorker
         }
 
         return $payloadByLang;
+    }
+
+    private function normalizeImportRowData(array $header, array $row, array $headerKeys): array
+    {
+        $row = array_pad($row, count($header), '');
+        $row = array_slice($row, 0, count($header));
+        $dirtyData = array_combine($header, $row);
+        if (!$dirtyData) {
+            return [];
+        }
+
+        $data = [];
+        foreach ($dirtyData as $key => $item) {
+            $normalizedKey = $headerKeys[$key] ?? $key;
+            $data[$normalizedKey] = $item;
+        }
+
+        return $data;
+    }
+
+    private function flattenTextPayloadByLang(array $payloadByLang): array
+    {
+        $flat = [];
+        foreach ($payloadByLang as $lang => $payload) {
+            $lang = strtolower(trim((string)$lang));
+            if ($lang === '') {
+                continue;
+            }
+
+            foreach ((array)$payload as $field => $value) {
+                $field = strtolower(trim((string)$field));
+                if (!in_array($field, self::TEXT_FIELDS, true)) {
+                    continue;
+                }
+
+                $flat[$this->buildLangTextKey($lang, $field)] = $value;
+            }
+        }
+
+        return $flat;
+    }
+
+    private function inflateTempTableRow(array $data): array
+    {
+        $attributes = $this->decodeJsonToArray($data['attributes'] ?? null);
+        $textPayload = $this->decodeJsonToArray($data['text_payload'] ?? null);
+
+        unset($data['attributes'], $data['text_payload'], $data['processed'], $data['row_id']);
+
+        foreach ($attributes as $key => $value) {
+            $data[$key] = $value;
+        }
+
+        foreach ($this->flattenTextPayloadByLang($textPayload) as $key => $value) {
+            $data[$key] = $value;
+        }
+
+        return $data;
+    }
+
+    private function decodeJsonToArray($value): array
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($value, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function encodeJson(array $value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE);
+        return $encoded === false ? null : $encoded;
+    }
+
+    private function resolveAliasFromPayload(array $payloadByLang, string $defaultLang): string
+    {
+        $candidates = ['en', strtolower(trim($defaultLang)), 'base'];
+        foreach ($candidates as $lang) {
+            $pagetitle = trim((string)($payloadByLang[$lang]['pagetitle'] ?? ''));
+            if ($pagetitle !== '') {
+                return $pagetitle;
+            }
+        }
+
+        foreach ($payloadByLang as $payload) {
+            $pagetitle = trim((string)($payload['pagetitle'] ?? ''));
+            if ($pagetitle !== '') {
+                return $pagetitle;
+            }
+        }
+
+        return 'new-product';
     }
 
     private function getProductTranslateField(sProduct $product, string $lang, string $field)
