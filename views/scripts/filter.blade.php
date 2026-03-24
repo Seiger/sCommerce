@@ -4,28 +4,60 @@
         if (e.target) {
             switch(true) {
                 case Boolean(e.target.closest('[data-sFilter]')?.hasAttribute("data-sFilter")):
-                    dataFilter = e.target.closest('[data-sFilter]').getAttribute('data-sFilter');
+                    let dataFilter = e.target.closest('[data-sFilter]').getAttribute('data-sFilter');
                     generateFilterUrl(e, dataFilter);
                     break;
                 case Boolean(e.target.closest('[data-sRange]')?.hasAttribute("data-sRange")):
-                    dataRange = e.target.closest('[data-sRange]').getAttribute('data-sRange');
-                    rangeBlocks = e.target.closest('[data-sRange]').querySelectorAll('input[type=\"number\"]');
-                    rangeValues = Array.from(rangeBlocks).map(input => parseInt(input.value));
+                    let dataRange = e.target.closest('[data-sRange]').getAttribute('data-sRange');
+                    const rangeBlocks = e.target.closest('[data-sRange]').querySelectorAll('input[type="number"]');
+                    const rangeValues = Array.from(rangeBlocks).map(input => parseInt(input.value));
                     dataRange = dataRange + '=' + Math.min(...rangeValues) + ',' + Math.max(...rangeValues);
                     generateFilterUrl(e, dataRange, 'range');
                     break;
             }
         }
     });
+    function parseCurrentFilterPath(pathname, suffix = '') {
+        const normalizedPath = suffix && pathname.endsWith(suffix)
+            ? pathname.slice(0, -suffix.length)
+            : pathname;
+        const segments = normalizedPath.split('/').filter(Boolean);
+        const filterSegments = [];
+
+        while (segments.length && segments[segments.length - 1].includes('=')) {
+            filterSegments.unshift(segments.pop());
+        }
+
+        return {
+            basePath: `/${segments.join('/')}`.replace(/\/+/g, '/'),
+            filters: filterSegments.join(';')
+        };
+    }
+    function normalizeFilterEntries(filters) {
+        return filters
+            .map(filter => {
+                const [key, values = ''] = filter.split('=');
+                const normalizedValues = [...new Set(values.split(',').filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
+
+                return normalizedValues.length ? `${key}=${normalizedValues.join(',')}` : null;
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                const [keyA] = a.split('=');
+                const [keyB] = b.split('=');
+                return keyA.localeCompare(keyB, undefined, {numeric: true, sensitivity: 'base'});
+            });
+    }
     function generateFilterUrl(e, dataFilter, type = 'checkbox') {
-        let newFilters = [];
         let searchFilter = true;
 
         const suffix = '{{evo()->getConfig('friendly_url_suffix', '')}}';
         const currentUrl = new URL(window.location.href);
-        const _path = currentUrl.pathname.substring(0, currentUrl.pathname.length - suffix.length);
+        const parsedPath = parseCurrentFilterPath(currentUrl.pathname, suffix);
         const _getParams = currentUrl.search;
-        const _filterMatch = '{{evo()->getPlaceholder('sFilters')}}';
+        const _path = parsedPath.basePath;
+        const _filterMatch = parsedPath.filters;
 
         if (_filterMatch) {
             let existingFilters = _filterMatch.split(';');
@@ -38,37 +70,33 @@
                     let valueArray = values.split(',');
 
                     if (valueArray.includes(filterValue)) {
-                        // If the current value already exists, then delete it
                         valueArray = valueArray.filter(v => v !== filterValue);
                     } else if (type === 'checkbox') {
-                        // If type 'checkbox' => add new value
                         valueArray.push(filterValue);
                     } else if (type === 'radio' || type === 'range') {
-                        // If type 'radio' or 'range' => replace completely
                         valueArray = [filterValue];
                     } else {
                         valueArray.push(filterValue);
                     }
 
-                    // Remove duplicates and convert back to key=val format
                     return valueArray.length > 0 ? `${key}=${[...new Set(valueArray)].join(',')}` : null;
                 }
                 return existingFilter;
             }).filter(Boolean);
 
-            // If no such key is found, add a new one
             if (searchFilter) {
                 existingFilters.push(dataFilter);
             }
 
-            // Form a new URL
+            existingFilters = normalizeFilterEntries(existingFilters);
+
             const newPath = existingFilters.length > 0
-                ? `${_path.replace(_filterMatch, '')}/${existingFilters.join(';')}/`
-                : `${_path.replace(_filterMatch, '')}/`;
+                ? `${_path}/${existingFilters.join(';')}/`
+                : `${_path}/`;
             currentUrl.pathname = newPath.replace('//', '/').replace(/\/;+/g, '/').replace(/;+\//g, '/');
         } else {
-            // If there were no filters before this
-            currentUrl.pathname = `${_path}/${dataFilter}/`.replace('//', '/').replace(/\/;+/g, '/').replace(/;+\//g, '/');
+            const normalizedFilters = normalizeFilterEntries([dataFilter]);
+            currentUrl.pathname = `${_path}/${normalizedFilters.join(';')}/`.replace('//', '/').replace(/\/;+/g, '/').replace(/;+\//g, '/');
         }
 
         window.location.href = `${currentUrl.pathname}${_getParams}`;

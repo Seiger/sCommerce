@@ -208,14 +208,12 @@ class sFilter
             // If there are requested filters, validate them
             if (is_array($requestedFilters) && count($requestedFilters)) {
                 $result = $this->validateFiltersStructure($path, $requestedFilters);
-                $filters = $result['filters'];
+                $filters = $this->normalizeFilters($result['filters']);
                 $filtersIds = $result['filtersIds'] ?? [];
 
                 if (count($filters)) {
                     // Construct the filter string
-                    $sFilters = implode(';', array_map(function ($filterName, $filterValues) {
-                        return $filterName . '=' . implode(',', $filterValues);
-                    }, array_keys($filters), array_values($filters)));
+                    $sFilters = $this->buildFiltersString($filters);
 
                     // Compare current path vs. expected path
                     if ($path['currentPath'] !== $path['path'] . '/' . $sFilters) {
@@ -273,18 +271,17 @@ class sFilter
         $categoryId = $categoryId ?? (int)evo()->documentIdentifier;
         $instance = new static();
         $result = $instance->validateFiltersStructure(['category' => $categoryId], $filters);
+        $normalizedFilters = $instance->normalizeFilters($result['filters']);
 
         static::$cachedResult = [
-            'filters' => $result['filters'],
+            'filters' => $normalizedFilters,
             'filtersIds' => $result['filtersIds'],
             'category' => $categoryId,
         ];
         static::$isValidated = true;
 
         if (count(static::$cachedResult['filters'])) {
-            $sFilters = implode(';', array_map(function ($filterName, $filterValues) {
-                return $filterName . '=' . implode(',', $filterValues);
-            }, array_keys(static::$cachedResult['filters']), array_values(static::$cachedResult['filters'])));
+            $sFilters = $instance->buildFiltersString(static::$cachedResult['filters']);
 
             evo()->setPlaceholder('sFilters', $sFilters);
             evo()->setPlaceholder('sFiltersArray', static::$cachedResult['filters']);
@@ -668,5 +665,47 @@ class sFilter
             'filters' => $filters,
             'filtersIds' => $filtersIds
         ];
+    }
+
+    /**
+     * Normalize filters for stable SEO-friendly URLs.
+     *
+     * @param array<string, array<int|string>> $filters
+     * @return array<string, array<int|string>>
+     */
+    protected function normalizeFilters(array $filters): array
+    {
+        ksort($filters, SORT_NATURAL | SORT_FLAG_CASE);
+
+        foreach ($filters as $filterName => $filterValues) {
+            $uniqueValues = array_values(array_unique($filterValues, SORT_REGULAR));
+
+            $allNumeric = count($uniqueValues) > 0 && count(array_filter($uniqueValues, static fn($value) => is_numeric($value))) === count($uniqueValues);
+
+            if ($allNumeric) {
+                sort($uniqueValues, SORT_NUMERIC);
+            } else {
+                sort($uniqueValues, SORT_NATURAL | SORT_FLAG_CASE);
+            }
+
+            $filters[$filterName] = $uniqueValues;
+        }
+
+        return $filters;
+    }
+
+    /**
+     * Build a canonical string representation of filters.
+     *
+     * @param array<string, array<int|string>> $filters
+     * @return string
+     */
+    protected function buildFiltersString(array $filters): string
+    {
+        $filters = $this->normalizeFilters($filters);
+
+        return implode(';', array_map(function ($filterName, $filterValues) {
+            return $filterName . '=' . implode(',', $filterValues);
+        }, array_keys($filters), array_values($filters)));
     }
 }
