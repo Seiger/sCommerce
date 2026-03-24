@@ -11,6 +11,8 @@ use Seiger\sTask\Models\sTaskModel;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sGallery\Facades\sGallery;
+use Seiger\sGallery\Models\sGalleryModel;
+use Seiger\sSeo\Models\sSeoModel;
 use Seiger\sTask\Workers\BaseWorker;
 use Seiger\sTask\Contracts\TaskInterface;
 
@@ -47,6 +49,7 @@ class ImportExportCSV extends BaseWorker
 {
     const ALLOWED_EXTENSIONS = ['csv'];
     private const TEXT_FIELDS = ['pagetitle', 'longtitle', 'introtext', 'content'];
+    private const SEO_FIELDS = ['meta_title', 'meta_description', 'meta_keywords', 'canonical_url'];
     /** Directory where this integration puts its CSV exports. */
     private const EXPORT_DIR = 'stask/uploads';
     /** Directory where uploaded CSV files are stored for import. */
@@ -285,6 +288,13 @@ class ImportExportCSV extends BaseWorker
                                         $a[$field] = $this->sanitizeCsvValue($value);
                                         continue;
                                     }
+
+                                    $parsedSeo = $this->parseLangIndexedSeoKey($field);
+                                    if ($parsedSeo) {
+                                        $value = $this->getProductSeoField($p, $parsedSeo['lang'], $parsedSeo['field']);
+                                        $a[$field] = $this->sanitizeCsvValue($value);
+                                        continue;
+                                    }
                                 }
                                 switch ($field) {
                                     case 'published':
@@ -326,10 +336,22 @@ class ImportExportCSV extends BaseWorker
                                             $a[$field] = implode('||', $categoryIds);
                                         }
                                         break;
+                                    case 'cover':
+                                        $a[$field] = $this->sanitizeCsvValue($this->normalizeCsvMediaPath($p?->{$field} ?? ''));
+                                        break;
                                     case 'categories':
                                         // Cross-domain category list: always return simple IDs
                                         $categoryIds = $p?->categories->pluck('id')->toArray();
                                         $a[$field] = implode('||', $categoryIds);
+                                        break;
+                                    case 'gallery':
+                                        $a[$field] = $this->sanitizeCsvValue($this->exportProductGallery($p));
+                                        break;
+                                    case 'meta_title':
+                                    case 'meta_description':
+                                    case 'meta_keywords':
+                                    case 'canonical_url':
+                                        $a[$field] = $this->sanitizeCsvValue($this->getProductSeoField($p, 'base', $field));
                                         break;
                                     default:
                                         $value = $p?->{$field} ?? '';
@@ -494,7 +516,14 @@ class ImportExportCSV extends BaseWorker
         }
     }
 
-    /** CSV write helper. */
+    /**
+     * Write a single row to the CSV stream.
+     *
+     * @param resource $fh Open CSV file handle.
+     * @param array $row Row values to write.
+     * @param array $opt CSV formatting options.
+     * @return void
+     */
     protected function putCsv($fh, array $row, array $opt): void
     {
         $result = fputcsv($fh, $row, $opt['delimiter'], $opt['enclosure'], $opt['escape']);
@@ -586,6 +615,13 @@ class ImportExportCSV extends BaseWorker
         return $this->buildHeaderRow($this->shouldUseMultilangCsv(), $sCommerceController);
     }
 
+    /**
+     * Build the CSV header definition, including optional multilingual and SEO fields.
+     *
+     * @param bool $useMultilang Whether multilingual columns should be included.
+     * @param sCommerceController $sCommerceController Controller used to resolve language metadata.
+     * @return array Header map in internalField => label format.
+     */
     private function buildHeaderRow(bool $useMultilang, sCommerceController $sCommerceController): array
     {
         $product = [
@@ -618,6 +654,7 @@ class ImportExportCSV extends BaseWorker
 
             // Media and content
             'cover' => __('sCommerce::global.cover'),
+            'gallery' => 'Галерея',
 
             // Categories and relationships
             'category' => __('sCommerce::global.category'),
@@ -649,6 +686,23 @@ class ImportExportCSV extends BaseWorker
             $product['longtitle'] = __('global.long_title');
             $product['introtext'] = __('global.resource_summary');
             $product['content'] = __('sCommerce::global.content');
+        }
+
+        if ($this->hasSeoSupport()) {
+            if ($useMultilang) {
+                foreach ($this->csvLanguagesList($sCommerceController) as $lang) {
+                    $langTag = '[' . $lang . ']';
+                    $product[$this->buildLangSeoKey($lang, 'meta_title')] = __('sSeo::global.meta_title') . ' ' . $langTag;
+                    $product[$this->buildLangSeoKey($lang, 'meta_description')] = __('sSeo::global.meta_description') . ' ' . $langTag;
+                    $product[$this->buildLangSeoKey($lang, 'meta_keywords')] = __('sSeo::global.meta_keywords') . ' ' . $langTag;
+                    $product[$this->buildLangSeoKey($lang, 'canonical_url')] = __('sSeo::global.canonical') . ' ' . $langTag;
+                }
+            } else {
+                $product['meta_title'] = __('sSeo::global.meta_title');
+                $product['meta_description'] = __('sSeo::global.meta_description');
+                $product['meta_keywords'] = __('sSeo::global.meta_keywords');
+                $product['canonical_url'] = __('sSeo::global.canonical');
+            }
         }
 
         // Related Attributes
@@ -906,12 +960,14 @@ class ImportExportCSV extends BaseWorker
             $table->decimal('price_special', 10, 2)->nullable();
             $table->string('currency', 3)->default('UAH');
             $table->string('cover', 500)->nullable();
+            $table->longText('gallery')->nullable();
             $table->integer('category')->nullable();
             $table->string('pagetitle', 255)->nullable();
             $table->string('longtitle', 255)->nullable();
             $table->text('introtext')->nullable();
             $table->longText('content')->nullable();
             $table->longText('text_payload')->nullable();
+            $table->longText('seo_payload')->nullable();
             $table->json('attributes')->nullable();
             $table->boolean('processed')->default(0);
 
@@ -955,6 +1011,7 @@ class ImportExportCSV extends BaseWorker
         $defaultLang = $this->csvDefaultLanguage(new sCommerceController());
         $batch = [];
         $batchSize = 1000; // Larger batch for temp table loading
+        $allowMultilang = $this->shouldUseMultilangCsv();
 
         // Process each row
         while (($row = fgetcsv($fh, 0, $opt['delimiter'], $opt['enclosure'], $opt['escape'])) !== false) {
@@ -963,7 +1020,8 @@ class ImportExportCSV extends BaseWorker
                 continue;
             }
 
-            $textPayload = $this->extractTextPayloadByLang($data, $defaultLang, $this->shouldUseMultilangCsv());
+            $textPayload = $this->extractTextPayloadByLang($data, $defaultLang, $allowMultilang);
+            $seoPayload = $this->extractSeoPayloadByLang($data, $defaultLang, $allowMultilang);
             $defaultPayload = $textPayload[$defaultLang] ?? [];
 
             // Prepare data for temp table
@@ -978,12 +1036,14 @@ class ImportExportCSV extends BaseWorker
                 'price_special' => isset($data['price_special']) && $data['price_special'] !== '' ? (float)$data['price_special'] : null,
                 'currency' => $data['currency'] ?? 'UAH',
                 'cover' => $data['cover'] ?? null,
+                'gallery' => $data['gallery'] ?? null,
                 'category' => isset($data['category']) && is_numeric($data['category']) ? (int)$data['category'] : null,
                 'pagetitle' => $data['pagetitle'] ?? ($defaultPayload['pagetitle'] ?? null),
                 'longtitle' => $data['longtitle'] ?? ($defaultPayload['longtitle'] ?? null),
                 'introtext' => $data['introtext'] ?? ($defaultPayload['introtext'] ?? null),
                 'content' => $data['content'] ?? ($defaultPayload['content'] ?? null),
                 'text_payload' => $this->encodeJson($textPayload),
+                'seo_payload' => $this->encodeJson($seoPayload),
                 'attributes' => $this->prepareAttributesForTempTable($data),
                 'processed' => 0,
             ];
@@ -1196,6 +1256,7 @@ class ImportExportCSV extends BaseWorker
         $allowMultilang = $this->shouldUseMultilangCsv();
         $defaultLang = $this->csvDefaultLanguage($sCommerceController);
         $payloadByLang = $this->extractTextPayloadByLang($data, $defaultLang, $allowMultilang);
+        $seoPayloadByLang = $this->extractSeoPayloadByLang($data, $defaultLang, $allowMultilang);
         $requestId = intval($data['id'] ?? 0);
         $alias = trim($data['alias'] ?? '') ?: 'new-product';
         $product = sCommerce::getProduct($requestId);
@@ -1260,6 +1321,13 @@ class ImportExportCSV extends BaseWorker
                 }
 
                 $translate->save();
+            }
+        }
+
+        if ($product->id) {
+            $this->syncProductSeo($product, $seoPayloadByLang, $defaultLang);
+            if (array_key_exists('gallery', $data)) {
+                $this->syncProductGallery($product, $data['gallery'] ?? null);
             }
         }
 
@@ -1508,6 +1576,11 @@ class ImportExportCSV extends BaseWorker
         }
     }
 
+    /**
+     * Check whether multilingual CSV mode should be enabled.
+     *
+     * @return bool True when sLang is enabled and available.
+     */
     private function shouldUseMultilangCsv(): bool
     {
         $enabled = (bool)evo()->getConfig('check_sLang', false);
@@ -1519,6 +1592,12 @@ class ImportExportCSV extends BaseWorker
         return class_exists(\Seiger\sLang\Facades\sLang::class);
     }
 
+    /**
+     * Get the normalized list of languages used for CSV import/export.
+     *
+     * @param sCommerceController $controller Controller used to resolve language metadata.
+     * @return array Language code list.
+     */
     private function csvLanguagesList(sCommerceController $controller): array
     {
         $langs = $controller->langList();
@@ -1535,6 +1614,12 @@ class ImportExportCSV extends BaseWorker
         return $langs;
     }
 
+    /**
+     * Get the normalized default language code for CSV fallback behavior.
+     *
+     * @param sCommerceController $controller Controller used to resolve language metadata.
+     * @return string Default language code.
+     */
     private function csvDefaultLanguage(sCommerceController $controller): string
     {
         $default = strtolower(trim($controller->langDefault()));
@@ -1572,12 +1657,37 @@ class ImportExportCSV extends BaseWorker
         return $map;
     }
 
+    /**
+     * Build an internal CSV key for multilingual product text fields.
+     *
+     * @param string $lang Language code.
+     * @param string $field Product text field name.
+     * @return string Composite CSV key.
+     */
     private function buildLangTextKey(string $lang, string $field): string
     {
         return 'lang.' . strtolower(trim($lang)) . '.' . strtolower(trim($field));
     }
 
+    /**
+     * Build an internal CSV key for multilingual SEO fields.
+     *
+     * @param string $lang Language code.
+     * @param string $field SEO field name.
+     * @return string Composite CSV key.
+     * @since 1.0.12
+     */
+    private function buildLangSeoKey(string $lang, string $field): string
+    {
+        return 'seo.' . strtolower(trim($lang)) . '.' . strtolower(trim($field));
+    }
 
+    /**
+     * Parse a multilingual text CSV key into language and field parts.
+     *
+     * @param string $key Internal CSV key.
+     * @return array|null Parsed key parts or null when the key does not match.
+     */
     private function parseLangIndexedTextKey(string $key): ?array
     {
         if (!preg_match('/^lang\.([a-z0-9_\-]+)\.(pagetitle|longtitle|introtext|content)$/i', $key, $m)) {
@@ -1590,6 +1700,33 @@ class ImportExportCSV extends BaseWorker
         ];
     }
 
+    /**
+     * Parse a multilingual SEO CSV key into language and field parts.
+     *
+     * @param string $key Internal CSV key.
+     * @return array|null Parsed key parts or null when the key does not match.
+     * @since 1.0.12
+     */
+    private function parseLangIndexedSeoKey(string $key): ?array
+    {
+        if (!preg_match('/^seo\.([a-z0-9_\-]+)\.(meta_title|meta_description|meta_keywords|canonical_url)$/i', $key, $m)) {
+            return null;
+        }
+
+        return [
+            'lang' => strtolower($m[1]),
+            'field' => strtolower($m[2]),
+        ];
+    }
+
+    /**
+     * Extract product text values from an import row and group them by language.
+     *
+     * @param array $data Normalized import row.
+     * @param string $defaultLang Default language for non-indexed columns.
+     * @param bool $allowMultilang Whether multilingual keys should be parsed.
+     * @return array Text payload grouped by language.
+     */
     private function extractTextPayloadByLang(array $data, string $defaultLang, bool $allowMultilang = true): array
     {
         $defaultLang = strtolower(trim($defaultLang)) ?: 'base';
@@ -1614,6 +1751,51 @@ class ImportExportCSV extends BaseWorker
         return $payloadByLang;
     }
 
+    /**
+     * Extract SEO values from an import row and group them by language.
+     *
+     * @param array $data Normalized import row.
+     * @param string $defaultLang Default language for non-indexed columns.
+     * @param bool $allowMultilang Whether multilingual keys should be parsed.
+     * @return array SEO payload grouped by language.
+     * @since 1.0.12
+     */
+    private function extractSeoPayloadByLang(array $data, string $defaultLang, bool $allowMultilang = true): array
+    {
+        if (!$this->hasSeoSupport()) {
+            return [];
+        }
+
+        $defaultLang = strtolower(trim($defaultLang)) ?: 'base';
+        $payloadByLang = [];
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, self::SEO_FIELDS, true)) {
+                $payloadByLang[$defaultLang][$key] = $value;
+                continue;
+            }
+
+            if (!$allowMultilang) {
+                continue;
+            }
+
+            $parsed = $this->parseLangIndexedSeoKey((string)$key);
+            if ($parsed && in_array($parsed['field'], self::SEO_FIELDS, true)) {
+                $payloadByLang[$parsed['lang']][$parsed['field']] = $value;
+            }
+        }
+
+        return $payloadByLang;
+    }
+
+    /**
+     * Normalize a raw CSV row into an associative array keyed by internal field names.
+     *
+     * @param array $header Original CSV header row.
+     * @param array $row Original CSV data row.
+     * @param array $headerKeys Map of external labels to internal field names.
+     * @return array Normalized row data.
+     */
     private function normalizeImportRowData(array $header, array $row, array $headerKeys): array
     {
         $row = array_pad($row, count($header), '');
@@ -1632,6 +1814,12 @@ class ImportExportCSV extends BaseWorker
         return $data;
     }
 
+    /**
+     * Flatten multilingual text payload into CSV-style field keys.
+     *
+     * @param array $payloadByLang Text payload grouped by language.
+     * @return array Flattened text payload.
+     */
     private function flattenTextPayloadByLang(array $payloadByLang): array
     {
         $flat = [];
@@ -1654,12 +1842,48 @@ class ImportExportCSV extends BaseWorker
         return $flat;
     }
 
+    /**
+     * Flatten multilingual SEO payload into CSV-style field keys.
+     *
+     * @param array $payloadByLang SEO payload grouped by language.
+     * @return array Flattened SEO payload.
+     * @since 1.0.12
+     */
+    private function flattenSeoPayloadByLang(array $payloadByLang): array
+    {
+        $flat = [];
+        foreach ($payloadByLang as $lang => $payload) {
+            $lang = strtolower(trim((string)$lang));
+            if ($lang === '') {
+                continue;
+            }
+
+            foreach ((array)$payload as $field => $value) {
+                $field = strtolower(trim((string)$field));
+                if (!in_array($field, self::SEO_FIELDS, true)) {
+                    continue;
+                }
+
+                $flat[$this->buildLangSeoKey($lang, $field)] = $value;
+            }
+        }
+
+        return $flat;
+    }
+
+    /**
+     * Restore temp-table row payload back into the normalized import format.
+     *
+     * @param array $data Temp-table row data.
+     * @return array Inflated import row.
+     */
     private function inflateTempTableRow(array $data): array
     {
         $attributes = $this->decodeJsonToArray($data['attributes'] ?? null);
         $textPayload = $this->decodeJsonToArray($data['text_payload'] ?? null);
+        $seoPayload = $this->decodeJsonToArray($data['seo_payload'] ?? null);
 
-        unset($data['attributes'], $data['text_payload'], $data['processed'], $data['row_id']);
+        unset($data['attributes'], $data['text_payload'], $data['seo_payload'], $data['processed'], $data['row_id']);
 
         foreach ($attributes as $key => $value) {
             $data[$key] = $value;
@@ -1669,9 +1893,19 @@ class ImportExportCSV extends BaseWorker
             $data[$key] = $value;
         }
 
+        foreach ($this->flattenSeoPayloadByLang($seoPayload) as $key => $value) {
+            $data[$key] = $value;
+        }
+
         return $data;
     }
 
+    /**
+     * Decode a JSON payload into an array with safe fallback.
+     *
+     * @param mixed $value JSON string candidate.
+     * @return array Decoded array or an empty array.
+     */
     private function decodeJsonToArray($value): array
     {
         if (!is_string($value) || trim($value) === '') {
@@ -1682,6 +1916,12 @@ class ImportExportCSV extends BaseWorker
         return is_array($decoded) ? $decoded : [];
     }
 
+    /**
+     * Encode an array payload into JSON for temp-table persistence.
+     *
+     * @param array $value Payload to encode.
+     * @return string|null Encoded JSON or null for an empty payload.
+     */
     private function encodeJson(array $value): ?string
     {
         if (empty($value)) {
@@ -1692,6 +1932,13 @@ class ImportExportCSV extends BaseWorker
         return $encoded === false ? null : $encoded;
     }
 
+    /**
+     * Resolve a fallback alias source from multilingual text payload.
+     *
+     * @param array $payloadByLang Text payload grouped by language.
+     * @param string $defaultLang Default language code.
+     * @return string Alias source string.
+     */
     private function resolveAliasFromPayload(array $payloadByLang, string $defaultLang): string
     {
         $candidates = ['en', strtolower(trim($defaultLang)), 'base'];
@@ -1712,6 +1959,14 @@ class ImportExportCSV extends BaseWorker
         return 'new-product';
     }
 
+    /**
+     * Get a translated product text field for a specific language.
+     *
+     * @param sProduct $product Product model.
+     * @param string $lang Language code.
+     * @param string $field Product text field name.
+     * @return mixed Field value or empty string.
+     */
     private function getProductTranslateField(sProduct $product, string $lang, string $field)
     {
         $lang = strtolower(trim($lang));
@@ -1729,6 +1984,252 @@ class ImportExportCSV extends BaseWorker
         return sProductTranslate::whereProduct($product->id)->whereLang($lang)->first()?->{$field} ?? '';
     }
 
+    /**
+     * Check whether sGallery support is available in the current installation.
+     *
+     * @return bool True when the gallery package and table exist.
+     * @since 1.0.12
+     */
+    private function hasGallerySupport(): bool
+    {
+        return class_exists(sGalleryModel::class) && Schema::hasTable('s_galleries');
+    }
+
+    /**
+     * Check whether sSeo support is available in the current installation.
+     *
+     * @return bool True when the SEO package and table exist.
+     * @since 1.0.12
+     */
+    private function hasSeoSupport(): bool
+    {
+        return class_exists(sSeoModel::class) && Schema::hasTable('s_seo');
+    }
+
+    /**
+     * Export gallery images for a product into a CSV-friendly string.
+     *
+     * @param sProduct $product Product model.
+     * @return string Gallery items joined with the multivalue separator.
+     * @since 1.0.12
+     */
+    private function exportProductGallery(sProduct $product): string
+    {
+        if (!$this->hasGallerySupport() || !$product->id) {
+            return '';
+        }
+
+        $query = sGalleryModel::where('parent', $product->id)
+            ->where('item_type', 'product')
+            ->where('type', sGalleryModel::TYPE_IMAGE)
+            ->orderBy('position');
+
+        if (Schema::hasColumn('s_galleries', 'block')) {
+            $query->where('block', '1');
+        }
+
+        return $query->get()
+            ->map(function ($image) {
+                return $this->normalizeCsvMediaPath((string)($image->src ?? $image->file ?? ''));
+            })
+            ->filter(fn($item) => $item !== '')
+            ->implode('||');
+    }
+
+    /**
+     * Normalize media paths for CSV output by removing local host prefixes.
+     *
+     * @param string $value Raw media path or URL.
+     * @return string Normalized relative path.
+     * @since 1.0.12
+     */
+    private function normalizeCsvMediaPath(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = preg_replace('#^https?://localhost\.?/#i', '', $value) ?? $value;
+        $value = preg_replace('#^https?://127\.0\.0\.1/?#i', '', $value) ?? $value;
+
+        return ltrim($value, '/');
+    }
+
+    /**
+     * Split imported gallery data into unique normalized items.
+     *
+     * @param string|null $gallery Raw gallery CSV value.
+     * @return array Normalized gallery items.
+     * @since 1.0.12
+     */
+    private function normalizeGalleryImportItems(?string $gallery): array
+    {
+        $items = [];
+        foreach (explode('||', (string)$gallery) as $item) {
+            $item = trim($item);
+            if ($item === '') {
+                continue;
+            }
+
+            $items[] = $this->normalizeGalleryImportPath($item);
+        }
+
+        return array_values(array_unique(array_filter($items, fn($item) => $item !== '')));
+    }
+
+    /**
+     * Normalize a single imported gallery item path before storage.
+     *
+     * @param string $path Raw path or URL from CSV.
+     * @return string Normalized storage path or external URL.
+     * @since 1.0.12
+     */
+    private function normalizeGalleryImportPath(string $path): string
+    {
+        $path = trim($path);
+        if ($path === '') {
+            return '';
+        }
+
+        if (sGallery::hasLink($path)) {
+            return $path;
+        }
+
+        $path = preg_replace('/^https?:\/\/[^\/]+/i', '', $path) ?? $path;
+        return '/' . ltrim($path, '/');
+    }
+
+    /**
+     * Replace product gallery records with the values imported from CSV.
+     *
+     * @param sProduct $product Product model.
+     * @param mixed $gallery Raw gallery payload from CSV.
+     * @return void
+     * @since 1.0.12
+     */
+    private function syncProductGallery(sProduct $product, $gallery): void
+    {
+        if (!$this->hasGallerySupport()) {
+            return;
+        }
+
+        $items = $this->normalizeGalleryImportItems((string)$gallery);
+
+        $query = sGalleryModel::where('parent', $product->id)
+            ->where('item_type', 'product')
+            ->where('type', sGalleryModel::TYPE_IMAGE);
+
+        if (Schema::hasColumn('s_galleries', 'block')) {
+            $query->where('block', '1');
+        }
+
+        $query->delete();
+
+        foreach ($items as $position => $item) {
+            $galleryModel = new sGalleryModel();
+            $galleryModel->parent = $product->id;
+            $galleryModel->position = $position;
+            $galleryModel->file = $item;
+            $galleryModel->type = sGalleryModel::TYPE_IMAGE;
+            $galleryModel->item_type = 'product';
+            if (Schema::hasColumn('s_galleries', 'block')) {
+                $galleryModel->block = '1';
+            }
+            $galleryModel->save();
+        }
+    }
+
+    /**
+     * Get a single SEO field value for a product and language.
+     *
+     * @param sProduct $product Product model.
+     * @param string $lang Language code.
+     * @param string $field SEO field name.
+     * @return string SEO field value or empty string.
+     * @since 1.0.12
+     */
+    private function getProductSeoField(sProduct $product, string $lang, string $field): string
+    {
+        if (!$this->hasSeoSupport() || !$product->id || !in_array($field, self::SEO_FIELDS, true)) {
+            return '';
+        }
+
+        $lang = strtolower(trim($lang)) ?: 'base';
+        $query = sSeoModel::where('resource_id', $product->id)
+            ->where('resource_type', 'product')
+            ->where('domain_key', 'default');
+
+        if ($lang === 'base') {
+            $defaultLang = $this->csvDefaultLanguage(new sCommerceController());
+            $item = $query->whereIn('lang', ['base', $defaultLang])
+                ->orderByRaw("FIELD(lang, 'base', '{$defaultLang}')")
+                ->first();
+        } else {
+            $item = $query->where('lang', $lang)->first();
+        }
+
+        return trim((string)($item?->{$field} ?? ''));
+    }
+
+    /**
+     * Persist imported SEO payload for a product across languages.
+     *
+     * @param sProduct $product Product model.
+     * @param array $payloadByLang SEO payload grouped by language.
+     * @param string $defaultLang Default language code.
+     * @return void
+     * @since 1.0.12
+     */
+    private function syncProductSeo(sProduct $product, array $payloadByLang, string $defaultLang): void
+    {
+        if (!$this->hasSeoSupport() || !$product->id || empty($payloadByLang)) {
+            return;
+        }
+
+        $defaultLang = strtolower(trim($defaultLang)) ?: 'base';
+
+        foreach ($payloadByLang as $lang => $payload) {
+            $lang = strtolower(trim((string)$lang));
+            if ($lang === '') {
+                continue;
+            }
+
+            $targetLang = $lang === $defaultLang ? 'base' : $lang;
+            $item = sSeoModel::where('resource_id', $product->id)
+                ->where('resource_type', 'product')
+                ->where('domain_key', 'default')
+                ->whereIn('lang', $targetLang === 'base' ? ['base', $defaultLang] : [$targetLang])
+                ->orderByRaw($targetLang === 'base' ? "FIELD(lang, 'base', '{$defaultLang}')" : "FIELD(lang, '{$targetLang}')")
+                ->first();
+
+            if (!$item) {
+                $item = new sSeoModel();
+                $item->resource_id = $product->id;
+                $item->resource_type = 'product';
+                $item->domain_key = 'default';
+                $item->lang = $targetLang;
+            } else {
+                $item->lang = $targetLang;
+            }
+
+            foreach (self::SEO_FIELDS as $field) {
+                if (array_key_exists($field, $payload)) {
+                    $item->{$field} = trim((string)($payload[$field] ?? ''));
+                }
+            }
+
+            $item->save();
+        }
+    }
+
+    /**
+     * Sanitize scalar values before writing them to CSV cells.
+     *
+     * @param mixed $value Source value.
+     * @return string Sanitized CSV-safe string.
+     * @since 1.0.12
+     */
     private function sanitizeCsvValue($value): string
     {
         $value = (string)($value ?? '');
