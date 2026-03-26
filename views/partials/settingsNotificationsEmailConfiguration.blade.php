@@ -1,13 +1,29 @@
 <h3>@lang('sCommerce::global.notifications_email') <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.notifications_email_layout', ['file' => '/views/notifications/email/layout.blade.php', 'directory' => '/views/notifications/email/'])"></i></h3>
 <div class="row form-row">
     <div class="col-auto">
-        <label for="notifications__email_addresses">@lang('sCommerce::global.notifications_email_addresses')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.notifications_email_addresses_help')"></i>
+        <label for="notifications__email_addresses">@lang('sCommerce::global.notifications_email_addresses_default')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.notifications_email_addresses_default_help')"></i>
     </div>
     <div class="col">
         <input type="text" class="form-control" id="notifications__email_addresses" name="notifications__email_addresses" value="{{sCommerce::config('notifications.email_addresses', '')}}" onchange="documentDirty=true;">
     </div>
 </div>
+@if (evo()->getConfig('scom_pro', false) && evo()->getConfig('check_sMultisite', false))
+    @foreach(Seiger\sMultisite\Models\sMultisite::all() as $domain)
+        <div class="row form-row">
+            <div class="col-auto">
+                <label for="notifications__email_addresses{{$domain->key}}">
+                    <span class="badge" style="background-color:{{$domain->site_color ?? '#60a5fa'}}; color:#fff; font-size:90%; margin-right:8px;">{{$domain->site_name}}</span>
+                    @lang('sCommerce::global.notifications_email_addresses')
+                </label>
+                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.notifications_email_addresses_site_help')"></i>
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" id="notifications__email_addresses{{$domain->key}}" name="notifications__email_addresses{{$domain->key}}" value="{{sCommerce::config('notifications.email_addresses'.$domain->key, '')}}" onchange="documentDirty=true;">
+            </div>
+        </div>
+    @endforeach
+@endif
 <div class="row form-row">
     <div class="col-auto">
         <label for="notifications__email_template_admin_order">@lang('sCommerce::global.notifications_email_template_admin_order')</label>

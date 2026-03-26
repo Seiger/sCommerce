@@ -523,6 +523,82 @@ class sCommerce
     }
 
     /**
+     * Get current site key for site-scoped settings.
+     *
+     * @param string $default
+     * @return string
+     */
+    public static function siteKey(string $default = 'default'): string
+    {
+        $siteKey = trim((string)evo()->getConfig('site_key', $default));
+        return $siteKey !== '' ? $siteKey : $default;
+    }
+
+    /**
+     * Check whether a relative sCommerce config key exists.
+     *
+     * @param string $key
+     * @return bool
+     */
+    public static function hasConfig(string $key): bool
+    {
+        return app('config')->has('seiger.settings.sCommerce.' . $key);
+    }
+
+    /**
+     * Resolve a site-scoped sCommerce setting using the `<key><siteKey>` convention.
+     *
+     * This keeps compatibility with existing config patterns like
+     * `basic.catalog_rootpolypro` and falls back to the base key when a
+     * site-specific override is not configured.
+     *
+     * @param string $key
+     * @param mixed $default
+     * @param string|null $siteKey
+     * @return mixed
+     */
+    public static function siteConfig(string $key, mixed $default = null, ?string $siteKey = null): mixed
+    {
+        $siteKey = trim((string)($siteKey ?? static::siteKey('')));
+
+        if ($siteKey !== '') {
+            $scopedKey = $key . $siteKey;
+            if (static::hasConfig($scopedKey)) {
+                return static::config($scopedKey, $default);
+            }
+        }
+
+        return static::config($key, $default);
+    }
+
+    /**
+     * Resolve administrator notification recipients for the current site.
+     *
+     * @param string|null $siteKey
+     * @return array<int, string>
+     */
+    public static function adminNotificationEmails(?string $siteKey = null): array
+    {
+        if (evo()->getConfig('scom_pro', false)) {
+            $emails = static::siteConfig('notifications.email_addresses', '', $siteKey);
+        } else {
+            $emails = static::config('notifications.email_addresses', '');
+        }
+
+        if (is_string($emails)) {
+            $emails = explode(',', $emails);
+        }
+
+        if (!is_array($emails)) {
+            return [];
+        }
+
+        $emails = array_map(static fn($email) => trim((string)$email), $emails);
+
+        return array_values(array_filter($emails, static fn($email) => $email !== ''));
+    }
+
+    /**
      * Retrieves the current currency for the session.
      * If the currency is not yet loaded, it initializes it using the loadCurrentCurrency method.
      *

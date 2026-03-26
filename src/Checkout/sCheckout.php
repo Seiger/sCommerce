@@ -501,7 +501,7 @@ class sCheckout
 
             if (sCommerce::config('notifications.email_template_admin_order_on', 0)) {
                 sCommerce::notifyEmail(
-                    explode(',', sCommerce::config('notifications.email_addresses', '')),
+                    sCommerce::adminNotificationEmails(),
                     sCommerce::config('notifications.email_template_admin_order', ''),
                     ['order' => $order]
                 );
@@ -693,7 +693,7 @@ class sCheckout
 
         if (sCommerce::config('notifications.email_template_admin_fast_order_on', 0)) {
             sCommerce::notifyEmail(
-                explode(',', sCommerce::config('notifications.email_addresses', '')),
+                sCommerce::adminNotificationEmails(),
                 sCommerce::config('notifications.email_template_admin_fast_order', ''),
                 ['order' => $order]
             );
