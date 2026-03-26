@@ -180,7 +180,20 @@ class sFilter
                 }
 
                 return $item;
-            });
+            })
+            ->filter(function ($item) {
+                if ($item->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
+                    return true;
+                }
+
+                if ($item->type == sAttribute::TYPE_ATTR_CHECKBOX) {
+                    return (int)($item->values->first()?->count ?? 0) > 0
+                        || (int)($item->values->first()?->checked ?? 0) === 1;
+                }
+
+                return $item->values instanceof Collection && $item->values->isNotEmpty();
+            })
+            ->values();
 
         return $filters;
     }
@@ -445,7 +458,9 @@ class sFilter
                 ->first()?->count ?? 0;
             $val->checked = (int)(isset($this->filters[$item->alias]) && in_array($val->alias, $this->filters[$item->alias]));
             return $val;
-        });
+        })->filter(function ($val) {
+            return (int)($val->count ?? 0) > 0 || (int)($val->checked ?? 0) === 1;
+        })->values();
 
         return $item;
     }
