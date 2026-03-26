@@ -542,6 +542,11 @@ class sFilter
         $category = null;
         $routes = UrlProcessor::getFacadeRoot()->documentListing;
         $currentPath = request()->path();
+        $currentLang = trim((string)evo()->getConfig('lang', evo()->getLocale()), '/');
+
+        if ($currentLang !== '' && str_starts_with($currentPath, $currentLang . '/')) {
+            $currentPath = substr($currentPath, strlen($currentLang . '/'));
+        }
 
         foreach ($routes as $route => $id) {
             $normalizedRoute = rtrim($route, '/');
