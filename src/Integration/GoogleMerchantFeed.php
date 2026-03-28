@@ -388,10 +388,10 @@ class GoogleMerchantFeed extends BaseWorker
                         </div>
                         <div class="col-sm-4">
                             <label>
-                                Країна <span style="color:#dc3545;">*</span>
-                                <i data-lucide="help-circle" class="settings-icon" data-tooltip="Країна призначення фіду. Використовується для g:target_country в XML." style="width:14px;height:14px;"></i>
+                                Цільова країна фіда
+                                <i data-lucide="help-circle" class="settings-icon" data-tooltip="Використовується як метадані та країна призначення для цього data source в Merchant Center. Не виводиться окремим XML-тегом товару." style="width:14px;height:14px;"></i>
                             </label>
-                            <select name="country[]" class="form-control" required>
+                            <select name="country[]" class="form-control">
                                 @foreach($countries as $code => $name)
                                     <option value="{{$code}}" {{ ($feed["country"] ?? "UA") === $code ? "selected" : ""}}>{{$name}}</option>
                                 @endforeach
@@ -1403,10 +1403,6 @@ class GoogleMerchantFeed extends BaseWorker
         $writer->writeElement('g:brand', $this->sanitizeText($brand, 70));
         $writer->writeElement('g:mpn', $this->sanitizeText($product->sku ?: $identifier, 70));
         $writer->writeElement('g:identifier_exists', $product->sku ? 'true' : 'false');
-
-        if (!empty($config['country'])) {
-            $writer->writeElement('g:target_country', $config['country']);
-        }
 
         if ($productType) {
             $writer->writeElement('g:product_type', $productType);
