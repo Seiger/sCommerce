@@ -87,7 +87,7 @@
                 if (upload && upload.success == true) {
                     widgetLogLine(root, upload.message);
 
-                    let result = await callApi("{{route('sTask.worker.task.run', ['identifier' => ($identifier ?? ''), 'action' => 'import'])}}", {filename: upload.result});
+                    let result = await callApi("{{route('sTask.worker.task.run', ['identifier' => ($identifier ?? ''), 'action' => 'import'])}}", {filename: (upload.filename || upload.result || null)});
 
                     if (result && result.success && result.id && result.id > 0) {
                         disableButtons('{{$identifier ?? ''}}', null, '{{$identifier ?? ''}}Import');

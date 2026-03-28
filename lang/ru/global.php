@@ -56,6 +56,7 @@
     "cache_products_listing" => "Создание полного списка активных товаров",
     "products_listing_cache" => "Кеш списка товаров",
     "csv_import_export" => "Импорт / Экспорт CSV",
+    "csv_import_export_desc" => "Импорт и экспорт товаров в CSV с разделителем столбцов <strong>;</strong>.",
     "running" => "Выполняется",
     "idle" => "Неактивный",
     "start_cache" => "Запустить кеш",

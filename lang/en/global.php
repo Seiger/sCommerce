@@ -56,6 +56,7 @@
     "cache_products_listing" => "Creating full list of active products",
     "products_listing_cache" => "Products Listing Cache",
     "csv_import_export" => "Import / Export CSV",
+    "csv_import_export_desc" => "Imports and exports products in CSV format using <strong>;</strong> as the column delimiter.",
     "running" => "Running",
     "idle" => "Idle",
     "start_cache" => "Start Cache",

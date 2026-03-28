@@ -17,8 +17,6 @@ use Seiger\sTask\Workers\BaseWorker;
 use Seiger\sTask\Contracts\TaskInterface;
 
 /**
- * TODO Need redevelop this Class
- *
  * ImportExportCSV - Integration for CSV import/export operations
  *
  * This class implements the CSV import/export integration for sCommerce products.
@@ -48,6 +46,7 @@ use Seiger\sTask\Contracts\TaskInterface;
 class ImportExportCSV extends BaseWorker
 {
     const ALLOWED_EXTENSIONS = ['csv'];
+    private const CSV_DELIMITER = ';';
     private const TEXT_FIELDS = ['pagetitle', 'longtitle', 'introtext', 'content'];
     private const SEO_FIELDS = ['meta_title', 'meta_description', 'meta_keywords', 'canonical_url'];
     /** Directory where this integration puts its CSV exports. */
@@ -110,7 +109,7 @@ class ImportExportCSV extends BaseWorker
      */
     public function description(): string
     {
-        return __('sCommerce::global.cache_products_listing_desc');
+        return __('sCommerce::global.csv_import_export_desc');
     }
 
     /**
@@ -200,7 +199,7 @@ class ImportExportCSV extends BaseWorker
         try {
             // CSV defaults
             $opt = array_merge([
-                'delimiter' => ';',
+                'delimiter' => self::CSV_DELIMITER,
                 'enclosure' => '"',
                 'escape'    => '\\',
                 'add_bom'   => true,
@@ -473,7 +472,7 @@ class ImportExportCSV extends BaseWorker
         try {
             // CSV defaults
             $opt = array_merge([
-                'delimiter' => ';',
+                'delimiter' => self::CSV_DELIMITER,
                 'enclosure' => '"',
                 'escape'    => '\\',
                 'add_bom'   => true,
