@@ -474,20 +474,34 @@ class sFilter
      */
     protected function buildPriceRangeFilter(sAttribute $item, $category): sAttribute
     {
-        // Get product IDs ignoring the price filter itself
         $dept = $this->currentDept ? $this->currentDept : 10;
         $categories = array_merge([$category], $this->controller->listAllActiveSubCategories($category, $dept));
-        $nonPriceProductIds = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories)->pluck('product')->toArray();
+
+        $query = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories);
 
         if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
-            $nonPriceProductIds = array_intersect($nonPriceProductIds, sProduct::search()->pluck('id')->toArray());
+            $query->whereIn('product', sProduct::search()->pluck('id')->toArray());
         } elseif (!empty(evo()->getPlaceholder('checkAsWishlist')) && evo()->getPlaceholder('checkAsWishlist')) {
-            $nonPriceProductIds = array_intersect($nonPriceProductIds, sWishlist::getWishlist());
+            $query->whereIn('product', sWishlist::getWishlist());
         }
 
-        // If empty, means no products left after other filters
+        $filtersIds = $this->getValidatedFiltersIds();
+        unset($filtersIds['priceRange']);
+
+        if (!empty($filtersIds)) {
+            foreach ($filtersIds as $filter => $values) {
+                $query->whereIn('product', function ($q) use ($filter, $values) {
+                    $q->select(['product'])
+                        ->from('s_product_attribute_values')
+                        ->where('attribute', $filter)
+                        ->whereIn('value', $values);
+                });
+            }
+        }
+
+        $nonPriceProductIds = $query->pluck('product')->toArray();
+
         if (empty($nonPriceProductIds)) {
-            // We can set min=max=0 or do something else
             $value = (object) [
                 'link' => ($item->alias ?? ''),
                 'min' => 0,
@@ -499,26 +513,27 @@ class sFilter
             return $item;
         }
 
-        // Calculate min/max for these non-price-filtered products
         $minMax = DB::table('s_products')
-            ->selectRaw('
-                MIN(price_regular) as min_regular,
-                MAX(price_regular) as max_regular,
-                MIN(price_special) as min_special,
-                MAX(price_special) as max_special
-            ')
+            ->selectRaw("
+                MIN(CASE
+                    WHEN price_special > 0 AND price_special < price_regular THEN price_special
+                    ELSE price_regular
+                END) as min_price,
+                MAX(CASE
+                    WHEN price_special > 0 AND price_special < price_regular THEN price_special
+                    ELSE price_regular
+                END) as max_price
+            ")
             ->whereIn('id', $nonPriceProductIds)
+            ->where('published', 1)
             ->first();
 
-        $min_regular = $minMax?->min_regular ?? 0;
-        $min_special = $minMax?->min_special ?? 0;
-        $max_regular = $minMax?->max_regular ?? 0;
-        $max_special = $minMax?->max_special ?? 0;
+        $effectiveMin = (float) ($minMax?->min_price ?? 0);
+        $effectiveMax = (float) ($minMax?->max_price ?? 0);
 
-        $fullMin = (($min_special > 0 && $min_special < $min_regular) ? $min_special : $min_regular) - 1;
-        $fullMax = (($max_special > 0 && $max_special > $max_regular) ? $max_special : $max_regular) + 1;
+        $fullMin = max(0, (int) floor($effectiveMin) - 1);
+        $fullMax = max($fullMin, (int) ceil($effectiveMax) + 1);
 
-        // Figure out user-chosen filter range if any
         $userMin = $fullMin;
         $userMax = $fullMax;
 
@@ -529,17 +544,14 @@ class sFilter
             $userMax = (int)$this->filters[$item->alias][1];
         }
 
-        // Build final object
         $value = (object)[];
         $value->link = ($item->alias ?? '');
-        $value->min = $fullMin; // always full range
-        $value->max = $fullMax; // always full range
+        $value->min = $fullMin;
+        $value->max = $fullMax;
 
-        // clamp
         $value->min_value = max($fullMin, $userMin);
         $value->max_value = min($fullMax, $userMax);
 
-        // Set item->values
         $item->values = collect([$value]);
         return $item;
     }

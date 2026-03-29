@@ -388,7 +388,11 @@ class sCommerceController
      */
     public function listAllActiveSubCategories(int $category, int $dept = 10): array
     {
-        return $this->getActiveChildIds($category, $dept);
+        $this->categories = [];
+        $result = $this->getActiveChildIds($category, $dept);
+        $this->categories = [];
+
+        return $result;
     }
 
     /**
@@ -399,8 +403,12 @@ class sCommerceController
      */
     public function categoryParentsIds(int $category): array
     {
+        $this->categories = [];
         $this->categories[] = $category;
-        return $this->getParentsIds($category);
+        $result = $this->getParentsIds($category);
+        $this->categories = [];
+
+        return $result;
     }
 
     /**
@@ -639,8 +647,11 @@ class sCommerceController
                     if ($filter == 'priceRange') {
                         $q->select(['id'])
                             ->from('s_products')
-                            ->whereBetween('price_regular', $values)
-                            ->orWhereBetween('price_special', $values);
+                            ->where('published', 1)
+                            ->whereRaw(
+                                '(CASE WHEN price_special > 0 AND price_special < price_regular THEN price_special ELSE price_regular END) BETWEEN ? AND ?',
+                                [(float) ($values[0] ?? 0), (float) ($values[1] ?? 999999999)]
+                            );
                     } else {
                         $q->select(['product'])
                             ->from('s_product_attribute_values')
