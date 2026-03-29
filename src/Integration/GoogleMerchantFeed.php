@@ -1038,6 +1038,47 @@ class GoogleMerchantFeed extends BaseWorker
     }
 
     /**
+     * Normalize worker settings before they are persisted.
+     *
+     * In a single-site setup the feed domain must always follow the current site URL,
+     * regardless of what was previously saved in worker settings.
+     *
+     * @param array $config
+     * @return array
+     */
+    public function normalizeSettingsForSave(array $config): array
+    {
+        if (evo()->getConfig('check_sMultisite', false)) {
+            return $config;
+        }
+
+        $currentDomain = $this->normalizeDomain((string) evo()->getConfig('site_url', EVO_SITE_URL));
+
+        if (isset($config['domain'])) {
+            if (is_array($config['domain'])) {
+                $config['domain'] = array_map(static fn() => $currentDomain, $config['domain']);
+            } else {
+                $config['domain'] = $currentDomain;
+            }
+        }
+
+        if (array_key_exists('feeds', $config)) {
+            $feeds = $this->normalizeFeedArray($config['feeds']);
+
+            foreach ($feeds as &$feed) {
+                if (is_array($feed)) {
+                    $feed['domain'] = $currentDomain;
+                }
+            }
+            unset($feed);
+
+            $config['feeds'] = $feeds;
+        }
+
+        return $config;
+    }
+
+    /**
      * Normalize feed configuration.
      *
      * @param array $feed
