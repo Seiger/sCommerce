@@ -17,6 +17,8 @@ use Seiger\sTask\Workers\BaseWorker;
 use Seiger\sTask\Contracts\TaskInterface;
 
 /**
+ * TODO Need redevelop this Class
+ *
  * ImportExportCSV - Integration for CSV import/export operations
  *
  * This class implements the CSV import/export integration for sCommerce products.
@@ -311,7 +313,7 @@ class ImportExportCSV extends BaseWorker
                                         break;
                                     case str_starts_with($field, 'attribute:'):
                                         $alias = substr($field, strlen('attribute:'));
-                                        $value = $p?->attribute($alias)?->label ?? '';
+                                        $value = $this->exportProductAttributeValue($p, $alias);
                                         $a[$field] = $this->sanitizeCsvValue($value);
                                         break;
                                     case 'category':
@@ -1393,8 +1395,12 @@ class ImportExportCSV extends BaseWorker
                 $categories[$parent] = ['scope' => 'primary', 'position' => ($prodCats[$parent] ?? 0)];
             }
         }
+        $product->categories()->sync([]);
+        $product->categories()->sync($categories);
+        $product->unsetRelation('categories');
+        $product->load('categories');
 
-        // Process attributes
+        // Process attributes after categories are attached so category-bound attributes can be resolved.
         foreach ($data as $key => $value) {
             if (str_starts_with($key, 'attribute:')) {
                 $attributeAlias = substr($key, 10); // Remove 'attribute:' prefix
@@ -1404,9 +1410,6 @@ class ImportExportCSV extends BaseWorker
             }
         }
 
-        $product->categories()->sync([]);
-        $product->categories()->sync($categories);
-
         if ($requestId) {
             return ['action' => 'updated', 'product' => $product];
         } else {
@@ -1414,6 +1417,95 @@ class ImportExportCSV extends BaseWorker
         }
     }
 
+    /**
+     * Export product attribute value in a CSV-friendly format.
+     *
+     * Handles multiselect attributes by returning all selected labels joined with `||`.
+     */
+    private function exportProductAttributeValue(sProduct $product, string $attributeAlias): string
+    {
+        $attribute = $product->attribute($attributeAlias);
+        if (!$attribute) {
+            return '';
+        }
+
+        if ((int)$attribute->type !== sAttribute::TYPE_ATTR_MULTISELECT) {
+            return trim((string)($attribute->label ?? ''));
+        }
+
+        $selected = $product->attrValues()->whereAlias($attributeAlias)->get();
+        if ($selected->isEmpty()) {
+            return '';
+        }
+
+        $labels = [];
+        foreach ($selected as $item) {
+            $option = $item->values()->whereAvid((int)($item->pivot->valueid ?? 0))->first();
+            $label = $this->attributeOptionDisplayValue($option);
+            if ($label !== '') {
+                $labels[] = $label;
+            }
+        }
+
+        $labels = array_values(array_unique($labels));
+        return implode('||', $labels);
+    }
+
+    /**
+     * Resolve attribute option display value using current locale, then base, then alias.
+     */
+    private function attributeOptionDisplayValue(?sAttributeValue $option): string
+    {
+        if (!$option) {
+            return '';
+        }
+
+        $locale = trim((string)evo()->getLocale());
+        $value = '';
+
+        if ($locale !== '' && isset($option->{$locale}) && trim((string)$option->{$locale}) !== '') {
+            $value = trim((string)$option->{$locale});
+        } elseif (isset($option->base) && trim((string)$option->base) !== '') {
+            $value = trim((string)$option->base);
+        } else {
+            $value = trim((string)($option->alias ?? ''));
+        }
+
+        return $value;
+    }
+
+    /**
+     * Resolve a CSV attribute option token to an attribute value id.
+     */
+    private function resolveAttributeOptionId(sAttribute $attribute, string $value): int
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return 0;
+        }
+
+        if (ctype_digit($value)) {
+            $option = $attribute->values()->where('avid', (int)$value)->first();
+            if ($option) {
+                return (int)$option->avid;
+            }
+        }
+
+        $locale = trim((string)evo()->getLocale());
+        $query = $attribute->values();
+        $query->where(function ($q) use ($value, $locale) {
+            $q->where('alias', $value)
+                ->orWhere('base', $value);
+
+            if ($locale !== '' && Schema::hasColumn('s_attribute_values', $locale)) {
+                $q->orWhere($locale, $value);
+            }
+        });
+
+        $option = $query->first();
+
+        return (int)($option->avid ?? 0);
+    }
     /**
      * Update product attribute value.
      *
@@ -1463,17 +1555,27 @@ class ImportExportCSV extends BaseWorker
                     break;
                 case sAttribute::TYPE_ATTR_SELECT : // 3
                 case sAttribute::TYPE_ATTR_COLOR : // 8
-                    if (trim($value)) {
-                        $valueId = sAttributeValue::where('base', $value)->first()?->avid ?? 0;
-                        $product->attrValues()->attach($attribute->id, ['valueid' => $valueId, 'value' => $valueId]);
+                    if (trim((string) $value)) {
+                        $valueId = $this->resolveAttributeOptionId($attribute, (string) $value);
+                        if ($valueId > 0) {
+                            $product->attrValues()->attach($attribute->id, ['valueid' => $valueId, 'value' => $valueId]);
+                        }
                     }
                     break;
                 case sAttribute::TYPE_ATTR_MULTISELECT : // 4
+                    if (is_string($value)) {
+                        $value = array_filter(array_map('trim', explode('||', $value)), static fn ($item) => $item !== '');
+                    }
+
                     if (is_array($value) && count($value)) {
-                        foreach ($value as $k => $v) {
-                            if (trim($v)) {
-                                $vId = intval($v);
-                                $product->attrValues()->attach($attribute->id, ['valueid' => $vId, 'value' => $v]);
+                        foreach ($value as $v) {
+                            if (!trim((string) $v)) {
+                                continue;
+                            }
+
+                            $vId = $this->resolveAttributeOptionId($attribute, (string) $v);
+                            if ($vId > 0) {
+                                $product->attrValues()->attach($attribute->id, ['valueid' => $vId, 'value' => $vId]);
                             }
                         }
                     }
@@ -2227,7 +2329,6 @@ class ImportExportCSV extends BaseWorker
      *
      * @param mixed $value Source value.
      * @return string Sanitized CSV-safe string.
-     * @since 1.0.12
      */
     private function sanitizeCsvValue($value): string
     {
