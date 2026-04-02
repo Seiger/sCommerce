@@ -96,11 +96,11 @@ switch ($get) {
             sOrder::ORDER_STATUS_CONFIRMED,
             sOrder::ORDER_STATUS_PACKING,
             sOrder::ORDER_STATUS_READY_FOR_SHIPMENT,
-            sOrder::ORDER_STATUS_SHIPPED,
             sOrder::ORDER_STATUS_ON_HOLD,
             sOrder::ORDER_STATUS_RETURN_REQUESTED,
         ];
         $completeds = [
+            sOrder::ORDER_STATUS_SHIPPED,
             sOrder::ORDER_STATUS_DELIVERED,
             sOrder::ORDER_STATUS_COMPLETED,
         ];
@@ -265,11 +265,11 @@ switch ($get) {
             sOrder::ORDER_STATUS_CONFIRMED,
             sOrder::ORDER_STATUS_PACKING,
             sOrder::ORDER_STATUS_READY_FOR_SHIPMENT,
-            sOrder::ORDER_STATUS_SHIPPED,
             sOrder::ORDER_STATUS_ON_HOLD,
             sOrder::ORDER_STATUS_RETURN_REQUESTED,
         ];
         $completeds = [
+            sOrder::ORDER_STATUS_SHIPPED,
             sOrder::ORDER_STATUS_DELIVERED,
             sOrder::ORDER_STATUS_COMPLETED,
         ];
@@ -316,11 +316,11 @@ switch ($get) {
             sOrder::ORDER_STATUS_CONFIRMED,
             sOrder::ORDER_STATUS_PACKING,
             sOrder::ORDER_STATUS_READY_FOR_SHIPMENT,
-            sOrder::ORDER_STATUS_SHIPPED,
             sOrder::ORDER_STATUS_ON_HOLD,
             sOrder::ORDER_STATUS_RETURN_REQUESTED,
         ];
         $completeds = [
+            sOrder::ORDER_STATUS_SHIPPED,
             sOrder::ORDER_STATUS_DELIVERED,
             sOrder::ORDER_STATUS_COMPLETED,
         ];
