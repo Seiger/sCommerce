@@ -528,13 +528,13 @@ class sProduct extends Model
      * Gets the price attribute of the sProduct.
      * Formats the price based on configuration values.
      *
+     * @since 1.0.12
      * @return string The formatted price of the product.
-     *
      * @throws ErrorException if configuration values are not set.
      */
     public function getPriceAttribute(): string
     {
-        return $this->priceTo(sCommerce::currentCurrency());
+        return $this->formatPriceValue($this->getPriceAsFloatAttribute(), sCommerce::currentCurrency());
     }
 
     /**
@@ -557,13 +557,13 @@ class sProduct extends Model
     /**
      * Convert the price to the specified currency and format it as a string.
      *
+     * @since 1.0.12
      * @param string $currency The target currency.
      * @return string The formatted price.
      */
     public function priceTo($currency): string
     {
-        $price = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_special : $this->price_regular ?? 0;
-        return sCommerce::convertPrice($price, $this->currency, $currency);
+        return $this->formatPriceValue($this->priceToNumber($currency), $currency);
     }
 
     /**
@@ -583,24 +583,25 @@ class sProduct extends Model
      * Gets the price special attribute of the sProduct.
      * Formats the price based on configuration values.
      *
+     * @since 1.0.12
      * @return string The formatted price of the product.
-     *
      * @throws ErrorException if configuration values are not set.
      */
     public function getSpecialPriceAttribute(): string
     {
-        return $this->specialPriceTo(sCommerce::currentCurrency());
+        return $this->formatPriceValue($this->specialPriceToNumber(sCommerce::currentCurrency()), sCommerce::currentCurrency());
     }
 
     /**
      * Convert the price special to the specified currency and format it as a string.
      *
+     * @since 1.0.12
      * @param string $currency The target currency.
      * @return string The formatted price.
      */
     public function specialPriceTo($currency): string
     {
-        return sCommerce::convertPrice($this->price_special, $this->currency, $currency);
+        return $this->formatPriceValue($this->specialPriceToNumber($currency), $currency);
     }
 
     /**
@@ -619,13 +620,13 @@ class sProduct extends Model
      * Gets the old price attribute of the sProduct.
      * Formats the price based on configuration values.
      *
+     * @since 1.0.12
      * @return string The formatted price of the product.
-     *
      * @throws ErrorException if configuration values are not set.
      */
     public function getOldPriceAttribute(): string
     {
-        return $this->oldPriceTo(sCommerce::currentCurrency());
+        return $this->formatPriceValue($this->getOldPriceAsFloatAttribute(), sCommerce::currentCurrency());
     }
 
     /**
@@ -648,13 +649,13 @@ class sProduct extends Model
     /**
      * Convert the old price to the specified currency and format it as a string.
      *
+     * @since 1.0.12
      * @param string $currency The target currency.
      * @return string The formatted price.
      */
     public function oldPriceTo($currency): string
     {
-        $oldPrice = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_regular : $this->price_special ?? 0;
-        return sCommerce::convertPrice($oldPrice, $this->currency, $currency);
+        return $this->formatPriceValue($this->oldPriceToNumber($currency), $currency);
     }
 
     /**
@@ -668,6 +669,33 @@ class sProduct extends Model
     {
         $oldPrice = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_regular : $this->price_special ?? 0;
         return sCommerce::convertPriceNumber($oldPrice, $this->currency, $currency);
+    }
+
+    /**
+     * Format an already converted numeric price for display in the target currency.
+     *
+     * @since 1.0.12
+     */
+    protected function formatPriceValue(float $price, ?string $currency = null): string
+    {
+        $currency = $currency ?? sCommerce::currentCurrency();
+        $curr = sCommerce::getCurrencies([$currency])->first() ?? [];
+
+        $formatted = number_format(
+            $price,
+            ($curr['exp'] ?? 2),
+            ($curr['decimals'] ?? '.'),
+            str_replace('&nbsp;', ' ', trim($curr['thousands'] ?? '&nbsp;'))
+        );
+
+        if ($curr['show'] ?? 1) {
+            $symbol = str_replace('&nbsp;', ' ', trim($curr['symbol'] ?? '&nbsp;'));
+            $formatted = ($curr['position'] ?? 'before') === 'after'
+                ? $formatted . $symbol
+                : $symbol . $formatted;
+        }
+
+        return $formatted;
     }
 
     /**

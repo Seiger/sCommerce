@@ -156,7 +156,7 @@ class sCart
         foreach ($products as $product) {
             foreach ($this->cartData[$product->id] as $optionId => $quantity) {
                 $items[] = array_merge($this->getProductFields($product), compact('quantity'));
-                $price = sCommerce::convertPriceNumber($product->price, $product->currency, sCommerce::currentCurrency());
+                $price = (float)($product->priceAsFloat ?? 0);
                 $totalSum += $price * $quantity;
             }
         }

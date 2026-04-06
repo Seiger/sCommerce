@@ -620,7 +620,7 @@ class sCheckout
             }
 
             $quantity = isset($data['quantity']) && $data['quantity'] > 0 ? (int) $data['quantity'] : 1;
-            $price = sCommerce::convertPriceNumber($product->price, $product->currency, sCommerce::currentCurrency());
+            $price = (float)($product->priceAsFloat ?? 0);
             $cost = $price * $quantity;
 
             $productsData = [

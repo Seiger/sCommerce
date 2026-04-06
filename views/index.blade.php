@@ -80,7 +80,7 @@
                 $(this).find('.btn-ok').attr('href', $(e.relatedTarget).data('href'));
             });
 
-            // Duplicate item
+            {{-- Duplicate item --}}
             $(document).on("click", "[data-duplicate]", function(e) {
                 var _this = $(this);
                 alertify.confirm(
@@ -105,7 +105,7 @@
                 return false;
             });
 
-            // Ordering
+            {{-- Ordering --}}
             $('.sorting').on('click', function () {
                 const urlParams = new URLSearchParams(window.location.search);
                 const order = $(this).attr('data-order');
@@ -121,7 +121,7 @@
                 window.location.href = newHref;
             });
 
-            // Flash messages
+            {{-- Flash messages --}}
             @if (session()->has('success'))
                 alertify.success("{{session('success')}}");
             @endif
@@ -130,7 +130,7 @@
             @endif
         });
 
-        // Enable table sorting
+        {{-- Enable table sorting --}}
         evo.sortable('.sortable > tbody > tr', {complete:function(e){documentDirty=true}});
         evo.sortable('.sortable > div', {complete:function(e){documentDirty=true}});
 
@@ -139,7 +139,7 @@
             NiceSelect.bind(document.getElementById(select.id), {searchable: true});
         });
 
-        // Image preview
+        {{-- Image preview --}}
         document.querySelectorAll("table img").forEach(function (img) {
             img.addEventListener("mouseenter", function () {
                 var alt = img.getAttribute("alt");
@@ -155,7 +155,7 @@
             });
         });
 
-        // Search form
+        {{-- Search form --}}
         const searchForm = document.querySelector('input[name="search"]');
         const submitForm = document.querySelector('.scom-submit-search');
         const clearFrom = document.querySelector('.scom-clear-search');
@@ -182,7 +182,7 @@
             window.location.href = _url+'?'+_get.toString()+string;
         }
 
-        // Save tab content on the fly
+        {{-- Save tab content on the fly --}}
         const submitting = document.querySelectorAll('[data-target] a');
         for (let i = 0; i < submitting.length; i++) {
             oldClick = submitting[i].getAttribute('onclick');
@@ -206,7 +206,7 @@
             saveForm('#form');
         }
 
-        // Delete Item
+        {{-- Delete Item --}}
         document.addEventListener("click", function(e) {
             console.log("clicked" , e.target);
             const target = e.target.closest("[data-delete]");
@@ -233,7 +233,7 @@
             e.preventDefault();
         });
 
-        // Form Validation and Saving
+        {{-- Form Validation and Saving --}}
         function saveForm(selector) {
             var errors = 0;
             var messages = "";
@@ -340,7 +340,7 @@
             }
         }
 
-        //dropdown
+        {{-- Dropdown --}}
         document.addEventListener("click", function (event) {
             const dropdowns = document.querySelectorAll('.dropdown');
             dropdowns.forEach(function(dropdown) {
@@ -351,8 +351,8 @@
                 }
             });
         });
-        //dropdown
-        // cookies
+
+        {{-- Cookies --}}
         let cookieName = 'scom_per_page';
         if (typeof window.cookieName !== 'undefined') {
             cookieName = window.cookieName;
@@ -365,7 +365,8 @@
         } else {
             setCookie(cookieName, 50, 30)
         }
-        // Function to set a cookie
+
+        {{-- Function to set a cookie --}}
         function setCookie(name, value, days) {
             var expires = "";
             if (days) {
@@ -388,7 +389,7 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
     <script>
-        // Configure marked.js for safe Markdown processing
+        {{-- Configure marked.js for safe Markdown processing --}}
         if (typeof marked !== 'undefined') {
             marked.setOptions({
                 breaks: false,      // Don't convert \n to <br> (we handle line breaks ourselves)
