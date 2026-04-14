@@ -15,6 +15,7 @@
     "all_domains" => "Всі домени",
     "all_products" => "Всі товари",
     "all_statuses" => "Усі статуси",
+    "all_words" => "За всіма словами (будь-який порядок)",
     "alternative_text" => "Альтернативний текст",
     "api_key" => "Ключ API",
     "are_you_sure" => "Ви впевнені?",

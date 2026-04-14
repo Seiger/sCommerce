@@ -300,7 +300,7 @@ switch ($get) {
         $tabs = ['order'];
         $iUrl = trim($iUrl) ?: '&i=0';
         $requestId = (int)request()->input('i', 0);
-        $item = sOrder::find($requestId);
+        $item = sOrder::withTrashed()->find($requestId);
 
         $domains = null;
         if (evo()->getConfig('check_sMultisite', false)) {
