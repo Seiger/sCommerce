@@ -151,7 +151,7 @@ Event::listen('evolution.OnManagerMenuPrerender', function($params) {
         $menu['scommerce'] = [
             'scommerce',
             'main',
-            '<i class="' . __('sCommerce::global.icon') . '"></i><span class="menu-item-text">' . __('sCommerce::global.title') . '</span>',
+            __('sCommerce::global.icon') . __('sCommerce::global.title'),
             sCommerce::moduleUrl(),
             __('sCommerce::global.title'),
             "",
@@ -172,9 +172,9 @@ Event::listen('evolution.OnManagerNodePrerender', function($params) {
     if (sCommerce::config('basic.catalog_root', 0) > 1) {
         switch ($params['ph']['id']) {
             case sCommerce::config('basic.catalog_root') :
-                $params['ph']['icon'] = '<i class="' . __('sCommerce::global.icon') . '"></i>';
-                $params['ph']['icon_folder_open'] = "<i class='" . __('sCommerce::global.icon') . "'></i>";
-                $params['ph']['icon_folder_close'] = "<i class='" . __('sCommerce::global.icon') . "'></i>";
+                $params['ph']['icon'] = __('sCommerce::global.icon', ['w' => '16px']);
+                $params['ph']['icon_folder_open'] = __('sCommerce::global.icon', ['w' => '16px']);
+                $params['ph']['icon_folder_close'] = __('sCommerce::global.icon', ['w' => '16px']);
                 break;
         }
 

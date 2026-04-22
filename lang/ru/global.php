@@ -163,7 +163,7 @@
     "helptext_help" => "Описание этого атрибута в панели администратора.",
     "history_changes" => "История изменений",
     "i_launch" => "запускаю",
-    "icon" => "fa fa-store",
+    "icon" => is_file(dirname(__DIR__, 2) . '/images/scommerce.svg') ? preg_replace('/<svg\b/', "<svg style='width::w;height::w;display:inline-block;vertical-align:-.125em;'", file_get_contents(dirname(__DIR__, 2) . '/images/scommerce.svg'), 1) : '',
     "image_and_text" => "Изображение и текст",
     "image_caption" => "Подпись к изображению",
     "image_file" => "Файл изображения",

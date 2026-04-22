@@ -628,7 +628,7 @@ switch ($get) {
                     'sku' => $product->sku ?? '',
                     'price' => $priceFormatted,
                     'priceNumber' => $priceNumber, // Store numeric price for calculations
-                    'coverSrc' => $productData->coverSrc ?? '/assets/site/noimage.png',
+                    'coverSrc' => $productData->coverSrc ?? '/assets/images/noimage.png',
                     'link' => $productData->link ?? '#',
                 ];
             }
@@ -972,7 +972,7 @@ switch ($get) {
         $product->height = $sCommerceController->validateNumber(request()->input('height', 0));
         $product->length = $sCommerceController->validateNumber(request()->input('length', 0));
         $product->volume = $sCommerceController->validateNumber(request()->input('volume', 0));
-        $product->cover = str_replace(EVO_SITE_URL, '', $cover->src ?? '/assets/site/noimage.png');
+        $product->cover = str_replace(EVO_SITE_URL, '', $cover->src ?? '/assets/images/noimage.png');
         $product->relevants = json_encode(request()->input('relevants', []), JSON_UNESCAPED_UNICODE);
         $product->similar = json_encode(request()->input('similar', []), JSON_UNESCAPED_UNICODE);
         $product->tmplvars = json_encode(request()->input('tmplvars', []), JSON_UNESCAPED_UNICODE);
