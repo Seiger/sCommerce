@@ -292,6 +292,7 @@ class sFilter
             'category' => $categoryId,
         ];
         static::$isValidated = true;
+        static::syncResolvedInstance();
 
         if (count(static::$cachedResult['filters'])) {
             $sFilters = $instance->buildFiltersString(static::$cachedResult['filters']);
@@ -317,8 +318,33 @@ class sFilter
             'category' => 0,
         ];
         static::$isValidated = false;
+        static::syncResolvedInstance();
         evo()->setPlaceholder('sFilters', '');
         evo()->setPlaceholder('sFiltersArray', []);
+    }
+
+    /**
+     * Keep the resolved singleton instance in sync with the static cache.
+     *
+     * This matters when filters were already parsed earlier in the request
+     * (for example in OnPageNotFound) and later overridden via force().
+     *
+     * @return void
+     */
+    protected static function syncResolvedInstance(): void
+    {
+        if (!app()->bound('sFilter')) {
+            return;
+        }
+
+        $resolved = app('sFilter');
+        if (!$resolved instanceof self) {
+            return;
+        }
+
+        $resolved->filters = static::$cachedResult['filters'];
+        $resolved->filtersIds = static::$cachedResult['filtersIds'];
+        $resolved->currentCategory = (int)static::$cachedResult['category'];
     }
 
     /**
