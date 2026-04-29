@@ -681,7 +681,7 @@ class sCheckout
 
         DB::transaction(function () use ($order): void {
             $order->save();
-            $this->assignBusinessReference($order);
+            self::assignBusinessReference($order);
         });
 
         if ($data['productId'] == 0) {
@@ -879,7 +879,7 @@ class sCheckout
 
         DB::transaction(function () use ($order): void {
             $order->save();
-            $this->assignBusinessReference($order);
+            self::assignBusinessReference($order);
         });
 
         $_SESSION['orderNumber'] = $order->id;
@@ -897,7 +897,7 @@ class sCheckout
      * @since 1.0.12
      * @param sOrder $order Persisted order model.
      */
-    private function assignBusinessReference(sOrder $order): void
+    private static function assignBusinessReference(sOrder $order): void
     {
         if (!empty($order->reference)) {
             return;

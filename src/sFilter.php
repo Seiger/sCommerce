@@ -528,7 +528,7 @@ class sFilter
         $nonPriceProductIds = $query->pluck('product')->toArray();
 
         if (empty($nonPriceProductIds)) {
-            $value = (object) [
+            $value = (object)[
                 'link' => ($item->alias ?? ''),
                 'min' => 0,
                 'max' => 0,
@@ -554,11 +554,11 @@ class sFilter
             ->where('published', 1)
             ->first();
 
-        $effectiveMin = (float) ($minMax?->min_price ?? 0);
-        $effectiveMax = (float) ($minMax?->max_price ?? 0);
+        $effectiveMin = (float)($minMax?->min_price ?? 0);
+        $effectiveMax = (float)($minMax?->max_price ?? 0);
 
-        $fullMin = max(0, (int) floor($effectiveMin) - 1);
-        $fullMax = max($fullMin, (int) ceil($effectiveMax) + 1);
+        $fullMin = max(0, (int)floor($effectiveMin) - 1);
+        $fullMax = max($fullMin, (int)ceil($effectiveMax) + 1);
 
         $userMin = $fullMin;
         $userMax = $fullMax;
