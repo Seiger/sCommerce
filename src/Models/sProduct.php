@@ -434,6 +434,38 @@ class sProduct extends Model
     }
 
     /**
+     * Build SEO-ready placeholders from product attributes.
+     *
+     * Returns a flat key/value array that can be merged into a template context.
+     * Explicit aliases are exposed directly as placeholders (e.g. [*skus*]).
+     *
+     * @param array<int, string> $aliases
+     * @return array<string, string>
+     */
+    public function seoAttributePlaceholders(array $aliases = []): array
+    {
+        $placeholders = [];
+
+        foreach ($aliases as $alias) {
+            $alias = trim((string)$alias);
+            if ($alias === '') {
+                continue;
+            }
+
+            $attribute = $this->attribute($alias);
+            if (!$attribute) {
+                continue;
+            }
+
+            $placeholders[$alias] = trim((string)($attribute->label ?? ''));
+            $placeholders[$alias . '_value'] = trim((string)($attribute->value ?? ''));
+            $placeholders[$alias . '_title'] = trim((string)($attribute->title ?? ''));
+        }
+
+        return $placeholders;
+    }
+
+    /**
      * Retrieves the category attribute for the product.
      *
      * @param string|int|null $key The key for the site scope (string) or category ID (int). If null, the default site key is used.

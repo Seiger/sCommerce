@@ -24,6 +24,9 @@
     <table class="table table-condensed table-hover sectionTrans scom-table">
         <thead>
         <tr>
+            <th class="sorting @if($order == 'alias') sorted @endif" data-order="alias">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.key') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
             <th class="sorting @if($order == 'pagetitle') sorted @endif" data-order="pagetitle">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.attribute_name') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
@@ -38,7 +41,8 @@
         </thead>
         <tbody>
         @foreach($items as $item)
-            <tr style="height: 42px;" id="attribute-{{$item->id}}">
+            <tr style="height: 40px;" id="attribute-{{$item->id}}">
+                <td>{{trim($item->alias ?? '') ?: '—'}}</td>
                 <td>
                     {{$item->pagetitle ?? __('sCommerce::global.no_text')}}
                     @if(isset($item->asfilter) && $item->asfilter)<span class="badge bg-seigerit bg-super">@lang('sCommerce::global.as_filter')</span>@endif
