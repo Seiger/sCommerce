@@ -434,10 +434,11 @@ class ImportExportCSV extends BaseWorker
             $downloadUrl = str_replace(['http://localhost', 'https://localhost', EVO_SITE_URL, EVO_CORE_PATH], '|', $downloadUrl);
             $downloadUrl = explode('|', $downloadUrl);
             $downloadUrl = end($downloadUrl);
+            $downloadUrl = '/' . ltrim($downloadUrl, '/.');
             $this->markFinished(
                 $task,
                 $path,
-                '**' . __('sCommerce::global.done') . '. [📥 ' . __('sCommerce::global.download') . '](' . ltrim($downloadUrl, '.') . ')**'
+                '**' . __('sCommerce::global.done') . '. [📥 ' . __('sCommerce::global.download') . '](' . $downloadUrl . ')**'
             );
 
             //self::maybePruneExports();
