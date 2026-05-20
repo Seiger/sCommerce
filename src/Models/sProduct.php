@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Models;
 
 use EvolutionCMS\Facades\UrlProcessor;
+use EvolutionCMS\Models\SiteContent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,13 @@ class sProduct extends Model
      * @var string|null
      */
     protected static ?string $friendlyUrlSuffix = null;
+
+    /**
+     * Visible category URL cache by original category ID.
+     *
+     * @var array<int, string>
+     */
+    protected static array $visibleCategoryUrlCache = [];
 
     /**
      * The accessors to append to the model's array form.
@@ -518,7 +526,7 @@ class sProduct extends Model
                 break;
             case "category" :
                 $category = intval($this->getCategoryAttribute(trim($key ?? '') ? $key : null) ?: sCommerce::config('basic.catalog_root' . $key, evo()->getConfig('site_start', 1)));
-                $base_url = UrlProcessor::makeUrl($category);
+                $base_url = $this->makeVisibleCategoryUrl($category);
                 break;
             default :
                 $base_url = UrlProcessor::makeUrl(evo()->getConfig('site_start', 1));
@@ -533,6 +541,38 @@ class sProduct extends Model
         }
 
         return $base_url . $this->alias . $suffix;
+    }
+
+    /**
+     * Build a category URL that respects hidden category aliases.
+     *
+     * Products are not site_content children, so Evolution CMS cannot skip a hidden
+     * current category alias automatically while appending the product alias.
+     *
+     * @param int $category The product category resource ID.
+     * @return string The nearest visible category URL.
+     */
+    protected function makeVisibleCategoryUrl(int $category): string
+    {
+        if (isset(static::$visibleCategoryUrlCache[$category])) {
+            return static::$visibleCategoryUrlCache[$category];
+        }
+
+        $visibleCategory = $category;
+
+        while ($visibleCategory > 0) {
+            $resource = SiteContent::query()
+                ->select(['id', 'parent', 'alias_visible'])
+                ->find($visibleCategory);
+
+            if (!$resource || (int)$resource->alias_visible === 1 || (int)$resource->parent <= 0) {
+                break;
+            }
+
+            $visibleCategory = (int)$resource->parent;
+        }
+
+        return static::$visibleCategoryUrlCache[$category] = UrlProcessor::makeUrl($visibleCategory);
     }
 
     /**
