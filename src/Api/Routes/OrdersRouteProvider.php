@@ -10,6 +10,7 @@ final class OrdersRouteProvider implements RouteProviderInterface
     {
         $router->group(['prefix' => 'orders'], function () use ($router) {
             $router->get('', [OrdersController::class, 'index'])->name('index');
+            $router->get('{order_id}', [OrdersController::class, 'show'])->whereNumber('order_id')->name('show');
             $router->put('{order_id}', [OrdersController::class, 'update'])->whereNumber('order_id')->name('update');
         });
     }

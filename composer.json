@@ -35,7 +35,8 @@
       "route_providers": [
         {"class": "Seiger\\sCommerce\\Api\\Routes\\OrdersRouteProvider", "endpoint": "orders"},
         {"class": "Seiger\\sCommerce\\Api\\Routes\\StatusesRouteProvider", "endpoint": "statuses"},
-        {"class": "Seiger\\sCommerce\\Api\\Routes\\PaymentsRouteProvider", "endpoint": "payments"}
+        {"class": "Seiger\\sCommerce\\Api\\Routes\\PaymentsRouteProvider", "endpoint": "payments"},
+        {"class": "Seiger\\sCommerce\\Api\\Routes\\CategoriesRouteProvider", "endpoint": "categories"}
       ]
     },
     "laravel": {

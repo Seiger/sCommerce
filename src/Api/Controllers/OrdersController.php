@@ -30,6 +30,18 @@ final class OrdersController
         ], '');
     }
 
+    public function show(int $order_id)
+    {
+        /** @var sOrder|null $order */
+        $order = sOrder::query()->find($order_id);
+
+        if (!$order) {
+            return ApiResponse::error('Order not found.', 404, (object)[]);
+        }
+
+        return ApiResponse::success($order, '');
+    }
+
     /**
      * Update an existing order.
      *
