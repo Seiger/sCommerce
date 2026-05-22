@@ -79,12 +79,19 @@ switch ($get) {
     |--------------------------------------------------------------------------
     */
     default:
+        $sCommerceExternalHandlerHandled = false;
         if (is_array($handlers = evo()->invokeEvent('sCommerceManagerAddTabEvent'))) {
             foreach ($handlers as $handler) {
                 if (trim($handler['handler']) && is_file($handler['handler'])) {
                     include_once $handler['handler'];
+                    if ($sCommerceExternalHandlerHandled === true) {
+                        break;
+                    }
                 }
             }
+        }
+        if ($sCommerceExternalHandlerHandled === true) {
+            break;
         }
     case "dashboard":
         $unprocessedes = [
