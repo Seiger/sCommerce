@@ -50,6 +50,55 @@ $pUrl = (int)request()->input('page', 1) > 1 ? '&page=' . (int)request()->input(
 $editor = [];
 $tabs = [];
 
+$extendManagerTabs = static function (array $tabs, array $context = []): array {
+    $events = evo()->invokeEvent('sCommerceManagerTabsEvent', [
+        'tabs' => $tabs,
+        'context' => $context,
+        'dataInput' => (new sCommerceController())->getData(),
+    ]);
+
+    if (!is_array($events)) {
+        return $tabs;
+    }
+
+    foreach ($events as $event) {
+        if (is_string($event)) {
+            $event = ['tabs' => [$event]];
+        }
+        if (!is_array($event)) {
+            continue;
+        }
+
+        $eventTabs = $event['tabs'] ?? $event['tab'] ?? [];
+        $eventTabs = is_array($eventTabs) ? $eventTabs : [$eventTabs];
+        $eventTabs = array_values(array_filter($eventTabs, static fn($tab) => is_string($tab) && trim($tab) !== ''));
+        if (!$eventTabs) {
+            continue;
+        }
+
+        $eventTabs = array_values(array_filter($eventTabs, static fn($tab) => !in_array($tab, $tabs, true)));
+        if (!$eventTabs) {
+            continue;
+        }
+
+        $insertBefore = $event['insertBefore'] ?? null;
+        $insertAfter = $event['insertAfter'] ?? null;
+
+        if (is_string($insertBefore) && ($index = array_search($insertBefore, $tabs, true)) !== false) {
+            array_splice($tabs, $index, 0, $eventTabs);
+            continue;
+        }
+        if (is_string($insertAfter) && ($index = array_search($insertAfter, $tabs, true)) !== false) {
+            array_splice($tabs, $index + 1, 0, $eventTabs);
+            continue;
+        }
+
+        $tabs = array_merge($tabs, $eventTabs);
+    }
+
+    return $tabs;
+};
+
 $tabs[] = 'dashboard';
 
 if (sCommerce::config('basic.orders_on', 1) == 1) {
@@ -71,6 +120,7 @@ if (sCommerce::config('basic.deliveries_on', 1) == 1) {
 if (evo()->hasPermission('settings')) {
     $tabs[] = 'settings';
 }
+$tabs = $extendManagerTabs($tabs, ['area' => 'root', 'get' => $get]);
 
 switch ($get) {
     /*
@@ -875,20 +925,7 @@ switch ($get) {
         $data['categories'] = $product->categories->pluck('id')->toArray();
         $data['item'] = $product;
 
-        // sStore integration (read-only for now): provide stores list for product view.
-        if (
-            class_exists(\Seiger\sStore\Models\sStore::class) &&
-            class_exists(\Seiger\sStore\Models\sProductStoreStock::class) &&
-            Schema::hasTable('s_stores') &&
-            Schema::hasTable('s_product_store_stocks')
-        ) {
-            $data['stores'] = \Seiger\sStore\Models\sStore::query()
-                ->orderByDesc('is_default')->orderBy('priority')->orderBy('id')->get();
-
-            $data['storeStocks'] = \Seiger\sStore\Models\sProductStoreStock::query()
-                ->where('product_id', (int)($product->id ?? 0))->get()->keyBy('store_id');
-        }
-
+        $tabs = $extendManagerTabs($tabs, ['area' => 'product', 'get' => $get, 'productId' => $requestId, 'product' => $product]);
         $tabs[] = 'content';
 
         if ($requestId > 0) {
@@ -1272,6 +1309,7 @@ switch ($get) {
         $products = sCommerce::getProducts($productIds)?->items();
         //
 
+        $tabs = $extendManagerTabs($tabs, ['area' => 'product', 'get' => $get, 'productId' => $requestId, 'product' => $product]);
         $tabs[] = 'content';
         $data['product'] = $product;
         $data['listAttributes'] = $listAttributes;
@@ -1336,6 +1374,7 @@ switch ($get) {
         }
 
         $tabs[] = 'prodattributes';
+        $tabs = $extendManagerTabs($tabs, ['area' => 'product', 'get' => $get, 'productId' => $requestId, 'product' => $product]);
         $tabs[] = 'content';
 
         $categoryParentsIds = [0];
@@ -1484,6 +1523,7 @@ switch ($get) {
         $result = (new TabProductController())->content($requestId, $requestLang);
 
         $tabs = $result['tabs'] ?? [];
+        $tabs = $extendManagerTabs($tabs, ['area' => 'product', 'get' => $get, 'productId' => $requestId]);
         $editor = $result['editor'] ?? [];
         $data = $result['data'] ?? [];
         break;

@@ -180,48 +180,6 @@
                 </div>
             @endif
         </div>
-        @if(isset($stores) && $stores instanceof \Illuminate\Support\Collection && $stores->count())
-            @php
-                $stocks = (isset($storeStocks) && $storeStocks instanceof \Illuminate\Support\Collection) ? $storeStocks : collect();
-            @endphp
-            <div class="split my-3"></div>
-            <h4 style="margin:0 0 10px 0;">@lang('sStore::global.stores')</h4>
-            <div class="table-responsive seiger__module-table">
-                <table class="table table-condensed table-hover sectionTrans scom-table">
-                    <thead>
-                    <tr>
-                        <th style="width:70px;">ID</th>
-                        <th>@lang('sStore::global.stores')</th>
-                        <th style="width:140px;">@lang('sCommerce::global.inventory')</th>
-                        <th style="width:140px;">@lang('sCommerce::global.visibility')</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach($stores as $store)
-                        @php
-                            $storeName = $tr($store->name ?? []) ?: __('sCommerce::global.no_text');
-                            $qty = (int)($stocks[$store->id]->qty ?? 0);
-                            $isActive = (bool)($store->is_active ?? false);
-                        @endphp
-                        <tr>
-                            <td>{{$store->id}}</td>
-                            <td>
-                                <a href="{!!$moduleUrl!!}&get=store&i={{(int)$store->id}}" target="_blank">{{$storeName}}</a>
-                            </td>
-                            <td><b>{{$qty}}</b></td>
-                            <td>
-                                @if($isActive)
-                                    <span class="badge badge-success">@lang('global.page_data_published')</span>
-                                @else
-                                    <span class="badge badge-dark">@lang('global.page_data_unpublished')</span>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
         <div class="split my-3"></div>
         <div class="row form-row">
             <div class="row-col col-lg-3 col-md-6 col-12">
