@@ -103,6 +103,11 @@
     @include('sCommerce::partials.settingsCartConfiguration')
     @include('sCommerce::partials.settingsOrdersConfiguration')
     @include('sCommerce::partials.settingsNotificationsEmailConfiguration')
+    @if(is_array($events = evo()->invokeEvent('sCommerceManagerSettingsBlocksEvent', ['dataInput' => $sCommerceController->getData()])))
+        @foreach($events as $event)
+            @if(is_array($event) && isset($event['view'])){!!$event['view']!!}@endif
+        @endforeach
+    @endif
     <span id="parentName" class="hidden"></span>
     <input type="hidden" name="parent" value="0"/>
 </form>

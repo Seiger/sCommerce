@@ -2348,6 +2348,9 @@ switch ($get) {
     case "settingsSave":
         $sCommerceController->updateDBConfigs();
         $sCommerceController->updateFileConfigs();
+        evo()->invokeEvent('sCommerceManagerSettingsSaveEvent', [
+            'request' => request()->all(),
+        ]);
         evo()->clearCache('full');
 
         $_SESSION['itemaction'] = 'Saving Settings';
