@@ -95,14 +95,14 @@ sCart::clearPriceMode();
 - `price_opt_special` используется, если она больше `0` и меньше `price_opt_regular`;
 - иначе используется `price_opt_regular`.
 
-### sCommerce.cart.resolveProductPriceMode
+### sCommerceResolveProductPriceMode
 
 Используйте это событие, чтобы изменить режим цены для конкретного товара поверх режима из сессии.
 
 ```php
 use Illuminate\Support\Facades\Event;
 
-Event::listen('sCommerce.cart.resolveProductPriceMode', function(array $payload) {
+Event::listen('evolution.sCommerceResolveProductPriceMode', function(array $payload) {
     $product = $payload['product'];
 
     if ((int)$product->id === 123) {
@@ -119,14 +119,14 @@ Payload содержит:
 - `optionId`: ID опции в корзине;
 - `priceMode`: режим из сессии до товарного override.
 
-### sCommerce.cart.resolveProductPrice
+### sCommerceResolveProductPrice
 
 Используйте это событие, когда проекту нужна полностью кастомная цена для конкретного товара.
 
 ```php
 use Illuminate\Support\Facades\Event;
 
-Event::listen('sCommerce.cart.resolveProductPrice', function(array $payload) {
+Event::listen('evolution.sCommerceResolveProductPrice', function(array $payload) {
     $product = $payload['product'];
 
     if ((int)$product->id === 123) {

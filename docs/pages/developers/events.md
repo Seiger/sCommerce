@@ -67,14 +67,14 @@ Wholesale prices use the same rule as retail prices:
 - `price_opt_special` is used when it is greater than `0` and lower than `price_opt_regular`;
 - otherwise `price_opt_regular` is used.
 
-### sCommerce.cart.resolveProductPriceMode
+### sCommerceResolveProductPriceMode
 
 Use this event to override the session price mode for a specific product.
 
 ```php
 use Illuminate\Support\Facades\Event;
 
-Event::listen('sCommerce.cart.resolveProductPriceMode', function(array $payload) {
+Event::listen('evolution.sCommerceResolveProductPriceMode', function(array $payload) {
     $product = $payload['product'];
 
     if ((int)$product->id === 123) {
@@ -91,14 +91,14 @@ The payload contains:
 - `optionId`: cart option ID;
 - `priceMode`: resolved session mode before product-level overrides.
 
-### sCommerce.cart.resolveProductPrice
+### sCommerceResolveProductPrice
 
 Use this event when a project needs to set a fully custom price for a specific product.
 
 ```php
 use Illuminate\Support\Facades\Event;
 
-Event::listen('sCommerce.cart.resolveProductPrice', function(array $payload) {
+Event::listen('evolution.sCommerceResolveProductPrice', function(array $payload) {
     $product = $payload['product'];
 
     if ((int)$product->id === 123) {

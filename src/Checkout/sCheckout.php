@@ -935,7 +935,7 @@ class sCheckout
             'oldPriceAsFloat' => $product->oldPriceToNumber($currency, $priceMode),
         ];
 
-        foreach (Event::dispatch('sCommerce.cart.resolveProductPrice', [[
+        foreach (Event::dispatch('evolution.sCommerceResolveProductPrice', [[
             'product' => $product,
             'optionId' => $optionId,
             'priceMode' => $priceMode,
@@ -981,7 +981,7 @@ class sCheckout
     {
         $priceMode = static::getSessionPriceMode();
 
-        foreach (Event::dispatch('sCommerce.cart.resolveProductPriceMode', [[
+        foreach (Event::dispatch('evolution.sCommerceResolveProductPriceMode', [[
             'product' => $product,
             'optionId' => $optionId,
             'priceMode' => $priceMode,
