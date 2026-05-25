@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Cart;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sAttribute;
@@ -29,6 +30,34 @@ class sCart
     public function __construct()
     {
         $this->cartData = $this->loadCartData();
+    }
+
+    /**
+     * Set the default pricing mode for the current customer session.
+     */
+    public function setPriceMode(string $priceMode = 'auto'): void
+    {
+        if (!isset($_SESSION['sCommerce']) || !is_array($_SESSION['sCommerce'])) {
+            $_SESSION['sCommerce'] = [];
+        }
+
+        $_SESSION['sCommerce']['priceMode'] = $this->normalizePriceMode($priceMode);
+    }
+
+    /**
+     * Get the default pricing mode for the current customer session.
+     */
+    public function getPriceMode(): string
+    {
+        return $this->getSessionPriceMode();
+    }
+
+    /**
+     * Reset the customer session to the default retail pricing behavior.
+     */
+    public function clearPriceMode(): void
+    {
+        unset($_SESSION['sCommerce']['priceMode'], $_SESSION['sCommercePriceMode']);
     }
 
     /**
@@ -65,9 +94,7 @@ class sCart
             ];
         }
 
-        if (!isset($this->cartData[$productId][$optionId])) {
-            $this->cartData[$productId][$optionId] = $quantity;
-        }
+        $this->cartData[$productId][$optionId] = $quantity;
 
         if (sCommerce::config('product.inventory_on', 0)) {
             if ($product->inventory < 0) {
@@ -100,7 +127,7 @@ class sCart
             'success' => true,
             'trigger' => $trigger,
             'message' => $message,
-            'product' => array_merge($this->getProductFields($product), compact('quantity')),
+            'product' => array_merge($this->getProductFields($product, $this->resolveProductPricing($product, $optionId)), compact('quantity')),
             'miniCart' => $this->getMiniCart(),
         ];
     }
@@ -154,9 +181,11 @@ class sCart
         $products = sCommerce::getProducts($productIds);
 
         foreach ($products as $product) {
-            foreach ($this->cartData[$product->id] as $optionId => $quantity) {
-                $items[] = array_merge($this->getProductFields($product), compact('quantity'));
-                $price = (float)($product->priceAsFloat ?? 0);
+            foreach ($this->cartData[$product->id] as $optionId => $cartItem) {
+                $quantity = $this->getCartItemQuantity($cartItem);
+                $pricing = $this->resolveProductPricing($product, (int)$optionId);
+                $items[] = array_merge($this->getProductFields($product, $pricing), compact('quantity'));
+                $price = (float)$pricing['priceAsFloat'];
                 $totalSum += $price * $quantity;
             }
         }
@@ -196,7 +225,7 @@ class sCart
      * @param object $product The product.
      * @throws \UnexpectedValueException If the returned object is not a product.
      */
-    private function getProductFields(object $product): ?array
+    private function getProductFields(object $product, array $pricing = []): ?array
     {
         $attributes = [];
         if (count($attributesDisplay = sCommerce::config('cart.product_attributes_display', []))) {
@@ -208,6 +237,106 @@ class sCart
             }
         }
 
-        return array_merge($product->only($this->productDetails), $attributes);
+        $productFields = array_merge($product->only($this->productDetails), $pricing);
+
+        return array_merge($productFields, $attributes);
+    }
+
+    /**
+     * Resolve product pricing from session mode and optional project hooks.
+     */
+    private function resolveProductPricing(object $product, int $optionId = 0): array
+    {
+        $currency = sCommerce::currentCurrency();
+        $priceMode = $this->resolveProductPriceMode($product, $optionId);
+        $pricing = [
+            'priceMode' => $priceMode,
+            'price' => $product->priceTo($currency, $priceMode),
+            'priceAsFloat' => $product->priceToNumber($currency, $priceMode),
+            'oldPrice' => $product->oldPriceTo($currency, $priceMode),
+            'oldPriceAsFloat' => $product->oldPriceToNumber($currency, $priceMode),
+        ];
+
+        foreach (Event::dispatch('sCommerce.cart.resolveProductPrice', [[
+            'product' => $product,
+            'optionId' => $optionId,
+            'priceMode' => $priceMode,
+            'currency' => $currency,
+            'pricing' => $pricing,
+        ]]) as $override) {
+            if (is_numeric($override)) {
+                $pricing['priceAsFloat'] = (float)$override;
+                $pricing['price'] = sCommerce::convertPrice($pricing['priceAsFloat']);
+                $pricing['oldPrice'] = '';
+                $pricing['oldPriceAsFloat'] = 0;
+                break;
+            }
+
+            if (is_array($override)) {
+                $pricing = array_replace($pricing, array_intersect_key($override, $pricing));
+                $pricing['priceAsFloat'] = (float)($pricing['priceAsFloat'] ?? 0);
+                $pricing['oldPriceAsFloat'] = (float)($pricing['oldPriceAsFloat'] ?? 0);
+
+                if (!isset($override['price'])) {
+                    $pricing['price'] = sCommerce::convertPrice($pricing['priceAsFloat']);
+                }
+
+                if (!isset($override['oldPrice'])) {
+                    $pricing['oldPrice'] = $pricing['oldPriceAsFloat'] > 0
+                        ? sCommerce::convertPrice($pricing['oldPriceAsFloat'])
+                        : '';
+                }
+
+                $pricing['priceMode'] = $this->normalizePriceMode((string)($pricing['priceMode'] ?? $priceMode));
+                break;
+            }
+        }
+
+        if ($pricing['priceMode'] === 'auto') {
+            unset($pricing['priceMode']);
+        }
+
+        return $pricing;
+    }
+
+    private function getCartItemQuantity(mixed $cartItem): int
+    {
+        return is_array($cartItem) ? max(1, (int)($cartItem['quantity'] ?? 1)) : max(1, (int)$cartItem);
+    }
+
+    private function resolveProductPriceMode(object $product, int $optionId = 0): string
+    {
+        $priceMode = $this->getSessionPriceMode();
+
+        foreach (Event::dispatch('sCommerce.cart.resolveProductPriceMode', [[
+            'product' => $product,
+            'optionId' => $optionId,
+            'priceMode' => $priceMode,
+        ]]) as $override) {
+            if (is_string($override) && trim($override) !== '') {
+                $priceMode = $this->normalizePriceMode($override);
+                break;
+            }
+        }
+
+        return $priceMode;
+    }
+
+    private function getSessionPriceMode(): string
+    {
+        $sessionPriceMode = is_array($_SESSION['sCommerce'] ?? null)
+            ? ($_SESSION['sCommerce']['priceMode'] ?? null)
+            : null;
+
+        return $this->normalizePriceMode(
+            (string)($sessionPriceMode ?? $_SESSION['sCommercePriceMode'] ?? 'auto')
+        );
+    }
+
+    private function normalizePriceMode(string $priceMode = 'auto'): string
+    {
+        $priceMode = strtolower(trim($priceMode));
+
+        return in_array($priceMode, ['wholesale', 'opt'], true) ? 'wholesale' : 'auto';
     }
 }

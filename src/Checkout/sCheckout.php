@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Checkout;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -620,23 +621,30 @@ class sCheckout
             }
 
             $quantity = isset($data['quantity']) && $data['quantity'] > 0 ? (int) $data['quantity'] : 1;
-            $price = (float)($product->priceAsFloat ?? 0);
+            $pricing = static::resolveProductPricing($product);
+            $price = (float)$pricing['priceAsFloat'];
             $cost = $price * $quantity;
 
-            $productsData = [
-                [
-                    'id' => $product->id,
-                    'title' => $product->title,
-                    'link' => $product->link,
-                    'coverSrc' => $product->coverSrc,
-                    'category' => $product->category,
-                    'sku' => $product->sku,
-                    'inventory' => $product->inventory,
-                    'price' => $product->price,
-                    'oldPrice' => $product->oldPrice,
-                    'quantity' => $quantity,
-                ]
+            $productData = [
+                'id' => $product->id,
+                'title' => $product->title,
+                'link' => $product->link,
+                'coverSrc' => $product->coverSrc,
+                'category' => $product->category,
+                'sku' => $product->sku,
+                'inventory' => $product->inventory,
+                'price' => $pricing['price'],
+                'priceAsFloat' => $pricing['priceAsFloat'],
+                'oldPrice' => $pricing['oldPrice'],
+                'oldPriceAsFloat' => $pricing['oldPriceAsFloat'],
+                'quantity' => $quantity,
             ];
+
+            if (isset($pricing['priceMode'])) {
+                $productData['priceMode'] = $pricing['priceMode'];
+            }
+
+            $productsData = [$productData];
         }
 
         do {
@@ -913,5 +921,95 @@ class sCheckout
 
         $order->reference = $reference;
         $order->save();
+    }
+
+    private static function resolveProductPricing(object $product, int $optionId = 0): array
+    {
+        $currency = sCommerce::currentCurrency();
+        $priceMode = static::resolveProductPriceMode($product, $optionId);
+        $pricing = [
+            'priceMode' => $priceMode,
+            'price' => $product->priceTo($currency, $priceMode),
+            'priceAsFloat' => $product->priceToNumber($currency, $priceMode),
+            'oldPrice' => $product->oldPriceTo($currency, $priceMode),
+            'oldPriceAsFloat' => $product->oldPriceToNumber($currency, $priceMode),
+        ];
+
+        foreach (Event::dispatch('sCommerce.cart.resolveProductPrice', [[
+            'product' => $product,
+            'optionId' => $optionId,
+            'priceMode' => $priceMode,
+            'currency' => $currency,
+            'pricing' => $pricing,
+        ]]) as $override) {
+            if (is_numeric($override)) {
+                $pricing['priceAsFloat'] = (float)$override;
+                $pricing['price'] = sCommerce::convertPrice($pricing['priceAsFloat']);
+                $pricing['oldPrice'] = '';
+                $pricing['oldPriceAsFloat'] = 0;
+                break;
+            }
+
+            if (is_array($override)) {
+                $pricing = array_replace($pricing, array_intersect_key($override, $pricing));
+                $pricing['priceAsFloat'] = (float)($pricing['priceAsFloat'] ?? 0);
+                $pricing['oldPriceAsFloat'] = (float)($pricing['oldPriceAsFloat'] ?? 0);
+
+                if (!isset($override['price'])) {
+                    $pricing['price'] = sCommerce::convertPrice($pricing['priceAsFloat']);
+                }
+
+                if (!isset($override['oldPrice'])) {
+                    $pricing['oldPrice'] = $pricing['oldPriceAsFloat'] > 0
+                        ? sCommerce::convertPrice($pricing['oldPriceAsFloat'])
+                        : '';
+                }
+
+                $pricing['priceMode'] = static::normalizePriceMode((string)($pricing['priceMode'] ?? $priceMode));
+                break;
+            }
+        }
+
+        if ($pricing['priceMode'] === 'auto') {
+            unset($pricing['priceMode']);
+        }
+
+        return $pricing;
+    }
+
+    private static function resolveProductPriceMode(object $product, int $optionId = 0): string
+    {
+        $priceMode = static::getSessionPriceMode();
+
+        foreach (Event::dispatch('sCommerce.cart.resolveProductPriceMode', [[
+            'product' => $product,
+            'optionId' => $optionId,
+            'priceMode' => $priceMode,
+        ]]) as $override) {
+            if (is_string($override) && trim($override) !== '') {
+                $priceMode = static::normalizePriceMode($override);
+                break;
+            }
+        }
+
+        return $priceMode;
+    }
+
+    private static function getSessionPriceMode(): string
+    {
+        $sessionPriceMode = is_array($_SESSION['sCommerce'] ?? null)
+            ? ($_SESSION['sCommerce']['priceMode'] ?? null)
+            : null;
+
+        return static::normalizePriceMode(
+            (string)($sessionPriceMode ?? $_SESSION['sCommercePriceMode'] ?? 'auto')
+        );
+    }
+
+    private static function normalizePriceMode(string $priceMode = 'auto'): string
+    {
+        $priceMode = strtolower(trim($priceMode));
+
+        return in_array($priceMode, ['wholesale', 'opt'], true) ? 'wholesale' : 'auto';
     }
 }

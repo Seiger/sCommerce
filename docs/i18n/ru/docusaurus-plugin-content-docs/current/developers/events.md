@@ -64,6 +64,92 @@ Event::listen('evolution.sCommerceAfterRemoveFromCart', function($params) {
 });
 ```
 
+## Цены в корзине
+
+По умолчанию sCommerce использует исторический розничный resolver цены:
+
+- `price_special` используется, если она больше `0` и меньше `price_regular`;
+- иначе используется `price_regular`.
+
+Оптовая цена управляется на сервере, а не через данные frontend-запроса. Это защищает корзину и checkout
+от подмены цены на стороне клиента.
+
+### Режим цены в сессии
+
+Используйте фасад `sCart`, чтобы переключить текущую сессию покупателя на оптовые цены:
+
+```php
+use Seiger\sCommerce\Facades\sCart;
+
+sCart::setPriceMode('wholesale');
+```
+
+Вернуть сессию к стандартной розничной цене:
+
+```php
+sCart::clearPriceMode();
+```
+
+Оптовая цена считается по тому же правилу, что и розничная:
+
+- `price_opt_special` используется, если она больше `0` и меньше `price_opt_regular`;
+- иначе используется `price_opt_regular`.
+
+### sCommerce.cart.resolveProductPriceMode
+
+Используйте это событие, чтобы изменить режим цены для конкретного товара поверх режима из сессии.
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.cart.resolveProductPriceMode', function(array $payload) {
+    $product = $payload['product'];
+
+    if ((int)$product->id === 123) {
+        return 'wholesale';
+    }
+
+    return null;
+});
+```
+
+Payload содержит:
+
+- `product`: модель текущего товара;
+- `optionId`: ID опции в корзине;
+- `priceMode`: режим из сессии до товарного override.
+
+### sCommerce.cart.resolveProductPrice
+
+Используйте это событие, когда проекту нужна полностью кастомная цена для конкретного товара.
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.cart.resolveProductPrice', function(array $payload) {
+    $product = $payload['product'];
+
+    if ((int)$product->id === 123) {
+        return [
+            'priceAsFloat' => 77.50,
+            'oldPriceAsFloat' => 100.00,
+        ];
+    }
+
+    return null;
+});
+```
+
+Listener может вернуть числовую цену или массив с любыми из этих ключей:
+
+- `priceMode`
+- `price`
+- `priceAsFloat`
+- `oldPrice`
+- `oldPriceAsFloat`
+
+Если форматированные `price` или `oldPrice` не переданы, sCommerce сформатирует их из числовых значений.
+
 ## События заказов
 
 ### sCommerceAfterOrderCreate

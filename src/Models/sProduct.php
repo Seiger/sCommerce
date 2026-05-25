@@ -633,9 +633,9 @@ class sProduct extends Model
      * @param string $currency The target currency.
      * @return string The formatted price.
      */
-    public function priceTo($currency): string
+    public function priceTo($currency, string $priceMode = 'auto'): string
     {
-        return $this->formatPriceValue($this->priceToNumber($currency), $currency);
+        return $this->formatPriceValue($this->priceToNumber($currency, $priceMode), $currency);
     }
 
     /**
@@ -645,9 +645,10 @@ class sProduct extends Model
      *
      * @return float The converted price in the specified currency.
      */
-    public function priceToNumber($currency): float
+    public function priceToNumber($currency, string $priceMode = 'auto'): float
     {
-        $price = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_special : $this->price_regular ?? 0;
+        [$regularPrice, $specialPrice] = $this->getPricePair($priceMode);
+        $price = $specialPrice > 0 && $specialPrice < $regularPrice ? $specialPrice : $regularPrice;
         return sCommerce::convertPriceNumber($price, $this->currency, $currency);
     }
 
@@ -725,9 +726,9 @@ class sProduct extends Model
      * @param string $currency The target currency.
      * @return string The formatted price.
      */
-    public function oldPriceTo($currency): string
+    public function oldPriceTo($currency, string $priceMode = 'auto'): string
     {
-        return $this->formatPriceValue($this->oldPriceToNumber($currency), $currency);
+        return $this->formatPriceValue($this->oldPriceToNumber($currency, $priceMode), $currency);
     }
 
     /**
@@ -737,10 +738,45 @@ class sProduct extends Model
      *
      * @return float The converted price in the specified currency.
      */
-    public function oldPriceToNumber($currency): float
+    public function oldPriceToNumber($currency, string $priceMode = 'auto'): float
     {
-        $oldPrice = $this->price_special > 0 && $this->price_special < $this->price_regular ? $this->price_regular : $this->price_special ?? 0;
+        [$regularPrice, $specialPrice] = $this->getPricePair($priceMode);
+        $oldPrice = $specialPrice > 0 && $specialPrice < $regularPrice ? $regularPrice : $specialPrice;
         return sCommerce::convertPriceNumber($oldPrice, $this->currency, $currency);
+    }
+
+    /**
+     * Get regular and special prices for the requested pricing mode.
+     *
+     * The default mode keeps the historical retail behavior. Wholesale pricing
+     * uses the same special-over-regular rule, but with the opt price fields.
+     *
+     * @since 1.0.12
+     */
+    protected function getPricePair(string $priceMode = 'auto'): array
+    {
+        return match ($this->normalizePriceMode($priceMode)) {
+            'wholesale' => [
+                (float)($this->price_opt_regular ?? 0),
+                (float)($this->price_opt_special ?? 0),
+            ],
+            default => [
+                (float)($this->price_regular ?? 0),
+                (float)($this->price_special ?? 0),
+            ],
+        };
+    }
+
+    /**
+     * Normalize external pricing mode aliases to internal values.
+     *
+     * @since 1.0.12
+     */
+    protected function normalizePriceMode(string $priceMode = 'auto'): string
+    {
+        $priceMode = strtolower(trim($priceMode));
+
+        return in_array($priceMode, ['wholesale', 'opt'], true) ? 'wholesale' : 'auto';
     }
 
     /**
