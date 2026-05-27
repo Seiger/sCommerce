@@ -1,7 +1,7 @@
 {
   "name": "seiger/scommerce",
   "license": "GPL-3.0",
-  "type": "EvolutionCMS-Module",
+  "type": "evolutioncms-module",
   "description": "E-commerce tools package for Evolution CMS.",
   "keywords": [
     "evocms",
@@ -31,14 +31,6 @@
     }
   },
   "extra": {
-    "sapi": {
-      "route_providers": [
-        {"class": "Seiger\\sCommerce\\Api\\Routes\\OrdersRouteProvider", "endpoint": "orders"},
-        {"class": "Seiger\\sCommerce\\Api\\Routes\\StatusesRouteProvider", "endpoint": "statuses"},
-        {"class": "Seiger\\sCommerce\\Api\\Routes\\PaymentsRouteProvider", "endpoint": "payments"},
-        {"class": "Seiger\\sCommerce\\Api\\Routes\\CategoriesRouteProvider", "endpoint": "categories"}
-      ]
-    },
     "laravel": {
       "providers": [
         "Seiger\\sCommerce\\sCommerceServiceProvider"
