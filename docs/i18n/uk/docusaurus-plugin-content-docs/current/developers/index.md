@@ -132,7 +132,7 @@ $order = sCommerce::createOrder($data);
 ### Ручне керування фільтрами
 
 ```php
-use Seiger\sCommerce\sFilter;
+use Seiger\sCommerce\Filter\sFilter;
 
 sFilter::force([
     'sex' => ['unisex'],

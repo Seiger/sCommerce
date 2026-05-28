@@ -159,7 +159,7 @@ $suggestions = sCommerce::getSearchSuggestions($query);
 #### Forcing filters
 
 ```php
-use Seiger\sCommerce\sFilter;
+use Seiger\sCommerce\Filter\sFilter;
 
 sFilter::force([
     'sex' => ['unisex'],

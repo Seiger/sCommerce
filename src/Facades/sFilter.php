@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @mixin \Seiger\sCommerce\sFilter
+ * @mixin \Seiger\sCommerce\Filter\sFilter
  */
 class sFilter extends Facade
 {
