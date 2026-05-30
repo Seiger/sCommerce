@@ -222,9 +222,16 @@ return new class extends Migration
         | Create a wishlist and favorites fields as JSON columns
         |--------------------------------------------------------------------------
         */
-        Schema::table('user_attributes', function (Blueprint $table) {
-            $table->json('wishlist')->nullable()->default(new Expression('(JSON_ARRAY())'));
-            $table->json('favorites')->nullable()->default(new Expression('(JSON_ARRAY())'));
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        Schema::table('user_attributes', function (Blueprint $table) use ($isSqlite) {
+            $wishlist = $table->json('wishlist')->nullable();
+            $favorites = $table->json('favorites')->nullable();
+
+            if (!$isSqlite) {
+                $wishlist->default(new Expression('(JSON_ARRAY())'));
+                $favorites->default(new Expression('(JSON_ARRAY())'));
+            }
         });
 
         /*
