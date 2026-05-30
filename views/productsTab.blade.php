@@ -270,7 +270,7 @@
                 @endif
                 <td style="text-align:center;">
                     <div class="btn-group">
-                        <a href="{!!$moduleUrl!!}&get=product&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}" class="btn btn-outline-success">
+                        <a href="{!!$moduleUrl!!}&get=product&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}{{request()->has('cat') ? '&cat=' . request()->cat : ''}}" class="btn btn-outline-success">
                             <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
                         </a>
                         <a href="#" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">

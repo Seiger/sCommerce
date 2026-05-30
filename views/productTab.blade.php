@@ -18,7 +18,7 @@
 <div class="split my-3"></div>
 
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=productSave" onsubmit="documentDirty=false;">
-    <input type="hidden" name="back" value="&get=product&i={{(int)request()->input('i', 0)}}{{request()->has('page') ? '&page=' . request()->page : ''}}"/>
+    <input type="hidden" name="back" value="&get=product&i={{(int)request()->input('i', 0)}}{{request()->has('page') ? '&page=' . request()->page : ''}}{{request()->has('cat') ? '&cat=' . request()->cat : ''}}"/>
     <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}"/>
     <div class="row-col col-12">
         <div class="row form-row">
@@ -32,19 +32,19 @@
                         <input type="checkbox" id="publishedcheck" class="form-checkbox form-control" name="publishedcheck" value="" onchange="documentDirty=true;" onclick="changestate(document.form.published);" @if(isset($item->published) && $item->published) checked @endif>
                         <input type="hidden" id="published" name="published" value="{{$item->published ?? 0}}" onchange="documentDirty=true;">
                         @if(sCommerce::config('product.views_on', 1) == 1)&emsp;
-                            <i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')">
-                                <b>{{$item->views ?? 0}}</b>
-                            </i>
+                        <i class="fa fa-eye" data-tooltip="@lang('sCommerce::global.views')">
+                            <b>{{$item->views ?? 0}}</b>
+                        </i>
                         @endif
                         @if(sCommerce::config('product.rating_on', 1) == 1)&emsp;
-                            <i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')">
-                                <b>{{$item->rating ?? 5}}</b>
-                            </i>
+                        <i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')">
+                            <b>{{$item->rating ?? 5}}</b>
+                        </i>
                         @endif
                         @if(sCommerce::config('product.inventory_on', 1))&emsp;
-                            <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.inventory')">
-                                <b>{{$item->inventory ?? 0}}</b>
-                            </i>
+                        <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.inventory')">
+                            <b>{{$item->inventory ?? 0}}</b>
+                        </i>
                         @endif
                     </div>
                 </div>
@@ -394,7 +394,7 @@
                             </div>
                             @break
                         @case(sAttribute::TYPE_ATTR_CUSTOM)
-                            @php(View::getFinder()->setPaths([MODX_BASE_PATH . 'assets/modules/scommerce/attribute']))
+                            @php(View::getFinder()->setPaths([EVO_BASE_PATH . 'assets/modules/scommerce/attribute']))
                             @include($attribute->alias)
                             @break
                     @endswitch
@@ -448,7 +448,7 @@
 @push('scripts.bot')
     <div id="actions">
         <div class="btn-group">
-            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}&get=products{{request()->has('page') ? '&page=' . request()->page : ''}}">
+            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}&get=products{{request()->has('page') ? '&page=' . request()->page : ''}}{{request()->has('cat') ? '&cat=' . request()->cat : ''}}">
                 <i class="fa fa-times-circle"></i><span>@lang('sCommerce::global.to_list_products')</span>
             </a>
             <a id="Button1" class="btn btn-success" href="javascript:void(0);" onclick="saveForm('#form');">
