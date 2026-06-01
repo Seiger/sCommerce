@@ -18,7 +18,7 @@ return new class extends Migration
         | The attributes's tables structure
         |--------------------------------------------------------------------------
         */
-        Schema::create('s_attributes', function (Blueprint $table) {
+        $this->createTableIfMissing('s_attributes', function (Blueprint $table) {
             $table->id('id');
             $table->tinyInteger('published')->unsigned()->default(0)->index()->comment('0-Unpublished|1-Published');
             $table->tinyInteger('asfilter')->unsigned()->default(0)->index()->comment('0-Not filter|1-Using as filter');
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('s_attribute_translates', function (Blueprint $table) {
+        $this->createTableIfMissing('s_attribute_translates', function (Blueprint $table) {
             $table->id('atid');
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
             $table->string('lang', 10)->index()->default('base');
@@ -41,7 +41,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('s_attribute_values', function (Blueprint $table) {
+        $this->createTableIfMissing('s_attribute_values', function (Blueprint $table) {
             $table->id('avid');
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
             $table->integer('position')->unsigned()->default(0)->index()->comment('Position the Attribute value in list');
@@ -52,7 +52,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('s_attribute_category', function (Blueprint $table) {
+        $this->createTableIfMissing('s_attribute_category', function (Blueprint $table) {
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
             $table->integer('category')->unsigned()->default(0)->index()->comment('Resource ID as Category');
         });
@@ -62,7 +62,7 @@ return new class extends Migration
         | The product's tables structure
         |--------------------------------------------------------------------------
         */
-        Schema::create('s_products', function (Blueprint $table) {
+        $this->createTableIfMissing('s_products', function (Blueprint $table) {
             $table->id('id');
             $table->uuid('uuid')->unique()->nullable();
             $table->smallInteger('published')->unsigned()->default(0)->index()->comment('0-Unpublished|1-Published');
@@ -94,7 +94,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('s_product_translates', function (Blueprint $table) {
+        $this->createTableIfMissing('s_product_translates', function (Blueprint $table) {
             $table->id('tid');
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->string('lang', 10)->index()->default('base');
@@ -108,21 +108,21 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('s_product_category', function (Blueprint $table) {
+        $this->createTableIfMissing('s_product_category', function (Blueprint $table) {
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->integer('category')->unsigned()->default(0)->index()->comment('Resource ID as Category');
             $table->string('scope')->index()->default('');
             $table->integer('position')->unsigned()->default(0)->comment('Product position in Category');
         });
 
-        Schema::create('s_product_attribute_values', function (Blueprint $table) {
+        $this->createTableIfMissing('s_product_attribute_values', function (Blueprint $table) {
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
             $table->integer('valueid')->unsigned()->default(0)->index()->comment('This is Id if the attribute value is given as an element from the data set of values');
             $table->text('value')->index()->comment('It using for value if valueid is null');
         });
 
-        Schema::create('s_product_modifications', function (Blueprint $table) {
+        $this->createTableIfMissing('s_product_modifications', function (Blueprint $table) {
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->smallInteger('mode')->unsigned()->default(0)->index()->comment('Modification type (group, option, variation)');
             $table->string('sku')->index()->comment('Unique modification code');
@@ -138,7 +138,7 @@ return new class extends Migration
         | The deliveries tables structure
         |--------------------------------------------------------------------------
         */
-        Schema::create('s_delivery_methods', function (Blueprint $table) {
+        $this->createTableIfMissing('s_delivery_methods', function (Blueprint $table) {
             $table->id('id');
             $table->uuid('uuid')->unique()->nullable();
             $table->string('name')->unique()->comment('Unique identifier for the delivery method');
@@ -156,7 +156,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('s_payment_methods', function (Blueprint $table) {
+        $this->createTableIfMissing('s_payment_methods', function (Blueprint $table) {
             $table->comment('Table that stores payment methods. This includes information such as credentials, settings and other relevant data for integrating and managing website payment systems.');
             $table->id('id');
             $table->uuid('uuid')->unique()->nullable();
@@ -174,7 +174,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('s_orders', function (Blueprint $table) {
+        $this->createTableIfMissing('s_orders', function (Blueprint $table) {
             $table->id('id');
             $table->bigInteger('user_id')->unsigned()->default(0)->index()->comment('User ID (if authorized)');
             $table->jsonb('user_info')->default(new Expression('(JSON_ARRAY())'))->comment('User information (JSON)');
@@ -203,7 +203,7 @@ return new class extends Migration
         | The review's tables structure
         |--------------------------------------------------------------------------
         */
-        Schema::create('s_reviews', function (Blueprint $table) {
+        $this->createTableIfMissing('s_reviews', function (Blueprint $table) {
             $table->id('id');
             $table->string('lang', 10)->default('base')->index()->comment('The Lang field');
             $table->bigInteger('parent')->unsigned()->default(0)->index()->comment('If it is answer');
@@ -224,15 +224,30 @@ return new class extends Migration
         */
         $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        Schema::table('user_attributes', function (Blueprint $table) use ($isSqlite) {
-            $wishlist = $table->json('wishlist')->nullable();
-            $favorites = $table->json('favorites')->nullable();
+        if (Schema::hasTable('user_attributes')) {
+            $hasWishlist = Schema::hasColumn('user_attributes', 'wishlist');
+            $hasFavorites = Schema::hasColumn('user_attributes', 'favorites');
 
-            if (!$isSqlite) {
-                $wishlist->default(new Expression('(JSON_ARRAY())'));
-                $favorites->default(new Expression('(JSON_ARRAY())'));
+            if (!$hasWishlist || !$hasFavorites) {
+                Schema::table('user_attributes', function (Blueprint $table) use ($isSqlite, $hasWishlist, $hasFavorites) {
+                    if (!$hasWishlist) {
+                        $wishlist = $table->json('wishlist')->nullable();
+
+                        if (!$isSqlite) {
+                            $wishlist->default(new Expression('(JSON_ARRAY())'));
+                        }
+                    }
+
+                    if (!$hasFavorites) {
+                        $favorites = $table->json('favorites')->nullable();
+
+                        if (!$isSqlite) {
+                            $favorites->default(new Expression('(JSON_ARRAY())'));
+                        }
+                    }
+                });
             }
-        });
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -267,9 +282,18 @@ return new class extends Migration
         | Delete a wishlist and favorites fields as JSON columns
         |--------------------------------------------------------------------------
         */
-        Schema::table('user_attributes', function (Blueprint $table) {
-            $table->dropColumn(['wishlist', 'favorites']);
-        });
+        if (Schema::hasTable('user_attributes')) {
+            $columns = array_values(array_filter(
+                ['wishlist', 'favorites'],
+                fn (string $column): bool => Schema::hasColumn('user_attributes', $column)
+            ));
+
+            if (!empty($columns)) {
+                Schema::table('user_attributes', function (Blueprint $table) use ($columns) {
+                    $table->dropColumn($columns);
+                });
+            }
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -292,6 +316,7 @@ return new class extends Migration
         | The product's tables structure
         |--------------------------------------------------------------------------
         */
+        Schema::dropIfExists('s_product_modifications');
         Schema::dropIfExists('s_product_attribute_values');
         Schema::dropIfExists('s_product_category');
         Schema::dropIfExists('s_product_translates');
@@ -306,5 +331,12 @@ return new class extends Migration
         Schema::dropIfExists('s_attribute_values');
         Schema::dropIfExists('s_attribute_translates');
         Schema::dropIfExists('s_attributes');
+    }
+
+    private function createTableIfMissing(string $tableName, callable $callback): void
+    {
+        if (!Schema::hasTable($tableName)) {
+            Schema::create($tableName, $callback);
+        }
     }
 };
