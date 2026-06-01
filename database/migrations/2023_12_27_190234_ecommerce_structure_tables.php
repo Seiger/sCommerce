@@ -119,7 +119,7 @@ return new class extends Migration
             $table->foreignId('product')->comment('Product ID')->constrained('s_products')->cascadeOnDelete();
             $table->foreignId('attribute')->comment('Attribute ID')->constrained('s_attributes')->cascadeOnDelete();
             $table->integer('valueid')->unsigned()->default(0)->index()->comment('This is Id if the attribute value is given as an element from the data set of values');
-            $table->text('value')->index()->comment('It using for value if valueid is null');
+            $table->text('value')->comment('It using for value if valueid is null');
         });
 
         $this->createTableIfMissing('s_product_modifications', function (Blueprint $table) {
