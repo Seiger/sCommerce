@@ -540,7 +540,9 @@ class sProduct extends Model
             $base_url .= '/';
         }
 
-        return $base_url . $this->alias . $suffix;
+        $alias = trim((string)$this->alias, '/');
+
+        return $base_url . $alias . $suffix;
     }
 
     /**
