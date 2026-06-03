@@ -17,8 +17,6 @@ use Seiger\sTask\Workers\BaseWorker;
 use Seiger\sTask\Contracts\TaskInterface;
 
 /**
- * TODO Need redevelop this Class
- *
  * ImportExportCSV - Integration for CSV import/export operations
  *
  * This class implements the CSV import/export integration for sCommerce products.
@@ -1505,8 +1503,68 @@ class ImportExportCSV extends BaseWorker
 
         $option = $query->first();
 
+        if ($option) {
+            return (int)$option->avid;
+        }
+
+        $option = $this->createAttributeOptionFromImport($attribute, $value);
+
         return (int)($option->avid ?? 0);
     }
+
+    /**
+     * Create a missing select-like attribute option from an imported CSV value.
+     */
+    private function createAttributeOptionFromImport(sAttribute $attribute, string $value): ?sAttributeValue
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        $sCommerceController = new SCommerceController();
+        $option = new sAttributeValue();
+        $option->attribute = (int)$attribute->id;
+        $option->position = ((int)$attribute->values()->max('position')) + 1;
+        $option->alias = $this->uniqueAttributeOptionAlias($attribute, $value, $sCommerceController);
+        $option->code = (int)$attribute->type === sAttribute::TYPE_ATTR_COLOR ? $value : '';
+        $option->base = $value;
+
+        $defaultLang = trim((string)$sCommerceController->langDefault());
+        if ($defaultLang !== '' && $defaultLang !== 'base' && Schema::hasColumn('s_attribute_values', $defaultLang)) {
+            $option->{$defaultLang} = $value;
+        }
+
+        $locale = trim((string)evo()->getLocale());
+        if ($locale !== '' && $locale !== 'base' && $locale !== $defaultLang && Schema::hasColumn('s_attribute_values', $locale)) {
+            $option->{$locale} = $value;
+        }
+
+        $option->save();
+
+        return $option;
+    }
+
+    /**
+     * Build a unique option alias inside the current attribute.
+     */
+    private function uniqueAttributeOptionAlias(sAttribute $attribute, string $value, SCommerceController $sCommerceController): string
+    {
+        $alias = $sCommerceController->validateAliasValues($value, 0, (int)$attribute->id);
+        if ($alias === '') {
+            $alias = (string)(((int)$attribute->values()->max('avid')) + 1);
+        }
+
+        $baseAlias = $alias;
+        $counter = 1;
+        while ($attribute->values()->where('alias', $alias)->exists()) {
+            $alias = $baseAlias . $counter;
+            $counter++;
+        }
+
+        return $alias;
+    }
+
     /**
      * Update product attribute value.
      *
