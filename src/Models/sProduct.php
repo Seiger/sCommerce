@@ -403,7 +403,14 @@ class sProduct extends Model
         $attribute = $this->attrValues()->whereAlias($alias)->first();
 
         if ($attribute) {
-            $attribute->title = $attribute->text->pagetitle;
+            $locale = evo()->getLocale();
+            $text = $attribute->text;
+            $title = trim((string)($text?->pagetitle ?? ''));
+            if ($title === '') {
+                $title = trim((string)($attribute->texts()->where('pagetitle', '!=', '')->orderByRaw("FIELD(lang, ?, 'base', 'uk', 'ru')", [$locale])->first()?->pagetitle ?? ''));
+            }
+            $attribute->title = $title !== '' ? $title : $attribute->alias;
+
             switch ($attribute->type) {
                 case sAttribute::TYPE_ATTR_NUMBER:
                 case sAttribute::TYPE_ATTR_CHECKBOX:
@@ -416,19 +423,19 @@ class sProduct extends Model
                     $avid = intval($attribute->pivot->valueid ?? 0);
                     $value = $attribute->values()->whereAvid($avid)->first();
                     $attribute->value = $value?->alias ?? '';
-                    $attribute->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
+                    $attribute->label = $value?->{$locale} ?: ($value?->base ?: ($value?->alias ?? ''));
                     break;
                 case sAttribute::TYPE_ATTR_TEXT:
-                    $value = json_decode($attribute->pivot->value ?? '', true);
-                    $attribute->value = $value[evo()->getLocale()] ?? $value['base'];
-                    $attribute->label = $value[evo()->getLocale()] ?? $value['base'];
+                    $value = json_decode($attribute->pivot->value ?? '', true) ?: [];
+                    $attribute->value = $value[$locale] ?? $value['base'] ?? reset($value) ?: '';
+                    $attribute->label = $attribute->value;
                     break;
                 case sAttribute::TYPE_ATTR_COLOR:
                     $avid = intval($attribute->pivot->valueid ?? 0);
                     $value = $attribute->values()->whereAvid($avid)->first();
                     $attribute->value = $value?->alias ?? '';
                     $attribute->code = $value?->code ?? '';
-                    $attribute->label = $value?->{evo()->getLocale()} ?? $value?->base ?? '';
+                    $attribute->label = $value?->{$locale} ?: ($value?->base ?: ($value?->alias ?? ''));
                     break;
                 case sAttribute::TYPE_ATTR_CUSTOM:
                     $value = trim($attribute->pivot->value ?? '');

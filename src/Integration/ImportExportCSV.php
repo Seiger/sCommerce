@@ -1530,13 +1530,15 @@ class ImportExportCSV extends BaseWorker
         $option->code = (int)$attribute->type === sAttribute::TYPE_ATTR_COLOR ? $value : '';
         $option->base = $value;
 
-        $defaultLang = trim((string)$sCommerceController->langDefault());
-        if ($defaultLang !== '' && $defaultLang !== 'base' && Schema::hasColumn('s_attribute_values', $defaultLang)) {
-            $option->{$defaultLang} = $value;
+        foreach ($sCommerceController->langList() as $lang) {
+            $lang = trim((string)$lang);
+            if ($lang !== '' && $lang !== 'base' && Schema::hasColumn('s_attribute_values', $lang)) {
+                $option->{$lang} = $value;
+            }
         }
 
         $locale = trim((string)evo()->getLocale());
-        if ($locale !== '' && $locale !== 'base' && $locale !== $defaultLang && Schema::hasColumn('s_attribute_values', $locale)) {
+        if ($locale !== '' && $locale !== 'base' && Schema::hasColumn('s_attribute_values', $locale)) {
             $option->{$locale} = $value;
         }
 
