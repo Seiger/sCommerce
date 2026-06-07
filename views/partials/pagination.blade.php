@@ -3,6 +3,7 @@
     @php
         $fullUrl = sCommerce::moduleUrl() . '&get='.request()->input('get', (sCommerce::config('basic.orders_on', 1) == 1 ? "orders" : "products"));
         $fullUrl .= (request()->has('search') ? '&search=' . request()->search : '');
+        $fullUrl .= (request()->has('domain') ? '&domain=' . request()->domain : '');
         $fullUrl .= (request()->has('order') ? '&order=' . request()->order : '');
         $fullUrl .= (request()->has('direc') ? '&direc=' . request()->direc : '');
         $paginator->withPath($fullUrl);
