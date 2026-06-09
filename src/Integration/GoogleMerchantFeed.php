@@ -415,7 +415,8 @@ class GoogleMerchantFeed extends BaseWorker
                             <select name="category[]" class="form-control" style="width:100%;">
                                 @foreach($googleCategories as $id => $name)
                                     @php
-                                        $feedCategory = $feed["category"] ?? "";
+                                        $feedCategory = $feed["category"] ?? ($feed["google_product_category"] ?? "");
+                                        $feedCategory = (string)$feedCategory;
                                     @endphp
                                     <option value="{{$id}}" {{$feedCategory === (string)$id ? "selected" : ""}}>{{$name}}</option>
                                 @endforeach
@@ -498,6 +499,7 @@ class GoogleMerchantFeed extends BaseWorker
 
                 function updateGoogleCategories(domainSelect, categorySelect) {
                     const domain = domainSelect.value || domainSelect.getAttribute("value") || "";
+                    const selectedValue = categorySelect.value || categorySelect.dataset.selectedValue || "";
                     let categories = allGoogleCategories[domain] || {};
                     
                     // Check if categories is a nested structure (multisite)
@@ -522,6 +524,11 @@ class GoogleMerchantFeed extends BaseWorker
                         option.textContent = name;
                         categorySelect.appendChild(option);
                     }
+
+                    if (selectedValue !== "" && Object.prototype.hasOwnProperty.call(categories, selectedValue)) {
+                        categorySelect.value = selectedValue;
+                    }
+                    categorySelect.dataset.selectedValue = categorySelect.value || "";
                     
                     // Select is already initialized, no need for select2
                 }
@@ -1117,6 +1124,7 @@ class GoogleMerchantFeed extends BaseWorker
 
         // Support both 'category' and 'google_product_category' field names
         $googleProductCategory = $feed['category'] ?? $feed['google_product_category'] ?? null;
+        $googleProductCategory = is_scalar($googleProductCategory) ? trim((string)$googleProductCategory) : null;
 
         // Support both 'include_out_of_stock' field name
         $includeOutOfStock = $feed['include_out_of_stock'] ?? false;
@@ -1137,6 +1145,7 @@ class GoogleMerchantFeed extends BaseWorker
             'chunk' => $chunk,
             'include_out_of_stock' => (bool)$includeOutOfStock,
             'include_without_images' => (bool)$includeWithoutImages,
+            'category' => $googleProductCategory,
             'google_product_category' => $googleProductCategory,
             'site_key' => $siteKey,
             'directory' => $directory,
