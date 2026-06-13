@@ -167,6 +167,7 @@ class GoogleMerchantFeed extends BaseWorker
                 'chunk' => self::DEFAULT_CHUNK,
                 'include_out_of_stock' => false,
                 'include_without_images' => false,
+                'catalog_category' => '',
                 'google_product_category' => '',
                 'site_key' => '',
                 'enabled' => true,
@@ -409,13 +410,13 @@ class GoogleMerchantFeed extends BaseWorker
                         @endif
                         <div class="col-sm-6">
                             <label>
-                                Категорія товару Google
-                                <i data-lucide="help-circle" class="settings-icon" data-tooltip="Категорія товарів Google (наприклад: Apparel & Accessories > Clothing). Використовується для g:google_product_category в XML." style="width:14px;height:14px;"></i>
+                                Категорія товарів каталогу
+                                <i data-lucide="help-circle" class="settings-icon" data-tooltip="Категорія каталогу, товари з якої потраплять у цей XML-фід." style="width:14px;height:14px;"></i>
                             </label>
                             <select name="category[]" class="form-control" style="width:100%;">
                                 @foreach($googleCategories as $id => $name)
                                     @php
-                                        $feedCategory = $feed["category"] ?? ($feed["google_product_category"] ?? "");
+                                        $feedCategory = $feed["catalog_category"] ?? ($feed["category"] ?? "");
                                         $feedCategory = (string)$feedCategory;
                                     @endphp
                                     <option value="{{$id}}" {{$feedCategory === (string)$id ? "selected" : ""}}>{{$name}}</option>
@@ -619,7 +620,8 @@ class GoogleMerchantFeed extends BaseWorker
 
                         // Get category
                         const categoryInput = feedBlock.querySelector("[name=\"category[]\"]");
-                        feed.category = categoryInput ? categoryInput.value.trim() : "";
+                        feed.catalog_category = categoryInput ? categoryInput.value.trim() : "";
+                        feed.category = feed.catalog_category;
                         
                         // Get enabled checkbox
                         const enabledInput = feedBlock.querySelector("[name=\"enabled[]\"]");
@@ -1122,8 +1124,11 @@ class GoogleMerchantFeed extends BaseWorker
             $language = strtolower(sLang::langDefault());
         }
 
-        // Support both 'category' and 'google_product_category' field names
-        $googleProductCategory = $feed['category'] ?? $feed['google_product_category'] ?? null;
+        // Support legacy 'category' as a catalog category filter.
+        $catalogCategory = $feed['catalog_category'] ?? $feed['category'] ?? null;
+        $catalogCategory = is_scalar($catalogCategory) ? (int)$catalogCategory : null;
+
+        $googleProductCategory = $feed['google_product_category'] ?? null;
         $googleProductCategory = is_scalar($googleProductCategory) ? trim((string)$googleProductCategory) : null;
 
         // Support both 'include_out_of_stock' field name
@@ -1145,7 +1150,8 @@ class GoogleMerchantFeed extends BaseWorker
             'chunk' => $chunk,
             'include_out_of_stock' => (bool)$includeOutOfStock,
             'include_without_images' => (bool)$includeWithoutImages,
-            'category' => $googleProductCategory,
+            'category' => $catalogCategory,
+            'catalog_category' => $catalogCategory,
             'google_product_category' => $googleProductCategory,
             'site_key' => $siteKey,
             'directory' => $directory,
@@ -1327,6 +1333,17 @@ class GoogleMerchantFeed extends BaseWorker
             });
         }
 
+        $catalogCategory = (int)($config['catalog_category'] ?? $config['category'] ?? 0);
+        if ($catalogCategory > 0) {
+            $categories = array_values(array_unique(array_merge(
+                [$catalogCategory],
+                (new sCommerceController())->listAllActiveSubCategories($catalogCategory)
+            )));
+
+            $query->whereHas('categories', function ($relation) use ($categories) {
+                $relation->whereIn('s_product_category.category', $categories);
+            });
+        }
 
         return $query;
     }
