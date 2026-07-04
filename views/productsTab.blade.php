@@ -2,6 +2,9 @@
     use Seiger\sCommerce\Models\sAttribute;
     use Seiger\sCommerce\Models\sProduct;
     $order = request()->has('order') ? request()->input('order') : 'id';
+    $productsBackQuery = request()->only(['get', 'search', 'domain', 'cat', 'order', 'direc', 'page', 'attribute_filters']);
+    $productsBackQuery['get'] = 'products';
+    $productsBack = '&' . http_build_query($productsBackQuery);
 @endphp
 <div class="row form-row">
     <div class="row-col col-lg-4 col-md-12 pl-0 scom-conters">
@@ -32,22 +35,37 @@
 <div class="mb-2 scom-btn-container">
     @if($domains)
         @foreach($domains as $domain)
-            <select style="flex:1;min-width:200px;" onchange="if(this.value) window.location.href=this.value;">
-                <option value="{!!$moduleUrl!!}&get=products">@lang('sCommerce::global.all_products')</option>
+            <select style="flex:1;min-width:200px;" data-products-category-filter>
+                <option value="0">@lang('sCommerce::global.all_products')</option>
                 <optgroup label="{{$domain->site_name}}">
                     @foreach($listCategories[$domain->key] as $key => $value)
-                        <option value="{!!$moduleUrl!!}&get=products&cat={{$key}}" @selected($cat == $key)>{{$value}}</option>
+                        <option value="{{$key}}" @selected($cat == $key)>{{$value}}</option>
                     @endforeach
                 </optgroup>
             </select>
         @endforeach
     @else
-        <select style="flex:1;min-width: 200px;max-width:300px;" onchange="if(this.value) window.location.href=this.value;">
-            <option value="{!!$moduleUrl!!}&get=products">@lang('sCommerce::global.all_products')</option>
+        <select style="flex:1;min-width: 200px;max-width:300px;" data-products-category-filter>
+            <option value="0">@lang('sCommerce::global.all_products')</option>
             @foreach($listCategories as $key => $value)
-                <option value="{!!$moduleUrl!!}&get=products&cat={{$key}}" @selected($cat == $key)>{{$value}}</option>
+                <option value="{{$key}}" @selected($cat == $key)>{{$value}}</option>
             @endforeach
         </select>
+    @endif
+    @if(evo()->getConfig('scom_pro', false) && isset($productsAttributeFilterOptions) && $productsAttributeFilterOptions->count())
+        @foreach($productsAttributeFilterOptions as $alias => $options)
+            @php($attribute = $productsAttributes->get($alias))
+            @if($attribute && $options->count())
+                @php($attributeTitle = $attribute->text(ManagerTheme::getLang())->first()?->pagetitle ?? $alias)
+                <select style="flex:1;min-width:200px;" data-attribute-filter="{{$alias}}">
+                    <option value="">{{$attributeTitle}}</option>
+                    @foreach($options as $option)
+                        @php($optionTitle = $option->{ManagerTheme::getLang()} ?? $option->base ?? $option->alias)
+                        <option value="{{$option->avid}}" @selected(($productsAttributeFilters[$alias] ?? 0) == $option->avid)>{{$optionTitle}}</option>
+                    @endforeach
+                </select>
+            @endif
+        @endforeach
     @endif
 </div>
 <div class="table-responsive seiger__module-table">
@@ -149,8 +167,9 @@
             @endif
             @if(evo()->getConfig('scom_pro', false) && count(sCommerce::config('products.attributes', [])))
                 @foreach(sCommerce::config('products.attributes', []) as $field)
+                    @php($attributeTitle = ($productsAttributes ?? collect())->get($field)?->text(ManagerTheme::getLang())->first()?->pagetitle ?? '')
                     <th class="sorting @if($order == $field) sorted @endif" data-order="a.{{$field}}">
-                        <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">{{sAttribute::whereAlias($field)->first()->text(ManagerTheme::getLang())->first()->pagetitle ?? ''}} <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                        <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">{{$attributeTitle}} <i class="fas fa-sort" style="color: #036efe;"></i></button>
                     </th>
                 @endforeach
             @endif
@@ -270,10 +289,10 @@
                 @endif
                 <td style="text-align:center;">
                     <div class="btn-group">
-                        <a href="{!!$moduleUrl!!}&get=product&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}{{request()->has('cat') ? '&cat=' . request()->cat : ''}}" class="btn btn-outline-success">
+                        <a href="{!!$moduleUrl!!}&get=product&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}&back={{urlencode($productsBack)}}" class="btn btn-outline-success">
                             <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
                         </a>
-                        <a href="#" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">
+                        <a href="#" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}&back={{urlencode($productsBack)}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle ?? __('sCommerce::global.no_text')}}" class="btn btn-outline-danger">
                             <i class="fa fa-trash"></i> <span>@lang('global.delete')</span>
                         </a>
                     </div>
@@ -315,6 +334,35 @@
     </div>
 </div>
 @push('scripts.bot')
+    <script>
+        document.querySelectorAll('[data-products-category-filter]').forEach(select => {
+            select.addEventListener('change', () => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('get', 'products');
+                url.searchParams.delete('page');
+                if (parseInt(select.value) > 0) {
+                    url.searchParams.set('cat', select.value);
+                } else {
+                    url.searchParams.delete('cat');
+                }
+                window.location.href = url.toString();
+            });
+        });
+
+        document.querySelectorAll('[data-attribute-filter]').forEach(select => {
+            select.addEventListener('change', () => {
+                const url = new URL(window.location.href);
+                const name = 'attribute_filters[' + select.dataset.attributeFilter + ']';
+                url.searchParams.delete('page');
+                if (select.value) {
+                    url.searchParams.set(name, select.value);
+                } else {
+                    url.searchParams.delete(name);
+                }
+                window.location.href = url.toString();
+            });
+        });
+    </script>
     <div id="actions">
         <div class="btn-group">
             <a id="Button2" href="{!!$moduleUrl!!}&get=product&i=0" class="btn btn-primary" title="@lang('sCommerce::global.add_product_help')">
