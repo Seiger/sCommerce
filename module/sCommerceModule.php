@@ -716,6 +716,34 @@ switch ($get) {
             $direc = request()->input('direc', 'desc');
         }
 
+        $productsAttributeAliases = [];
+        $productsAttributes = collect();
+        $productsAttributeFilters = [];
+        $productsAttributeFilterOptions = collect();
+        if (evo()->getConfig('scom_pro', false)) {
+            $productsAttributeAliases = array_values(array_filter(array_map('trim', sCommerce::config('products.attributes', []))));
+            $productsAttributeFiltersInput = request()->input('attribute_filters', []);
+            $productsAttributeFiltersInput = is_array($productsAttributeFiltersInput) ? $productsAttributeFiltersInput : [];
+
+            if (count($productsAttributeAliases)) {
+                $productsAttributes = sAttribute::with('values')
+                    ->whereIn('alias', $productsAttributeAliases)
+                    ->get()
+                    ->keyBy('alias');
+
+                foreach ($productsAttributeAliases as $alias) {
+                    $attribute = $productsAttributes->get($alias);
+                    $valueId = (int)($productsAttributeFiltersInput[$alias] ?? 0);
+                    if ($attribute && $valueId > 0) {
+                        $productsAttributeFilters[$alias] = $valueId;
+                    }
+                }
+
+                $productsAttributeFilterOptions = $productsAttributes
+                    ->mapWithKeys(fn($attribute, $alias) => [$alias => $attribute->values]);
+            }
+        }
+
         $query = sProduct::lang($sCommerceController->langDefault())
             ->search()
             ->extractConstructor()
@@ -732,6 +760,19 @@ switch ($get) {
             $query->whereHas('categories', function ($q) use ($cat) {
                 $q->where('category', $cat);
             });
+        }
+
+        foreach ($productsAttributeFilters as $alias => $valueId) {
+            $attribute = $productsAttributes->get($alias);
+            if ($attribute) {
+                $query->whereExists(function ($q) use ($attribute, $valueId) {
+                    $q->select(DB::raw(1))
+                        ->from('s_product_attribute_values')
+                        ->whereColumn('s_product_attribute_values.product', 's_products.id')
+                        ->where('s_product_attribute_values.attribute', $attribute->id)
+                        ->where('s_product_attribute_values.valueid', $valueId);
+                });
+            }
         }
 
         switch ($order) {
@@ -836,6 +877,9 @@ switch ($get) {
         $data['resources'] = $resources;
         $data['listCategories'] = $listCategories;
         $data['cat'] = $cat;
+        $data['productsAttributes'] = $productsAttributes;
+        $data['productsAttributeFilters'] = $productsAttributeFilters;
+        $data['productsAttributeFilterOptions'] = $productsAttributeFilterOptions;
         $_SESSION['itemaction'] = 'Viewing a list of products';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
@@ -1220,7 +1264,13 @@ switch ($get) {
         }
 
         sTask::create('sProductsListingCache', 'make');
-        $back = '&get=products';
+        $back = trim((string)request()->input('back', '&get=products'));
+        if (str_starts_with($back, 'get=')) {
+            $back = '&' . $back;
+        }
+        if (!str_starts_with($back, '&get=products')) {
+            $back = '&get=products';
+        }
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "modifications":
         $tabs = ['product', 'modifications'];

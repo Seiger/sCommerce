@@ -13,12 +13,26 @@
         }
         return (string)($v ?? '');
     };
+
+    $productsBack = trim((string)request()->input('back', '&get=products'));
+    if (str_starts_with($productsBack, 'get=')) {
+        $productsBack = '&' . $productsBack;
+    }
+    if (!str_starts_with($productsBack, '&get=products')) {
+        $productsBack = '&get=products';
+    }
+
+    $productBack = '&get=product&i=' . (int)request()->input('i', 0);
+    if (request()->has('page')) {
+        $productBack .= '&page=' . request()->page;
+    }
+    $productBack .= '&back=' . urlencode($productsBack);
 @endphp
 <h3>{{(int)request()->input('i', 0) == 0 ? __('sCommerce::global.new_product') : ($item->pagetitle ?? __('sCommerce::global.no_text'))}}</h3>
 <div class="split my-3"></div>
 
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!$moduleUrl!!}&get=productSave" onsubmit="documentDirty=false;">
-    <input type="hidden" name="back" value="&get=product&i={{(int)request()->input('i', 0)}}{{request()->has('page') ? '&page=' . request()->page : ''}}{{request()->has('cat') ? '&cat=' . request()->cat : ''}}"/>
+    <input type="hidden" name="back" value="{{$productBack}}"/>
     <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}"/>
     <div class="row-col col-12">
         <div class="row form-row">
@@ -448,7 +462,7 @@
 @push('scripts.bot')
     <div id="actions">
         <div class="btn-group">
-            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}&get=products{{request()->has('page') ? '&page=' . request()->page : ''}}{{request()->has('cat') ? '&cat=' . request()->cat : ''}}">
+            <a id="Button5" class="btn btn-secondary" href="{!!$moduleUrl!!}{{$productsBack}}">
                 <i class="fa fa-times-circle"></i><span>@lang('sCommerce::global.to_list_products')</span>
             </a>
             <a id="Button1" class="btn btn-success" href="javascript:void(0);" onclick="saveForm('#form');">
@@ -458,7 +472,7 @@
             <a id="Button6" class="btn btn-info" data-href="{!!$moduleUrl!!}&get=productDuplicate&i={{$item->id}}" data-duplicate="{{$item->id}}" data-name="{{$item->pagetitle}}">
                 <i class="fa fa-clone"></i> <span>@lang('global.duplicate')</span>
             </a>
-            <a id="Button3" class="btn btn-danger" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle}}">
+            <a id="Button3" class="btn btn-danger" data-href="{!!$moduleUrl!!}&get=productDelete&i={{$item->id}}&back={{urlencode($productsBack)}}" data-delete="{{$item->id}}" data-name="{{$item->pagetitle}}">
                 <i class="fa fa-trash"></i> <span>@lang('global.delete')</span>
             </a>
         </div>

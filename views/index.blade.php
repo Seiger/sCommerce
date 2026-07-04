@@ -110,15 +110,14 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const order = $(this).attr('data-order');
                 let direc = 'asc';
-                let newHref = '{!!sCommerce::moduleUrl()!!}&get={{$get}}&order=' + order;
                 if (urlParams.get('order') == order && urlParams.get('direc') == direc) {
                     direc = 'desc';
                 }
-                newHref = newHref + '&direc=' + direc;
-                if (urlParams.has('cat')) {
-                    newHref = newHref + '&cat=' + '{{$cat ?? ''}}';
-                }
-                window.location.href = newHref;
+                urlParams.set('get', '{{$get}}');
+                urlParams.set('order', order);
+                urlParams.set('direc', direc);
+                urlParams.delete('page');
+                window.location.href = window.location.pathname + '?' + urlParams.toString();
             });
 
             {{-- Flash messages --}}

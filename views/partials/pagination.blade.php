@@ -4,8 +4,16 @@
         $fullUrl = sCommerce::moduleUrl() . '&get='.request()->input('get', (sCommerce::config('basic.orders_on', 1) == 1 ? "orders" : "products"));
         $fullUrl .= (request()->has('search') ? '&search=' . request()->search : '');
         $fullUrl .= (request()->has('domain') ? '&domain=' . request()->domain : '');
+        $fullUrl .= (request()->has('cat') ? '&cat=' . request()->cat : '');
         $fullUrl .= (request()->has('order') ? '&order=' . request()->order : '');
         $fullUrl .= (request()->has('direc') ? '&direc=' . request()->direc : '');
+        if (request()->has('attribute_filters') && is_array(request()->input('attribute_filters'))) {
+            foreach (request()->input('attribute_filters') as $alias => $value) {
+                if (is_scalar($alias) && is_scalar($value) && trim((string)$value) !== '') {
+                    $fullUrl .= '&attribute_filters[' . urlencode((string)$alias) . ']=' . urlencode((string)$value);
+                }
+            }
+        }
         $paginator->withPath($fullUrl);
     @endphp
     <style>.dark #translatePagination a {color: #444}</style>
