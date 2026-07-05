@@ -1,10 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\Schema;
 use Seiger\sTask\Models\sWorker;
-use Illuminate\Database\Schema\Blueprint;
 
 /**
  * Migration: integrations storage.
@@ -17,6 +15,10 @@ return new class extends Migration {
         | Create a default Integrations
         |--------------------------------------------------------------------------
         */
+        if (!Schema::hasTable('s_workers')) {
+            return;
+        }
+
         $integrations = [
             [
                 'identifier' => 'sProductsListingCache',
@@ -36,7 +38,10 @@ return new class extends Migration {
         ];
 
         foreach ($integrations as $integration) {
-            sWorker::create($integration);
+            sWorker::updateOrCreate(
+                ['identifier' => $integration['identifier']],
+                $integration
+            );
         }
     }
 
@@ -47,6 +52,10 @@ return new class extends Migration {
         | Delete a default Integrations
         |--------------------------------------------------------------------------
         */
+        if (!Schema::hasTable('s_workers')) {
+            return;
+        }
+
         sWorker::where('identifier', 'sProductsListingCache')->delete();
         sWorker::where('identifier', 'sImportExportCSV')->delete();
     }
