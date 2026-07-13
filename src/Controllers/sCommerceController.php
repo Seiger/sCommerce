@@ -693,7 +693,7 @@ class sCommerceController
             }
         }
 
-        return implode("", evo()->invokeEvent('OnRichTextEditorInit', [
+        return implode("", (array)evo()->invokeEvent('OnRichTextEditorInit', [
             'editor' => $editor,
             'elements' => $elements,
             'height' => $height,
