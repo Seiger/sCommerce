@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Filter;
 
 use EvolutionCMS\Facades\UrlProcessor;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -278,12 +279,14 @@ class sFilter
      * @param array<string, array<int|string>> $filters Filters indexed by attribute alias.
      * @param int|null $categoryId Optional category context.
      * @return void
+     *
+     * @since 1.2.1 Supports trusted programmatic filters for attributes that are not exposed as storefront filters.
      */
     public static function force(array $filters, ?int $categoryId = null): void
     {
         $categoryId = $categoryId ?? (int)evo()->documentIdentifier;
         $instance = new static();
-        $result = $instance->validateFiltersStructure(['category' => $categoryId], $filters);
+        $result = $instance->validateFiltersStructure(['category' => $categoryId], $filters, false);
         $normalizedFilters = $instance->normalizeFilters($result['filters']);
 
         static::$cachedResult = [
@@ -358,6 +361,88 @@ class sFilter
             $this->validateFilters();
         }
         return $this->filtersIds;
+    }
+
+    /**
+     * Apply validated attribute filters to a product-category query.
+     *
+     * Checkbox value `1` requires a checked attribute row. Checkbox value `0`
+     * matches products without a checked row, including products with no pivot row.
+     * Supplying both values leaves the checkbox unrestricted.
+     *
+     * @param Builder $query Product-category query containing a `product` column.
+     * @param array<int|string, array<int|string>> $filters Validated filters keyed by attribute ID.
+     * @return Builder
+     *
+     * @since 1.2.1
+     */
+    public function applyAttributeFilters(Builder $query, array $filters): Builder
+    {
+        unset($filters['priceRange']);
+
+        $attributeIds = array_values(array_filter(
+            array_keys($filters),
+            static fn($attributeId) => is_numeric($attributeId)
+        ));
+
+        $checkboxIds = empty($attributeIds)
+            ? []
+            : sAttribute::query()
+                ->whereIn('id', $attributeIds)
+                ->where('type', sAttribute::TYPE_ATTR_CHECKBOX)
+                ->pluck('id')
+                ->mapWithKeys(static fn($attributeId) => [(int)$attributeId => true])
+                ->all();
+
+        foreach ($filters as $attributeId => $values) {
+            if (!is_numeric($attributeId)) {
+                continue;
+            }
+
+            $attributeId = (int)$attributeId;
+            $values = array_values(array_unique((array)$values, SORT_REGULAR));
+
+            if (isset($checkboxIds[$attributeId])) {
+                $values = array_values(array_unique(array_map('intval', $values)));
+                $hasUnchecked = in_array(0, $values, true);
+                $hasChecked = in_array(1, $values, true);
+
+                if ($hasUnchecked && $hasChecked) {
+                    continue;
+                }
+
+                if ($hasUnchecked) {
+                    $query->whereNotIn('product', function ($subQuery) use ($attributeId) {
+                        $subQuery->select('product')
+                            ->from('s_product_attribute_values')
+                            ->where('attribute', $attributeId)
+                            ->where('value', 1);
+                    });
+                } elseif ($hasChecked) {
+                    $query->whereIn('product', function ($subQuery) use ($attributeId) {
+                        $subQuery->select('product')
+                            ->from('s_product_attribute_values')
+                            ->where('attribute', $attributeId)
+                            ->where('value', 1);
+                    });
+                }
+
+                continue;
+            }
+
+            if (empty($values)) {
+                continue;
+            }
+
+            $query->whereIn('product', function ($subQuery) use ($attributeId, $values) {
+                $subQuery->select('product')
+                    ->from('s_product_attribute_values')
+                    ->where('attribute', $attributeId)
+                    ->whereIn('value', $values);
+            });
+        }
+
+        return $query;
     }
 
     /**
@@ -497,6 +582,8 @@ class sFilter
      *
      * @param sAttribute $item       The attribute model (price_range).
      * @return sAttribute
+     *
+     * @since 1.2.1 Uses the shared attribute-query filtering semantics, including unchecked checkboxes.
      */
     protected function buildPriceRangeFilter(sAttribute $item, $category): sAttribute
     {
@@ -513,6 +600,7 @@ class sFilter
 
         $filtersIds = $this->getValidatedFiltersIds();
         unset($filtersIds['priceRange']);
+        $this->applyAttributeFilters($query, $filtersIds);
 
         if (!empty($filtersIds)) {
             foreach ($filtersIds as $filter => $values) {
@@ -632,6 +720,8 @@ class sFilter
      *
      * @param array $path The known path to the category (e.g., 'catalog/bicycles').
      * @return array An associative array of filters where keys are filter names and values are their respective values.
+     *
+     * @since 1.2.1 Preserves zero values so unchecked checkbox filters can be represented in URLs.
      */
     protected function extractFilters(array $path): array
     {
@@ -646,7 +736,7 @@ class sFilter
 
         foreach ($filterPairs as $filterPair) {
             [$key, $value] = array_pad(explode('=', $filterPair, 2), 2, null);
-            if ($key && $value) {
+            if ($key !== null && $key !== '' && $value !== null && $value !== '') {
                 $filters[$key] = explode(',', $value);
             }
         }
@@ -659,9 +749,12 @@ class sFilter
      *
      * @param array $path
      * @param array $requestedFilters
+     * @param bool $filterableOnly Whether attributes must be exposed as storefront filters.
      * @return array
+     *
+     * @since 1.2.1 Supports checkbox values `0` (unchecked) and `1` (checked).
      */
-    protected function validateFiltersStructure(array $path, array $requestedFilters): array
+    protected function validateFiltersStructure(array $path, array $requestedFilters, bool $filterableOnly = true): array
     {
         $filters = [];
         $filtersIds = [];
@@ -679,10 +772,15 @@ class sFilter
 
             $categoryParentsIds = $this->controller->categoryParentsIds($category);
 
-            // Retrieve attributes that belong to these categories and are marked as filters
-            $attributes = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {
+            $attributesQuery = sAttribute::whereHas('categories', function ($q) use ($categoryParentsIds) {
                 $q->whereIn('category', $categoryParentsIds);
-            })->where('asfilter', 1)->get();
+            });
+
+            if ($filterableOnly) {
+                $attributesQuery->where('asfilter', 1);
+            }
+
+            $attributes = $attributesQuery->get();
 
             foreach ($requestedFilters as $filterName => $filterValues) {
                 $attribute = $attributes->where('alias', $filterName)->first();
@@ -695,7 +793,15 @@ class sFilter
                 $values = $attribute->values;
 
                 foreach ($filterValues as $filterValue) {
-                    if ($attribute->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
+                    if ($attribute->type == sAttribute::TYPE_ATTR_CHECKBOX) {
+                        $val = filter_var($filterValue, FILTER_VALIDATE_INT);
+                        if ($val === false || !in_array($val, [0, 1], true)) {
+                            continue;
+                        }
+
+                        $newValues[] = $val;
+                        $newValuesIds[] = $val;
+                    } elseif ($attribute->type == sAttribute::TYPE_ATTR_PRICE_RANGE) {
                         $val = (int)filter_var($filterValue, FILTER_VALIDATE_INT, [
                             'options' => ['min_range' => 0, 'max_range' => 999999999]
                         ]);
