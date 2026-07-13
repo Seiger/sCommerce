@@ -259,7 +259,7 @@ class sCommerce
         if (!$this->currencies) {
             $this->currencies = Cache::remember('currencies', 2629743, function () {
                 $reflector = new \ReflectionClass(self::class);
-                $list = include_once str_replace('src/sCommerce.php', 'config/currencies.php', $reflector->getFileName());
+                $list = include dirname($reflector->getFileName(), 2) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'currencies.php';
                 return $list->map(function ($item) {
                     if ($this->config('currencies.'.$item['alpha'])) {
                         $item = array_merge($item, $this->config('currencies.'.$item['alpha']));
