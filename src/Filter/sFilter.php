@@ -602,17 +602,6 @@ class sFilter
         unset($filtersIds['priceRange']);
         $this->applyAttributeFilters($query, $filtersIds);
 
-        if (!empty($filtersIds)) {
-            foreach ($filtersIds as $filter => $values) {
-                $query->whereIn('product', function ($q) use ($filter, $values) {
-                    $q->select(['product'])
-                        ->from('s_product_attribute_values')
-                        ->where('attribute', $filter)
-                        ->whereIn('value', $values);
-                });
-            }
-        }
-
         $nonPriceProductIds = $query->pluck('product')->toArray();
 
         if (empty($nonPriceProductIds)) {

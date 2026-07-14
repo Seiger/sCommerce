@@ -617,6 +617,8 @@ class sCommerceController
      *                            Defaults to 10.
      *
      * @return array An array of product IDs related to the specified category and its subcategories.
+     *
+     * @since 1.2.0 Supports unchecked checkbox filters through the shared sFilter query logic.
      */
     public function productIds(?int $category = null, int $dept = 10): array
     {
@@ -641,26 +643,20 @@ class sCommerceController
             $query->whereIn('product', $correctingProductIds);
         }
 
-        if (is_array($filters) && count($filters)) {
-            foreach ($filters as $filter => $values) {
-                $query->whereIn('product', function ($q) use ($filter, $values) {
-                    if ($filter == 'priceRange') {
-                        $q->select(['id'])
-                            ->from('s_products')
-                            ->where('published', 1)
-                            ->whereRaw(
-                                '(CASE WHEN price_special > 0 AND price_special < price_regular THEN price_special ELSE price_regular END) BETWEEN ? AND ?',
-                                [(float) ($values[0] ?? 0), (float) ($values[1] ?? 999999999)]
-                            );
-                    } else {
-                        $q->select(['product'])
-                            ->from('s_product_attribute_values')
-                            ->where('attribute', $filter)
-                            ->whereIn('value', $values);
-                    }
-                });
-            }
+        if (isset($filters['priceRange'])) {
+            $values = $filters['priceRange'];
+            $query->whereIn('product', function ($subQuery) use ($values) {
+                $subQuery->select(['id'])
+                    ->from('s_products')
+                    ->where('published', 1)
+                    ->whereRaw(
+                        '(CASE WHEN price_special > 0 AND price_special < price_regular THEN price_special ELSE price_regular END) BETWEEN ? AND ?',
+                        [(float)($values[0] ?? 0), (float)($values[1] ?? 999999999)]
+                    );
+            });
         }
+
+        sFilter::applyAttributeFilters($query, $filters);
 
         $foundIds = $query->get()->pluck('product')->toArray();
         self::$staticProductIdsCache[$cacheKey] = $foundIds;
