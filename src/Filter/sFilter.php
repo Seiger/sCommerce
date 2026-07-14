@@ -280,7 +280,7 @@ class sFilter
      * @param int|null $categoryId Optional category context.
      * @return void
      *
-     * @since 1.2.0 Supports trusted programmatic filters for attributes that are not exposed as storefront filters.
+     * @since 1.2.1 Supports trusted programmatic filters for attributes that are not exposed as storefront filters.
      */
     public static function force(array $filters, ?int $categoryId = null): void
     {
@@ -374,7 +374,7 @@ class sFilter
      * @param array<int|string, array<int|string>> $filters Validated filters keyed by attribute ID.
      * @return Builder
      *
-     * @since 1.2.0
+     * @since 1.2.1
      */
     public function applyAttributeFilters(Builder $query, array $filters): Builder
     {
@@ -583,7 +583,7 @@ class sFilter
      * @param sAttribute $item       The attribute model (price_range).
      * @return sAttribute
      *
-     * @since 1.2.0 Uses the shared attribute-query filtering semantics, including unchecked checkboxes.
+     * @since 1.2.1 Uses the shared attribute-query filtering semantics, including unchecked checkboxes.
      */
     protected function buildPriceRangeFilter(sAttribute $item, $category): sAttribute
     {
@@ -710,7 +710,7 @@ class sFilter
      * @param array $path The known path to the category (e.g., 'catalog/bicycles').
      * @return array An associative array of filters where keys are filter names and values are their respective values.
      *
-     * @since 1.2.0 Preserves zero values so unchecked checkbox filters can be represented in URLs.
+     * @since 1.2.1 Preserves zero values so unchecked checkbox filters can be represented in URLs.
      */
     protected function extractFilters(array $path): array
     {
@@ -741,7 +741,7 @@ class sFilter
      * @param bool $filterableOnly Whether attributes must be exposed as storefront filters.
      * @return array
      *
-     * @since 1.2.0 Supports checkbox values `0` (unchecked) and `1` (checked).
+     * @since 1.2.1 Supports checkbox values `0` (unchecked) and `1` (checked).
      */
     protected function validateFiltersStructure(array $path, array $requestedFilters, bool $filterableOnly = true): array
     {
