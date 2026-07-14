@@ -229,7 +229,7 @@ class sCommerceServiceProvider extends ServiceProvider
                 }
             }
         }
-        $lang = include_once dirname(__DIR__) . '/lang/' . $lang . '/global.php';
+        $lang = include dirname(__DIR__) . '/lang/' . $lang . '/global.php';
         $this->app->registerModule($lang['title'], dirname(__DIR__) . '/module/sCommerceModule.php', $lang['icon']);
     }
 }
