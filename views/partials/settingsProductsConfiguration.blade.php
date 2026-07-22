@@ -1,5 +1,4 @@
 @php use Seiger\sCommerce\Models\sAttribute; @endphp
-<h3>@lang('sCommerce::global.representation_products_fields')</h3>
 <div class="row form-row">
     <div class="col-auto">
         <label for="products__show_field_id" class="warning">ID</label>
@@ -197,4 +196,3 @@
         </div>
     </div>
 @endif
-<div class="split my-3"></div>

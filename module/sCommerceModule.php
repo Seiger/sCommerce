@@ -104,7 +104,7 @@ $tabs[] = 'dashboard';
 if (sCommerce::config('basic.orders_on', 1) == 1) {
     $tabs[] = 'orders';
 }
-$tabs = array_merge($tabs, ['products', 'reviews', 'attributes']);
+$tabs = array_merge($tabs, ['products', 'attributes', 'reviews']);
 if (sCommerce::config('basic.integrations_on', 1) == 1) {
     $tabs[] = 'integrations';
 }

@@ -1,5 +1,4 @@
 @php use Seiger\sCommerce\Models\sProduct; @endphp
-<h3>@lang('sCommerce::global.management_product_functionality')</h3>
 <div class="row form-row">
     <div class="col-auto">
         <label for="product__link_rule" class="warning">@lang('sCommerce::global.product_link')</label>
@@ -199,4 +198,3 @@
         <input type="hidden" id="product__visual_editor_introtext" name="product__visual_editor_introtext" value="{{sCommerce::config('product.visual_editor_introtext', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
-<div class="split my-3"></div>

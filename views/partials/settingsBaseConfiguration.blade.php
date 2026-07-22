@@ -1,4 +1,3 @@
-<h3>@lang('sCommerce::global.management_base_functionality')</h3>
 @if (evo()->getConfig('check_sMultisite', false))
     @foreach(Seiger\sMultisite\Models\sMultisite::all() as $domain)
         <div class="row form-row">
@@ -79,7 +78,7 @@
         <label for="basic__main_menu_order">@lang('sCommerce::global.main_menu_order')</label>
         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.main_menu_order_help')"></i>
     </div>
-    <div class="input-group col col-4 col-md-3 col-lg-2">
+    <div class="input-group col col-4 col-md-3 col-lg-2 scommerce-menu-order-control">
         <div class="input-group-prepend">
             <span class="btn btn-secondary" onclick="let elm = document.form.basic__main_menu_order;let v=parseInt(elm.value+'')-1;elm.value=v>0? v:0;elm.focus();documentDirty=true;return false;" style="cursor: pointer;"><i class="fa fa-angle-left"></i></span>
             <span class="btn btn-secondary" onclick="let elm = document.form.basic__main_menu_order;let v=parseInt(elm.value+'')+1;elm.value=v>0? v:0;elm.focus();documentDirty=true;return false;" style="cursor: pointer;"><i class="fa fa-angle-right"></i></span>
@@ -151,4 +150,3 @@
     </div>
 </div>
 <input type="hidden" id="basic__friendlyUrlSuffix" name="basic__friendlyUrlSuffix" value="{{evo()->getConfig('friendly_urls', false) && trim(evo()->getConfig('friendly_url_suffix', '')) ? evo()->getConfig('friendly_url_suffix', '') : ''}}">
-<div class="split my-3"></div>

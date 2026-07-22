@@ -1,11 +1,3 @@
-<h3 class="sectionTrans">
-    @lang('sCommerce::global.currency_price_configuration')
-    <div class="btn-group">
-        <span class="btn btn-primary" onclick="addCurrencyItem('available_currencies')">
-            <i class="fa fa-plus"></i> <span>@lang('sCommerce::global.add')</span>
-        </span>
-    </div>
-</h3>
 <div class="row form-row">
     <div class="col-auto">
         <label for="basic__main_currency">@lang('sCommerce::global.main_currency')</label>
@@ -25,7 +17,7 @@
         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.available_currencies_help')"></i>
     </div>
     <div class="col">
-        <div class="col col-12 col-sm-12 col-md-6">
+        <div class="col-12">
             <div id="available_currencies" class="row form-row widgets sortable">
                 @foreach(sCommerce::config('basic.available_currencies', []) as $cur)
                     @include('sCommerce::partials.settingsCurrencyItem', sCommerce::getCurrencies([$cur])->first())
@@ -34,8 +26,6 @@
         </div>
     </div>
 </div>
-<div class="split my-3"></div>
-
 @push('scripts.bot')
     <div class="draft-currencies hidden">
         <select name="select_available_currencies" class="form-control niceSelect2SearchCurrencies">
