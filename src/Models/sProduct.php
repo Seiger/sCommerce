@@ -50,6 +50,21 @@ class sProduct extends Model
     protected static array $visibleCategoryUrlCache = [];
 
     /**
+     * Active dynamic price amounts keyed by price-type code.
+     *
+     * @var array<string, array{amount: float, currency: string}|null>
+     */
+    protected array $activePricingPriceCache = [];
+
+    /**
+     * Request-scoped effective storefront pricing applied after a cached
+     * product collection has been restored.
+     *
+     * @var array{currency: string, price: float, old_price: float}|null
+     */
+    protected ?array $resolvedPricing = null;
+
+    /**
      * The accessors to append to the model's array form.
      *
      * @var array
@@ -656,6 +671,25 @@ class sProduct extends Model
      */
     public function priceToNumber($currency, string $priceMode = 'auto'): float
     {
+        if ($priceMode === 'auto') {
+            $resolved = $this->resolvedPricingValue((string)$currency, 'price');
+            if ($resolved !== null) {
+                return $resolved;
+            }
+        }
+
+        return $this->legacyPriceToNumber($currency, $priceMode);
+    }
+
+    /**
+     * Return the historical sCommerce price without a storefront override.
+     *
+     * @param string $currency The desired currency to convert to.
+     * @param string $priceMode The historical price mode.
+     * @return float
+     */
+    public function legacyPriceToNumber($currency, string $priceMode = 'auto'): float
+    {
         [$regularPrice, $specialPrice] = $this->getPricePair($priceMode);
         $price = $specialPrice > 0 && $specialPrice < $regularPrice ? $specialPrice : $regularPrice;
         return sCommerce::convertPriceNumber($price, $this->currency, $currency);
@@ -696,6 +730,81 @@ class sProduct extends Model
     public function specialPriceToNumber($currency): float
     {
         return sCommerce::convertPriceNumber($this->price_special, $this->currency, $currency);
+    }
+
+    /**
+     * Return an active sPricing amount for a system price type, when sPricing
+     * is installed. A missing dynamic value deliberately returns null so the
+     * caller can retain the legacy product-field fallback.
+     *
+     * @param string $currency The desired currency to convert to.
+     * @param string $priceTypeCode The dynamic price-type code.
+     * @return float|null
+     */
+    public function activePricingPriceToNumber(string $currency, string $priceTypeCode): ?float
+    {
+        $price = $this->activePricingPrice($priceTypeCode);
+
+        return $price === null
+            ? null
+            : sCommerce::convertPriceNumber($price['amount'], $price['currency'], $currency);
+    }
+
+    /**
+     * Format an active sPricing amount for a system price type.
+     *
+     * @param string $currency The desired currency to convert to.
+     * @param string $priceTypeCode The dynamic price-type code.
+     * @return string|null
+     */
+    public function activePricingPriceTo(string $currency, string $priceTypeCode): ?string
+    {
+        $price = $this->activePricingPriceToNumber($currency, $priceTypeCode);
+
+        return $price === null ? null : $this->formatPriceValue($price, $currency);
+    }
+
+    /**
+     * Resolve one currently active sPricing row for the product and type.
+     *
+     * The optional package is referenced dynamically so sCommerce continues
+     * to work independently when sPricing is not installed.
+     *
+     * @param string $priceTypeCode The dynamic price-type code.
+     * @return array{amount: float, currency: string}|null
+     */
+    protected function activePricingPrice(string $priceTypeCode): ?array
+    {
+        if (array_key_exists($priceTypeCode, $this->activePricingPriceCache)) {
+            return $this->activePricingPriceCache[$priceTypeCode];
+        }
+
+        $productPriceModel = 'Seiger\\sPricing\\Models\\ProductPrice';
+        if (!class_exists($productPriceModel)) {
+            return $this->activePricingPriceCache[$priceTypeCode] = null;
+        }
+
+        $now = now();
+        $price = $productPriceModel::query()
+            ->where('product_id', $this->id)
+            ->where('is_active', true)
+            ->where(fn (Builder $query) => $query->whereNull('valid_from')->orWhere('valid_from', '<=', $now))
+            ->where(fn (Builder $query) => $query->whereNull('valid_to')->orWhere('valid_to', '>=', $now))
+            ->whereHas('priceType', fn (Builder $query) => $query
+                ->where('code', $priceTypeCode)
+                ->where('is_active', true))
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($price === null) {
+            return $this->activePricingPriceCache[$priceTypeCode] = null;
+        }
+
+        return $this->activePricingPriceCache[$priceTypeCode] = [
+            'amount' => (float)$price->amount,
+            'currency' => (string)$price->currency,
+        ];
     }
 
     /**
@@ -749,9 +858,67 @@ class sProduct extends Model
      */
     public function oldPriceToNumber($currency, string $priceMode = 'auto'): float
     {
+        if ($priceMode === 'auto') {
+            $resolved = $this->resolvedPricingValue((string)$currency, 'old_price');
+            if ($resolved !== null) {
+                return $resolved;
+            }
+        }
+
+        return $this->legacyOldPriceToNumber($currency, $priceMode);
+    }
+
+    /**
+     * Return the historical sCommerce old price without a storefront override.
+     *
+     * @param string $currency The desired currency to convert to.
+     * @param string $priceMode The historical price mode.
+     * @return float
+     */
+    public function legacyOldPriceToNumber($currency, string $priceMode = 'auto'): float
+    {
         [$regularPrice, $specialPrice] = $this->getPricePair($priceMode);
         $oldPrice = $specialPrice > 0 && $specialPrice < $regularPrice ? $regularPrice : $specialPrice;
         return sCommerce::convertPriceNumber($oldPrice, $this->currency, $currency);
+    }
+
+    /**
+     * Apply a request-scoped effective price without persisting it to the
+     * product model. This keeps shared catalogue cache entries user-neutral.
+     *
+     * @param array{priceAsFloat: float|int, oldPriceAsFloat: float|int} $pricing
+     * @param string $currency Currency used by the resolved amounts.
+     * @return $this
+     */
+    public function applyResolvedPricing(array $pricing, string $currency): static
+    {
+        $this->resolvedPricing = [
+            'currency' => strtoupper($currency),
+            'price' => (float)$pricing['priceAsFloat'],
+            'old_price' => max(0, (float)$pricing['oldPriceAsFloat']),
+        ];
+
+        return $this;
+    }
+
+    /**
+     * Resolve one request-scoped pricing component in the requested currency.
+     *
+     * @param string $currency The desired currency to convert to.
+     * @param 'price'|'old_price' $field The effective pricing component.
+     * @return float|null
+     */
+    protected function resolvedPricingValue(string $currency, string $field): ?float
+    {
+        if ($this->resolvedPricing === null) {
+            return null;
+        }
+
+        return sCommerce::convertPriceNumber(
+            $this->resolvedPricing[$field],
+            $this->resolvedPricing['currency'],
+            strtoupper($currency),
+        );
     }
 
     /**

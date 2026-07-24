@@ -190,20 +190,22 @@
                     <a href="{{$item->link}}" target="_blank"><b>{{$item->pagetitle ?? __('sCommerce::global.no_text')}}</b></a>
                 </td>
                 @if (sCommerce::config('products.show_field_price', 1) && sCommerce::config('product.show_field_price', 1))
+                    @php($price = $item->activePricingPriceTo($item->currency, 'price'))
                     <td>
                         @if(sCommerce::config('basic.price_symbol', 1))
-                            {{$item->priceTo($item->currency)}}
+                            {{$price ?? $item->priceTo($item->currency)}}
                         @else
-                            {{sCommerce::getCurrencies([$item->currency])->first()['symbol']}}{{$item->priceTo($item->currency)}}
+                            {{sCommerce::getCurrencies([$item->currency])->first()['symbol']}}{{$price ?? $item->priceTo($item->currency)}}
                         @endif
                     </td>
                 @endif
                 @if (sCommerce::config('products.show_field_price_special', 1) && sCommerce::config('product.show_field_price_special', 1))
+                    @php($specialPrice = $item->activePricingPriceTo($item->currency, 'price_special'))
                     <td>
                         @if(sCommerce::config('basic.price_symbol', 1))
-                            {{$item->specialPriceTo($item->currency)}}
+                            {{$specialPrice ?? $item->specialPriceTo($item->currency)}}
                         @else
-                            {{sCommerce::getCurrencies([$item->currency])->first()['symbol']}}{{$item->specialPriceTo($item->currency)}}
+                            {{sCommerce::getCurrencies([$item->currency])->first()['symbol']}}{{$specialPrice ?? $item->specialPriceTo($item->currency)}}
                         @endif
                     </td>
                 @endif

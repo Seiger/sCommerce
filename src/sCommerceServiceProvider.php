@@ -5,6 +5,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Seiger\sCommerce\Cart\sCart;
 use Seiger\sCommerce\Checkout\sCheckout;
 use Seiger\sCommerce\Filter\sFilter;
+use Seiger\sCommerce\Services\sPriceResolver;
 use Seiger\sCommerce\Wishlist\sWishlist;
 
 /**
@@ -56,6 +57,10 @@ class sCommerceServiceProvider extends ServiceProvider
         // Register sCommerce class as a singleton
         $this->app->singleton(sCommerce::class);
         $this->app->alias(sCommerce::class, 'sCommerce');
+
+        // One shared resolver keeps catalogue, cart, checkout, and optional
+        // pricing-package integrations on the same price contract.
+        $this->app->singleton(sPriceResolver::class);
 
         // Register the sFilter class as a singleton
         $this->app->singleton(sFilter::class);

@@ -12,6 +12,7 @@ use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 use Seiger\sCommerce\Models\sDeliveryMethod;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
+use Seiger\sCommerce\Services\sPriceResolver;
 use View;
 
 /**
@@ -925,56 +926,8 @@ class sCheckout
 
     private static function resolveProductPricing(object $product, int $optionId = 0): array
     {
-        $currency = sCommerce::currentCurrency();
         $priceMode = static::resolveProductPriceMode($product, $optionId);
-        $pricing = [
-            'priceMode' => $priceMode,
-            'price' => $product->priceTo($currency, $priceMode),
-            'priceAsFloat' => $product->priceToNumber($currency, $priceMode),
-            'oldPrice' => $product->oldPriceTo($currency, $priceMode),
-            'oldPriceAsFloat' => $product->oldPriceToNumber($currency, $priceMode),
-        ];
-
-        foreach (Event::dispatch('evolution.sCommerceResolveProductPrice', [[
-            'product' => $product,
-            'optionId' => $optionId,
-            'priceMode' => $priceMode,
-            'currency' => $currency,
-            'pricing' => $pricing,
-        ]]) as $override) {
-            if (is_numeric($override)) {
-                $pricing['priceAsFloat'] = (float)$override;
-                $pricing['price'] = sCommerce::convertPrice($pricing['priceAsFloat']);
-                $pricing['oldPrice'] = '';
-                $pricing['oldPriceAsFloat'] = 0;
-                break;
-            }
-
-            if (is_array($override)) {
-                $pricing = array_replace($pricing, array_intersect_key($override, $pricing));
-                $pricing['priceAsFloat'] = (float)($pricing['priceAsFloat'] ?? 0);
-                $pricing['oldPriceAsFloat'] = (float)($pricing['oldPriceAsFloat'] ?? 0);
-
-                if (!isset($override['price'])) {
-                    $pricing['price'] = sCommerce::convertPrice($pricing['priceAsFloat']);
-                }
-
-                if (!isset($override['oldPrice'])) {
-                    $pricing['oldPrice'] = $pricing['oldPriceAsFloat'] > 0
-                        ? sCommerce::convertPrice($pricing['oldPriceAsFloat'])
-                        : '';
-                }
-
-                $pricing['priceMode'] = static::normalizePriceMode((string)($pricing['priceMode'] ?? $priceMode));
-                break;
-            }
-        }
-
-        if ($pricing['priceMode'] === 'auto') {
-            unset($pricing['priceMode']);
-        }
-
-        return $pricing;
+        return app(sPriceResolver::class)->resolve($product, sCommerce::currentCurrency(), $priceMode, $optionId);
     }
 
     private static function resolveProductPriceMode(object $product, int $optionId = 0): string

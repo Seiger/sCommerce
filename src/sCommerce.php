@@ -18,6 +18,7 @@ use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
+use Seiger\sCommerce\Services\sPriceResolver;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 use View;
 
@@ -211,6 +212,34 @@ class sCommerce
         $category = $this->getCategoryId($category);
         $productIds = $this->controller->productIds($category, $dept);
         return $this->getProducts($productIds, $lang, $perPage);
+    }
+
+    /**
+     * Resolve effective storefront pricing through optional package listeners.
+     *
+     * sCommerce always provides a legacy price pair. Optional packages, such
+     * as sPricing, may override that pair without becoming a dependency of
+     * this package.
+     *
+     * @param sProduct $product Product whose storefront price is requested.
+     * @param string|null $currency Requested display currency.
+     * @return array{priceAsFloat: float, oldPriceAsFloat: float}
+     */
+    public function resolveProductPricing(object $product, ?string $currency = null): array
+    {
+        return app(sPriceResolver::class)->resolve($product, $currency);
+    }
+
+    /**
+     * Apply request-scoped effective prices to cached product objects.
+     *
+     * @param mixed $value A product, collection, paginator, or nested array.
+     * @param string|null $currency Requested display currency.
+     * @return void
+     */
+    public function hydrateProductPricing(mixed $value, ?string $currency = null): void
+    {
+        app(sPriceResolver::class)->hydrate($value, $currency);
     }
 
     /**
