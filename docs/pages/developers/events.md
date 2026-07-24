@@ -38,7 +38,14 @@ Event::listen('evolution.sCommerceAfterProductDuplicate', function($params) {
 
 ## Cart pricing
 
-By default, sCommerce uses the historical retail price resolver:
+`sPriceResolver` is the single price-resolution point for the product model,
+storefront, cart, and checkout. When `sPricing` is installed, it receives the
+current-user context and may return an applicable personal or cumulative price.
+Cached page data remains user-neutral; the contextual price is applied during
+the request, so shared cache data cannot expose one customer's price to another.
+
+When `sPricing` is unavailable or has no applicable price, sCommerce uses the
+historical retail price resolver:
 
 - `price_special` is used when it is greater than `0` and lower than `price_regular`;
 - otherwise `price_regular` is used.
