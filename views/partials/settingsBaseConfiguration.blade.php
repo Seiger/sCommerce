@@ -14,9 +14,9 @@
                         @php($parentlookup = sCommerce::config('basic.catalog_root'.$domain->key, $domain->site_start))
                     @endif
                     @if($parentlookup !== false && is_numeric($parentlookup))
-                        @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
+                        @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)?->pagetitle)
                         @if(!$parentname)
-                            @php(evo()->webAlertAndQuit($_lang["error_no_parent"]))
+                            @php(app('config')->set('seiger.settings.sCommerce.basic.catalog_root'.$domain->key, $domain->site_start))
                         @endif
                     @endif
                     <i id="plockcat{{$domain->key}}" class="fa fa-folder" onclick="enableCatalogRootSelection(this, !allowParentSelection, '{{$domain->key}}');"></i>
@@ -41,9 +41,9 @@
                     @php($parentlookup = sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))
                 @endif
                 @if($parentlookup !== false && is_numeric($parentlookup))
-                    @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)->pagetitle)
+                    @php($parentname = \EvolutionCMS\Models\SiteContent::withTrashed()->select('pagetitle')->find($parentlookup)?->pagetitle)
                     @if(!$parentname)
-                        @php(evo()->webAlertAndQuit($_lang["error_no_parent"]))
+                        @php(app('config')->set('seiger.settings.sCommerce.basic.catalog_root', evo()->getConfig('site_start', 1)))
                     @endif
                 @endif
                 <i id="plockcat" class="fa fa-folder" onclick="enableCatalogRootSelection(this, !allowParentSelection, '');"></i>
