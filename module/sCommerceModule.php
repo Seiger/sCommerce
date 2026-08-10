@@ -1183,16 +1183,18 @@ switch ($get) {
                 $array = $text->toArray();
                 unset($array['tid'], $array['product']);
                 $array['pagetitle'] = $array['pagetitle'] . ' - Duplicate';
-                $newProduct->texts()->create($array);
-                $newProduct->texts()->update($array);
+                $newText = $newProduct->texts()->create([
+                    'lang' => $array['lang'],
+                ]);
+                $newProduct->texts()->whereKey($newText->tid)->update($array);
             }
 
             // Images
-            $galleryDirectory = MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id;
+            $galleryDirectory = EVO_BASE_PATH . 'assets/sgallery/product/' . $product->id;
             if (is_dir($galleryDirectory)) {
                 $sCommerceController->copyDirRecursive(
                     $galleryDirectory,
-                    MODX_BASE_PATH . 'assets/sgallery/product/' . $newProduct->id,
+                    EVO_BASE_PATH . 'assets/sgallery/product/' . $newProduct->id,
                 );
 
                 $galleries = sGallery::collections()->documentId($product->id)->itemType('product')->get();
@@ -1244,9 +1246,9 @@ switch ($get) {
             $_SESSION['itemaction'] = 'Deleting Product';
             $_SESSION['itemname'] = $product->title;
 
-            $galleryDirectory = MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id;
+            $galleryDirectory = EVO_BASE_PATH . 'assets/sgallery/product/' . $product->id;
             if (file_exists($galleryDirectory)) {
-                $sCommerceController->removeDirRecursive(MODX_BASE_PATH . 'assets/sgallery/product/' . $product->id);
+                $sCommerceController->removeDirRecursive(EVO_BASE_PATH . 'assets/sgallery/product/' . $product->id);
                 $galleries = sGallery::collections()->documentId($product->id)->itemType('product')->get();
                 if ($galleries->count()) {
                     foreach ($galleries as $gallery) {
@@ -1582,8 +1584,8 @@ switch ($get) {
         $requestLang = request()->input('lang');
         $contentField = '';
         $renders = [];
-        $fields = glob(MODX_BASE_PATH . 'assets/modules/scommerce/builder/*/config.php');
-        View::getFinder()->setPaths([MODX_BASE_PATH . 'assets/modules/scommerce/builder']);
+        $fields = glob(EVO_BASE_PATH . 'assets/modules/scommerce/builder/*/config.php');
+        View::getFinder()->setPaths([EVO_BASE_PATH . 'assets/modules/scommerce/builder']);
 
         if (count($fields)) {
             foreach ($fields as $field) {
