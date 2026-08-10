@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use ReflectionClass;
+use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sGallery\sGallery;
 
@@ -405,6 +406,31 @@ class sProduct extends Model
         return $this->belongsToMany(sAttribute::class, 's_product_attribute_values', 'product', 'attribute')
             ->withPivot('valueid', 'value')
             ->orderBy('position');
+    }
+
+    /**
+     * Retrieve attributes that are visible for this product's categories.
+     *
+     * @since 1.3.0
+     *
+     * @return \Illuminate\Support\Collection<int, sAttribute>
+     */
+    public function characteristics()
+    {
+        $controller = new sCommerceController();
+        $categoryIds = $this->categories
+            ->flatMap(fn(sCategory $category) => $controller->categoryParentsIds((int)$category->id))
+            ->unique()
+            ->values();
+
+        if ($categoryIds->isEmpty()) {
+            return collect();
+        }
+
+        return $this->attrValues()
+            ->active()
+            ->whereHas('categories', fn($query) => $query->whereIn('category', $categoryIds))
+            ->get();
     }
 
     /**
