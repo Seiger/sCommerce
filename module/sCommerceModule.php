@@ -283,6 +283,7 @@ switch ($get) {
                             'title' => $product->pagetitle ?? 'N/A',
                             'cover' => $product->cover_src,
                             'views' => (int) ($product->views ?? 0),
+                            'sku' => trim((string) $product->sku),
                             'count' => $productStats[$productId]['orders'] ?? 0,
                             'revenue' => $productStats[$productId]['revenue'] ?? 0,
                         ];
