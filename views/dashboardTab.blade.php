@@ -43,10 +43,11 @@
     .scom-dashboard__product-meta-icon { width:13px; height:13px; margin-right:2px; vertical-align:-2px; }
     .scom-dashboard__product-revenue { color:#475467; font-size:13px; font-weight:700; text-align:right; white-space:nowrap; }
     .scom-dashboard__chart-card { padding:0 20px 15px; }
-    .scom-dashboard__chart-head { align-items:flex-start; border-bottom:0; gap:48px; justify-content:flex-start; margin:0; padding:18px 0 10px; }
+    .scom-dashboard__chart-head { align-items:flex-start; border-bottom:0; gap:48px; justify-content:flex-start; margin:0; padding:18px 0 6px; }
     .scom-dashboard__chart-title { color:#1f2937; font-size:16px; font-weight:700; margin:0; }
+    .scom-dashboard__chart-subtitle { color:#98a2b3; font-size:11px; margin-top:29px; }
     .scom-dashboard__chart-content { align-items:flex-start; display:flex; flex:1; gap:26px; justify-content:space-between; min-width:0; }
-    .scom-dashboard__chart-metrics { display:grid; flex:1; grid-template-columns:repeat(4, minmax(110px, 1fr)); gap:18px; margin:0; max-width:720px; }
+    .scom-dashboard__chart-metrics { display:grid; flex:1; grid-template-columns:repeat(4, minmax(110px, 1fr)); gap:12px; margin:0; max-width:720px; }
     .scom-dashboard__chart-metric { color:#667085; font-size:11px; min-width:0; }
     .scom-dashboard__chart-metric strong { color:#344054; display:block; font-size:18px; line-height:1.2; margin:4px 0; }
     .scom-dashboard__chart-change { color:#98a2b3; display:block; font-size:11px; }
@@ -168,7 +169,7 @@
 
     <section class="scom-dashboard__card scom-dashboard__chart-card">
         <div class="scom-dashboard__card-head scom-dashboard__chart-head">
-            <div><h3 class="scom-dashboard__chart-title">@lang('sCommerce::global.sales_dynamics')</h3></div>
+            <div><h3 class="scom-dashboard__chart-title">@lang('sCommerce::global.sales_dynamics')</h3><div class="scom-dashboard__chart-subtitle">@lang('sCommerce::global.previous_period')</div></div>
             <div class="scom-dashboard__chart-content">
                 <div class="scom-dashboard__chart-metrics">
                     @foreach([
@@ -177,7 +178,7 @@
                         ['label' => __('sCommerce::global.average_check'), 'value' => sCommerce::convertPrice($averageOrder, sCommerce::currentCurrency()), 'change' => $dashboardChanges['average'], 'suffix' => '%'],
                         ['label' => __('sCommerce::global.paid_share'), 'value' => round($paidRate, 1) . '%', 'change' => $dashboardChanges['paid'], 'suffix' => ' в.п.'],
                     ] as $metric)
-                        <div class="scom-dashboard__chart-metric"><span>{{$metric['label']}}</span><strong>{{$metric['value']}}</strong>@if($metric['change'] !== null)<span @class(['scom-dashboard__chart-change', 'scom-dashboard__chart-change--positive' => $metric['change'] > 0, 'scom-dashboard__chart-change--negative' => $metric['change'] < 0])>{{($metric['change'] > 0 ? '+' : '') . $metric['change'] . $metric['suffix']}}</span>@endif<span class="scom-dashboard__chart-change">@lang('sCommerce::global.previous_period')</span></div>
+                        <div class="scom-dashboard__chart-metric"><span>{{$metric['label']}}</span><strong>{{$metric['value']}}</strong>@if($metric['change'] !== null)<span @class(['scom-dashboard__chart-change', 'scom-dashboard__chart-change--positive' => $metric['change'] > 0, 'scom-dashboard__chart-change--negative' => $metric['change'] < 0])>{{($metric['change'] > 0 ? '+' : '') . $metric['change'] . $metric['suffix']}}</span>@endif</div>
                     @endforeach
                 </div>
                 <div class="scom-dashboard__chart-actions">
@@ -199,8 +200,8 @@
         if (!canvas) return;
         new Chart(canvas.getContext('2d'), {
             type: 'line', data: { labels: salesData.map(item => item.label), datasets: [
-                { label: '@lang("sCommerce::global.revenue")', data: salesData.map(item => item.revenue), borderColor: '#1683f6', backgroundColor: 'rgba(22,131,246,.08)', borderWidth: 2.5, fill: true, pointRadius: context => context.raw > 0 ? 3 : 0, pointHoverRadius: context => context.raw > 0 ? 5 : 0, tension: 0, yAxisID: 'revenue' },
-                { label: '@lang("sCommerce::global.orders")', data: salesData.map(item => item.orders), borderColor: '#29af63', backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: context => context.raw > 0 ? 3 : 0, pointHoverRadius: context => context.raw > 0 ? 5 : 0, tension: 0, yAxisID: 'orders' }
+                { label: '@lang("sCommerce::global.revenue")', data: salesData.map(item => item.revenue), borderColor: '#1683f6', backgroundColor: 'rgba(22,131,246,.08)', borderWidth: 2.5, fill: true, pointRadius: context => context.raw > 0 ? 3 : 0, pointHoverRadius: context => context.raw > 0 ? 5 : 0, tension: 0.35, yAxisID: 'revenue' },
+                { label: '@lang("sCommerce::global.orders")', data: salesData.map(item => item.orders), borderColor: '#29af63', backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: context => context.raw > 0 ? 3 : 0, pointHoverRadius: context => context.raw > 0 ? 5 : 0, tension: 0.35, yAxisID: 'orders' }
             ]}, options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index', intersect:false}, plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: context => context.dataset.yAxisID === 'revenue' ? context.dataset.label + ': ' + context.parsed.y.toLocaleString() : context.dataset.label + ': ' + context.parsed.y } } }, scales:{ x:{ grid:{ color:'rgba(113,128,150,.10)' }, ticks:{ color:'#98a2b3', font:{size:10}, maxTicksLimit:16 } }, revenue:{ type:'linear', position:'left', beginAtZero:true, grid:{ color:'rgba(113,128,150,.13)' }, ticks:{ color:'#1683f6', font:{size:10} }, title:{ display:true, text:'@lang("sCommerce::global.revenue")', color:'#98a2b3', font:{size:11} } }, orders:{ type:'linear', position:'right', beginAtZero:true, grid:{ drawOnChartArea:false }, ticks:{ color:'#29af63', precision:0, font:{size:10} }, title:{ display:true, text:'@lang("sCommerce::global.orders")', color:'#98a2b3', font:{size:11} } } } }
         });
     });
