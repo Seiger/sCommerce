@@ -536,7 +536,13 @@ class sCommerce
      */
     public function moduleUrl(): string
     {
-        return 'index.php?a=112&id=' . md5(__('sCommerce::global.title'));
+        $url = 'index.php?a=112';
+
+        if (!empty($_SESSION['mgrValidated'])) {
+            $url .= '&_token=' . rawurlencode(csrf_token());
+        }
+
+        return $url . '&id=' . md5(__('sCommerce::global.title'));
     }
 
     /**
