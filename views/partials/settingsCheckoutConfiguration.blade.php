@@ -3,7 +3,7 @@
     .scommerce-checkout-settings-layout { display:grid; grid-template-columns:1fr; gap:18px; margin-bottom:18px; }
     .scommerce-checkout-settings-section { padding:18px; border:1px solid #dde3ea; background:#fff; box-shadow:0 4px 14px rgba(38,50,56,.05); }
     .scommerce-checkout-settings-title { display:flex; align-items:center; gap:8px; margin:0 0 14px; color:#1f2937; font-size:16px; font-weight:700; }
-    .scommerce-checkout-settings-title i { color:#036efe; }
+    .scommerce-checkout-settings-title .tabler-icon { color:#036efe; }
     .scommerce-checkout-settings-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 22px; }
     .scommerce-checkout-settings-field { min-width:0; }
     .scommerce-checkout-settings-field--wide { grid-column:1 / -1; }
@@ -26,7 +26,7 @@
 <div class="scommerce-checkout-settings-layout">
     <section class="scommerce-checkout-settings-section">
         <h4 class="scommerce-checkout-settings-title">
-            <i class="fa fa-shopping-cart"></i>
+            @svg('tabler-shopping-cart', 'tabler-icon')
             @lang('sCommerce::global.managing_cart_functionality')
         </h4>
         <div class="scommerce-checkout-settings-grid">
@@ -36,7 +36,7 @@
 
     <section class="scommerce-checkout-settings-section">
         <h4 class="scommerce-checkout-settings-title">
-            <i class="fa fa-file-text-o"></i>
+            @svg('tabler-file-text', 'tabler-icon')
             @lang('sCommerce::global.orders_settings')
         </h4>
         <div class="scommerce-checkout-settings-grid">

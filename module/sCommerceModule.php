@@ -200,44 +200,78 @@ switch ($get) {
 
         // Payment statistics
         $paidOrders = sOrder::where('payment_status', sOrder::PAYMENT_STATUS_PAID)->count();
-        $pendingOrders = sOrder::where('payment_status', sOrder::PAYMENT_STATUS_PENDING)->count();
+        $pendingOrders = sOrder::whereIn('payment_status', [
+            sOrder::PAYMENT_STATUS_PENDING,
+            sOrder::PAYMENT_STATUS_AWAITING_CONFIRMATION,
+            sOrder::PAYMENT_STATUS_AUTHORIZED,
+            sOrder::PAYMENT_STATUS_PENDING_VERIFICATION,
+        ])->count();
 
-        // Sales chart data (last 30 days)
+        // Sales chart data
+        $dashboardPeriod = (int) request()->input('dashboard_period', 30);
+        if (!in_array($dashboardPeriod, [7, 30, 90, 365], true)) {
+            $dashboardPeriod = 30;
+        }
+        $periodStart = now()->copy()->startOfDay()->subDays($dashboardPeriod - 1);
+        $previousPeriodStart = $periodStart->copy()->subDays($dashboardPeriod);
+        $previousPeriodEnd = $periodStart->copy()->subSecond();
+        $salesByDate = sOrder::selectRaw(
+            'DATE(created_at) as date, SUM(CASE WHEN payment_status = ? THEN cost ELSE 0 END) as revenue, COUNT(*) as orders',
+            [sOrder::PAYMENT_STATUS_PAID]
+        )
+            ->whereBetween('created_at', [$periodStart, now()])
+            ->groupBy('date')
+            ->get()
+            ->keyBy('date');
         $salesChartData = [];
-        for ($i = 29; $i >= 0; $i--) {
+        for ($i = $dashboardPeriod - 1; $i >= 0; $i--) {
             $date = now()->subDays($i);
-            $dayRevenue = sOrder::whereDate('created_at', $date)
-                ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
-                ->sum('cost');
-            $dayOrders = sOrder::whereDate('created_at', $date)->count();
+            $day = $salesByDate->get($date->format('Y-m-d'));
             $salesChartData[] = [
                 'date' => $date->format('Y-m-d'),
                 'label' => $date->format('d.m'),
-                'revenue' => (float)$dayRevenue,
-                'orders' => $dayOrders,
+                'revenue' => (float) ($day->revenue ?? 0),
+                'orders' => (int) ($day->orders ?? 0),
             ];
         }
+        $previousPeriodOrders = sOrder::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count();
+        $previousPeriodRevenue = sOrder::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])
+            ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
+            ->sum('cost');
+        $periodPaidOrders = sOrder::whereBetween('created_at', [$periodStart, now()])
+            ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
+            ->count();
+        $previousPeriodPaidOrders = sOrder::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])
+            ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
+            ->count();
 
         // Recent orders
-        $recentOrders = sOrder::orderBy('created_at', 'desc')->limit(10)->get();
+        $recentOrders = sOrder::orderBy('created_at', 'desc')->limit(7)->get();
 
-        // Top products (by order count) - simplified version
+        // Top products
         $topProductsData = [];
         try {
             $allOrders = sOrder::select('products')->get();
-            $productCounts = [];
+            $productStats = [];
             foreach ($allOrders as $order) {
                 if (is_array($order->products)) {
                     foreach ($order->products as $product) {
                         if (isset($product['id'])) {
-                            $productId = $product['id'];
-                            $productCounts[$productId] = ($productCounts[$productId] ?? 0) + 1;
+                            $productId = (int) $product['id'];
+                            $quantity = max(1, (int) ($product['quantity'] ?? 1));
+                            $price = isset($product['priceNumber']) && is_numeric($product['priceNumber'])
+                                ? (float) $product['priceNumber']
+                                : sCommerce::convertPriceNumber($product['price'] ?? 0, $order->currency, $order->currency);
+
+                            $productStats[$productId] = $productStats[$productId] ?? ['orders' => 0, 'revenue' => 0.0];
+                            $productStats[$productId]['orders'] += $quantity;
+                            $productStats[$productId]['revenue'] += $price * $quantity;
                         }
                     }
                 }
             }
-            arsort($productCounts);
-            $topProductIds = array_slice(array_keys($productCounts), 0, 5, true);
+            uasort($productStats, static fn(array $left, array $right) => $right['orders'] <=> $left['orders']);
+            $topProductIds = array_slice(array_keys($productStats), 0, 5);
 
             if (count($topProductIds) > 0) {
                 $topProducts = sProduct::whereIn('id', $topProductIds)->get()->keyBy('id');
@@ -247,7 +281,10 @@ switch ($get) {
                         $topProductsData[] = [
                             'id' => $product->id,
                             'title' => $product->pagetitle ?? 'N/A',
-                            'count' => $productCounts[$productId] ?? 0,
+                            'cover' => $product->cover_src,
+                            'views' => (int) ($product->views ?? 0),
+                            'count' => $productStats[$productId]['orders'] ?? 0,
+                            'revenue' => $productStats[$productId]['revenue'] ?? 0,
                         ];
                     }
                 }
@@ -272,6 +309,11 @@ switch ($get) {
         $data['paidOrders'] = $paidOrders;
         $data['pendingOrders'] = $pendingOrders;
         $data['salesChartData'] = $salesChartData;
+        $data['dashboardPeriod'] = $dashboardPeriod;
+        $data['previousPeriodOrders'] = $previousPeriodOrders;
+        $data['previousPeriodRevenue'] = $previousPeriodRevenue;
+        $data['periodPaidOrders'] = $periodPaidOrders;
+        $data['previousPeriodPaidOrders'] = $previousPeriodPaidOrders;
         $data['recentOrders'] = $recentOrders;
         $data['topProducts'] = $topProductsData ?? [];
         $data['unprocessedes'] = $unprocessedes;

@@ -3,7 +3,7 @@
     .scommerce-general-settings-layout { display:grid; grid-template-columns:1fr; gap:18px; margin-bottom:18px; }
     .scommerce-general-settings-section { min-width:0; padding:18px; border:1px solid #dde3ea; background:#fff; box-shadow:0 4px 14px rgba(38,50,56,.05); }
     .scommerce-general-settings-title { display:flex; align-items:center; gap:8px; margin:0 0 14px; color:#1f2937; font-size:16px; font-weight:700; }
-    .scommerce-general-settings-title > i { color:#036efe; }
+    .scommerce-general-settings-title > .tabler-icon { color:#036efe; }
     .scommerce-general-settings-title .btn-group { margin-left:auto; }
     .scommerce-general-settings-section .row.form-row { min-width:0; }
     .scommerce-general-settings-section .row.form-row > .col { min-width:0; }
@@ -19,7 +19,7 @@
 <div class="scommerce-general-settings-layout">
     <section class="scommerce-general-settings-section scommerce-general-settings-section--base">
         <h4 class="scommerce-general-settings-title">
-            <i class="fa fa-sliders"></i>
+            @svg('tabler-adjustments-horizontal', 'tabler-icon')
             @lang('sCommerce::global.management_base_functionality')
         </h4>
         @include('sCommerce::partials.settingsBaseConfiguration')
@@ -27,11 +27,11 @@
 
     <section class="scommerce-general-settings-section scommerce-general-settings-section--currency">
         <h4 class="scommerce-general-settings-title">
-            <i class="fa fa-money"></i>
+            @svg('tabler-cash-banknote', 'tabler-icon')
             @lang('sCommerce::global.currency_price_configuration')
             <span class="btn-group">
                 <button type="button" class="btn btn-primary" onclick="addCurrencyItem('available_currencies')">
-                    <i class="fa fa-plus"></i> <span>@lang('sCommerce::global.add')</span>
+                    @svg('tabler-plus', 'tabler-icon') <span>@lang('sCommerce::global.add')</span>
                 </button>
             </span>
         </h4>

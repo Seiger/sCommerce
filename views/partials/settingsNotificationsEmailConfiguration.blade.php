@@ -1,7 +1,7 @@
 @php
     $notificationGroups = [
         'administrator' => [
-            'icon' => 'fa-user-shield',
+            'icon' => 'tabler-user-cog',
             'title' => __('sCommerce::global.notifications_email_administrator'),
             'templates' => [
                 'admin_order' => __('sCommerce::global.notifications_email_template_admin_order'),
@@ -9,7 +9,7 @@
             ],
         ],
         'customer' => [
-            'icon' => 'fa-user',
+            'icon' => 'tabler-user-circle',
             'title' => __('sCommerce::global.notifications_email_customer'),
             'templates' => [
                 'customer_order' => __('sCommerce::global.notifications_email_template_customer_order'),
@@ -24,7 +24,7 @@
     .scommerce-email-settings-layout { display:grid; grid-template-columns:1fr; gap:18px; margin-bottom:18px; }
     .scommerce-email-settings-section { padding:18px; border:1px solid #dde3ea; background:#fff; box-shadow:0 4px 14px rgba(38,50,56,.05); }
     .scommerce-email-settings-title { display:flex; align-items:center; gap:8px; margin:0 0 14px; color:#1f2937; font-size:16px; font-weight:700; }
-    .scommerce-email-settings-title i { color:#036efe; }
+    .scommerce-email-settings-title .tabler-icon { color:#036efe; }
     .scommerce-email-settings-field { margin:0 0 14px; min-width:0; }
     .scommerce-email-settings-field:last-child { margin-bottom:0; }
     .scommerce-email-settings-field > label { display:flex; align-items:center; gap:6px; margin:0 0 6px; font-weight:700; color:#344054; }
@@ -49,7 +49,7 @@
     @foreach($notificationGroups as $groupKey => $group)
         <section class="scommerce-email-settings-section">
             <h4 class="scommerce-email-settings-title">
-                <i class="fa {{ $group['icon'] }}"></i>
+                @svg($group['icon'], 'tabler-icon')
                 {{ $group['title'] }}
             </h4>
 
