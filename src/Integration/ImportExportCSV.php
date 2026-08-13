@@ -304,7 +304,7 @@ class ImportExportCSV extends BaseWorker
                                     case 'price_regular':
                                     case 'price_special':
                                         if ((float)$p?->{$field} !== null && (float)$p?->{$field} > 0) {
-                                            $a[$field] = number_format((float)$p?->{$field}, 2, '.', '');
+                                            $a[$field] = number_format((float)$p?->{$field}, 3, '.', '');
                                         } else {
                                             $a[$field] = '';
                                         }
@@ -956,8 +956,8 @@ class ImportExportCSV extends BaseWorker
             $table->boolean('published')->default(1);
             $table->boolean('availability')->default(0);
             $table->integer('inventory')->default(0);
-            $table->decimal('price_regular', 10, 2)->default(0.00);
-            $table->decimal('price_special', 10, 2)->nullable();
+            $table->decimal('price_regular', 10, 3)->default(0.000);
+            $table->decimal('price_special', 10, 3)->nullable();
             $table->string('currency', 3)->default('UAH');
             $table->string('cover', 500)->nullable();
             $table->longText('gallery')->nullable();

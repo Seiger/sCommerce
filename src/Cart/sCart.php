@@ -170,9 +170,12 @@ class sCart
     }
 
     /**
-     * Get the total sum of items in the cart in current Currency.
+     * Get the cart items and totals in the current currency.
      *
-     * @return array The total sum  and items in the cart.
+     * Each item includes the numeric `sumAsFloat` and formatted `sum`
+     * calculated from its effective price and quantity.
+     *
+     * @return array{totalSum: float, totalSumFormatted: string, items: array<int, array<string, mixed>>}
      */
     public function getMiniCart(): array
     {
@@ -185,13 +188,19 @@ class sCart
             foreach ($this->cartData[$product->id] as $optionId => $cartItem) {
                 $quantity = $this->getCartItemQuantity($cartItem);
                 $pricing = $this->resolveProductPricing($product, (int)$optionId);
-                $items[] = array_merge($this->getProductFields($product, $pricing), compact('quantity'));
                 $price = (float)$pricing['priceAsFloat'];
-                $totalSum += $price * $quantity;
+                $lineSum = $price * $quantity;
+                $sumAsFloat = round($lineSum, 3);
+                $sum = sCommerce::convertPrice($sumAsFloat);
+                $items[] = array_merge(
+                    $this->getProductFields($product, $pricing),
+                    compact('quantity', 'sumAsFloat', 'sum')
+                );
+                $totalSum += $lineSum;
             }
         }
 
-        $cart['totalSum'] = round($totalSum, 2);
+        $cart['totalSum'] = round($totalSum, 3);
         $cart['totalSumFormatted'] = sCommerce::convertPrice($totalSum);
         $cart['items'] = $items;
 
