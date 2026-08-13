@@ -73,10 +73,10 @@ return new class extends Migration
             $table->integer('views')->unsigned()->default(0)->index()->comment('Count view the product');
             $table->integer('rating')->unsigned()->default(5)->index()->comment('Rating the product base on votes');
             $table->smallInteger('mode')->unsigned()->default(0)->comment('Type the product');
-            $table->decimal('price_regular', 10, 3)->unsigned()->default(0)->comment('The regular price of the product');
-            $table->decimal('price_special', 10, 3)->unsigned()->default(0)->comment('The special price of the product');
-            $table->decimal('price_opt_regular', 10, 3)->unsigned()->default(0)->comment('The wholesale price of the product');
-            $table->decimal('price_opt_special', 10, 3)->unsigned()->default(0)->comment('The special wholesale price of the product');
+            $table->decimal('price_regular', 9, 2)->unsigned()->default(0)->comment('The regular price of the product');
+            $table->decimal('price_special', 9, 2)->unsigned()->default(0)->comment('The special price of the product');
+            $table->decimal('price_opt_regular', 9, 2)->unsigned()->default(0)->comment('The wholesale price of the product');
+            $table->decimal('price_opt_special', 9, 2)->unsigned()->default(0)->comment('The special wholesale price of the product');
             $table->decimal('weight', 11, 4)->unsigned()->default(0)->comment('The weight of production is indicated if necessary for technical purposes');
             $table->decimal('width', 11, 4)->unsigned()->default(0)->comment('The width of production is indicated if necessary for technical purposes');
             $table->decimal('height', 11, 4)->unsigned()->default(0)->comment('The height of production is indicated if necessary for technical needs');
@@ -128,7 +128,7 @@ return new class extends Migration
             $table->string('sku')->index()->comment('Unique modification code');
             $table->jsonb('mods')->default(new Expression('(JSON_ARRAY())'))->comment('JSON object with modification attributes (e.g. size, color)');
             $table->jsonb('parameters')->default(new Expression('(JSON_ARRAY())'))->comment('JSON object with modification parameters (e.g. size, color)');
-            $table->decimal('price_modifier', 10, 3)->nullable()->comment('Price change (+/-) for modification');
+            $table->decimal('price_modifier', 9, 2)->nullable()->comment('Price change (+/-) for modification');
             $table->integer('inventory')->nullable()->comment('Quantity in stock (NULL if not applicable)');
             $table->timestamps();
         });

@@ -87,10 +87,10 @@ class sProduct extends Model
      */
     protected $casts = [
         'inventory' => 'integer',
-        'price_regular' => 'decimal:3',
-        'price_special' => 'decimal:3',
-        'price_opt_regular' => 'decimal:3',
-        'price_opt_special' => 'decimal:3',
+        'price_regular' => 'decimal:2',
+        'price_special' => 'decimal:2',
+        'price_opt_regular' => 'decimal:2',
+        'price_opt_special' => 'decimal:2',
         'weight' => 'decimal:4',
         'width' => 'decimal:4',
         'height' => 'decimal:4',
