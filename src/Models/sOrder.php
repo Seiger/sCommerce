@@ -155,6 +155,16 @@ class sOrder extends Model
 
         return $query->where(function ($q) use ($raw) {
             $digits = OrderReferenceFormatter::extractTrailingDigits($raw);
+            $phoneDigits = preg_replace('/\D+/', '', $raw);
+
+            $date = \DateTimeImmutable::createFromFormat('!d.m.Y', $raw) ?: \DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
+            if ($date !== false) {
+                $q->orWhereDate('created_at', $date->format('Y-m-d'));
+            }
+
+            if (preg_match('/^\d+(?:[.,]\d{1,2})?$/', $raw)) {
+                $q->orWhere('cost', (float) str_replace(',', '.', $raw));
+            }
 
             if (ctype_digit($raw)) {
                 $num = (int)$raw;
@@ -169,9 +179,22 @@ class sOrder extends Model
                 ->orWhere('identifier', 'like', '%' . $raw . '%')
                 ->orWhere('uuid', 'like', '%' . $raw . '%')
                 ->orWhere('comment', 'like', '%' . $raw . '%')
-                ->orWhere('user_info', 'like', '%' . $raw . '%')
                 ->orWhere('delivery_info', 'like', '%' . $raw . '%')
                 ->orWhere('payment_info', 'like', '%' . $raw . '%');
+
+            $q->orWhereRaw(
+                "CONCAT_WS(' ', JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.first_name')), JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.middle_name')), JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.last_name'))) LIKE ?",
+                ['%' . $raw . '%']
+            );
+
+            if ($phoneDigits !== '') {
+                $q->orWhereRaw(
+                    "REPLACE(REPLACE(REPLACE(REPLACE(JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.phone')), ' ', ''), '(', ''), ')', ''), '-', '') LIKE ?",
+                    ['%' . $phoneDigits . '%']
+                );
+            }
+
+            $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.email')) LIKE ?", ['%' . $raw . '%']);
         });
     }
 

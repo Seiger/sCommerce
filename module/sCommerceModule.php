@@ -344,7 +344,8 @@ switch ($get) {
         $status = isset($dbStatuses[$status]) ? $status : 0;
         $domain = request()->input('domain', '');
         $order = request()->input('order', 'id');
-        $direc = request()->input('direc', 'desc');
+        $order = in_array($order, ['id', 'client', 'created_at', 'cost', 'status', 'payment_status'], true) ? $order : 'id';
+        $direc = request()->input('direc', 'desc') === 'asc' ? 'asc' : 'desc';
 
         $domains = null;
         if (evo()->getConfig('check_sMultisite', false)) {
@@ -354,7 +355,11 @@ switch ($get) {
         $query = sOrder::query()->select('*');
         if ($domains && trim($domain)) {$query->where('domain', $domain);}
         if (request()->filled('search')) {$query->search();}
-        $query->orderBy($order, $direc);
+        if ($order === 'client') {
+            $query->orderByRaw("CONCAT_WS(' ', JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.first_name')), JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.middle_name')), JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.last_name'))) {$direc}");
+        } else {
+            $query->orderBy($order, $direc);
+        }
 
         $unprocessedes = [
             sOrder::ORDER_STATUS_NEW,

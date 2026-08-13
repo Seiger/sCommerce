@@ -1,38 +1,111 @@
-@php use Seiger\sCommerce\Models\sOrder; @endphp
-@php($order = request()->has('order') ? request()->input('order') : 'id')
-@php($currencies = sCommerce::config('currencies', []))
+@use(Seiger\sCommerce\Models\sOrder)
+@php $order = request()->has('order') ? request()->input('order') : 'id'; @endphp
+@php $currencies = sCommerce::config('currencies', []); @endphp
 <style>
-    .badge-1click {
-        background-color: #036efe;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 12px;
-        font-size: 10px;
-        font-weight: bold;
-        display: inline-flex;
-        align-items: center;
-        text-transform: uppercase;
-    }
-    .badge-1click i {
-        margin-right: 5px;
-    }
+    .scom-orders-page { color:#344054; padding:4px 0 22px; }
+    .scom-orders-toolbar, .scom-orders-filters, .scom-orders-table-panel { background:#fff; border:1px solid #dde3ea; border-radius:0; box-shadow:0 4px 14px rgba(38,50,56,.05); }
+    .scom-orders-toolbar { align-items:center; display:flex; gap:0; height:52px; margin-bottom:16px; padding:0 43px; }
+    .scom-orders-summary { align-items:center; display:flex; flex:1 1 auto; flex-wrap:nowrap; min-width:0; }
+    .scom-orders-summary__item { align-items:center; color:#344054; display:inline-flex; font-size:14px; font-weight:700; gap:10px; height:30px; line-height:1.2; padding:0 20px; position:relative; white-space:nowrap; }
+    .scom-orders-summary__item:first-child { padding-left:0; }
+    .scom-orders-summary__item + .scom-orders-summary__item:before { background:#d8e0ec; content:''; left:0; position:absolute; top:0; bottom:0; width:1px; }
+    .scom-orders-summary__label { color:#344054; }
+    .scom-orders-summary__value { color:#036efe; font-weight:700; }
+    .scom-orders-summary__item--new:after, .scom-orders-summary__item--working:after, .scom-orders-summary__item--completed:after { border-radius:50%; content:''; height:7px; left:20px; position:absolute; top:calc(50% - 4px); width:7px; }
+    .scom-orders-summary__item--new { padding-left:34px; }
+    .scom-orders-summary__item--working { padding-left:34px; }
+    .scom-orders-summary__item--completed { padding-left:34px; }
+    .scom-orders-summary__item--new:after { background:var(--brand-pink, #EF4B67); }
+    .scom-orders-summary__item--working:after { background:var(--brand-orange, #fd7e14); }
+    .scom-orders-summary__item--completed:after { background:var(--brand-green, #009891); }
+    .scom-orders-search { flex:0 0 590px; margin-left:auto; position:relative; width:590px; }
+    .scom-orders-search .form-control { border-color:#cbd7e6; border-radius:4px !important; box-shadow:none; height:38px; padding-left:40px; padding-right:64px; }
+    .scom-orders-search .input-group-append { left:0; position:absolute; top:0; z-index:3; }
+    .scom-orders-search .scom-submit-search { background:transparent; border:0; border-radius:4px !important; color:#8b9bb5; height:38px; padding:0 12px; }
+    .scom-orders-search .scom-submit-search svg { height:18px; width:18px; }
+    .scom-orders-search .scom-clear-search { align-items:center; display:flex; height:38px; position:absolute; right:8px; top:0; z-index:3; }
+    .scom-orders-search .scom-clear-search svg { height:20px; width:20px; }
+    .scom-orders-filters { align-items:center; display:flex; flex-wrap:wrap; gap:10px; height:52px; margin-bottom:16px; padding:0 43px; }
+    .scom-orders-filters .btn { align-items:center; background:#fff; border:1px solid #cbd7e6; border-radius:4px; color:#344054; display:inline-flex; font-size:14px; font-weight:600; height:32px; margin:0; padding:0 14px; }
+    .scom-orders-filters .btn.btn-info { background:#036efe; border-color:#036efe; color:#fff; }
+    .scom-orders-status-filter { --status-color:#64748b; }
+    .scom-orders-status-filter:before { background:var(--status-color); border-radius:50%; content:''; height:7px; margin-right:8px; width:7px; }
+    .scom-orders-status-filter.is-active { background:var(--status-color); border-color:var(--status-color); color:#fff; }
+    .scom-orders-status-filter.is-active:before { background:#fff; }
+    .scom-orders-status-filter--new { --status-color:var(--brand-pink, #EF4B67); }
+    .scom-orders-status-filter--working { --status-color:var(--brand-orange, #fd7e14); }
+    .scom-orders-status-filter--completed { --status-color:var(--brand-green, #009891); }
+    .scom-orders-status-filter--cancelled { --status-color:var(--brand-cancelled, #64748b); }
+    .scom-orders-filters__label { border-left:1px solid #cbd7e6; color:#344054; font-size:15px; font-weight:600; margin-left:10px; padding-left:28px; }
+    .scom-orders-domain-filter { align-items:center; background:#fff; border:1px solid #cbd7e6; border-radius:4px; color:#344054; display:inline-flex; font-size:14px; font-weight:600; gap:8px; height:32px; padding:0 14px; }
+    .scom-orders-domain-filter:hover { background:#f8fafc; color:#1d4ed8; }
+    .scom-orders-domain-dot { background:var(--domain-color, #60a5fa); border-radius:50%; display:inline-block; flex:0 0 auto; height:9px; width:9px; }
+    .scom-orders-domain-filter.is-active { background:var(--domain-color, #036efe); border-color:var(--domain-color, #036efe); color:#fff; }
+    .scom-orders-domain-filter.is-active:hover { color:#fff; }
+    .scom-orders-domain-filter.is-active .scom-orders-domain-dot { background:#fff; }
+    .scom-orders-table-panel { margin:0; overflow:hidden; width:100%; }
+    .scom-orders-table { border:0; margin-bottom:0; }
+    .scom-orders-table th, .scom-orders-table td { border:0 !important; vertical-align:middle; }
+    .scom-orders-table { font-size:13px; }
+    .scom-orders-table thead th { border-bottom:2px solid #8aa0c3 !important; color:#475467; font-size:12px; font-weight:700; padding:8px 12px; }
+    .scom-orders-table thead th:last-child { text-align:center; }
+    .scom-orders-table tbody td { color:#475467; font-size:13px; padding:6px 12px; }
+    .scom-orders-table tbody tr { border-bottom:1px solid #e7edf5; }
+    .scom-orders-table tbody tr:last-child { border-bottom:0; }
+    .scom-orders-bottom { align-items:center; background:#fff; border:1px solid #dde3ea; border-radius:0; box-shadow:0 4px 14px rgba(38,50,56,.05); display:flex; justify-content:space-between; margin:0; min-height:52px; padding:0 43px; }
+    .scom-orders-bottom > * { flex:0 1 auto; }
+    .scom-orders-bottom .paginator { display:flex; justify-content:center; }
+    .scom-orders-bottom .seiger__list { display:flex; align-items:center; margin-left:auto; }
+    .scom-orders-bottom .seiger__label { color:#718096; font-size:12px; font-weight:400; line-height:1.2; margin-right:8px; }
+    .scom-orders-bottom .dropdown .dropdown__title { border-color:#cbd7e6; border-radius:4px; padding:6px 10px; }
+    .scom-orders-bottom .dropdown .dropdown__title span { color:#344054; font-size:12px; font-weight:600; }
+    .scom-orders-order-reference { align-items:center; display:inline-flex; }
+    .scom-orders-order-number { color:#036efe; font-weight:700; }
+    .scom-orders-quick { color:#1476dd; display:inline-flex; margin-left:5px; }
+    .scom-orders-quick svg { height:14px; width:14px; }
+    .scom-orders-client { color:#475467; display:block; line-height:1.2; }
+    .scom-orders-phone { color:#344054; display:block; font-size:12px; font-weight:700; line-height:1.2; }
+    .scom-orders-payment { color:#718096; font-size:11px; white-space:nowrap; }
+    .scom-orders-payment:before { background:#ffb30f; border-radius:50%; content:''; display:inline-block; height:7px; margin:0 6px 1px 0; width:7px; }
+    .scom-orders-payment--paid:before { background:#28ad63; }
+    .scom-orders-payment--failed:before { background:#ec4a5e; }
+    .scom-orders-actions { align-items:center; display:inline-flex; gap:4px; position:relative; }
+    .scom-orders-edit { align-items:center; color:#1476dd; display:inline-flex; padding:3px 7px; }
+    .scom-orders-edit svg { height:16px; width:16px; }
+    .scom-orders-delete { align-items:center; color:#ef4444; cursor:pointer; display:inline-flex; padding:3px 7px; }
+    .scom-orders-delete svg { height:16px; width:16px; }
+    @media (max-width:1200px) { .scom-orders-toolbar { height:auto; min-height:52px; padding:8px 43px; } .scom-orders-summary { flex-wrap:wrap; } .scom-orders-search { flex:1 1 100%; margin-top:8px; width:auto; } }
+    @media (max-width:992px) { .scom-orders-page { padding-left:0; padding-right:0; } .scom-orders-toolbar { padding:12px; } .scom-orders-summary__item { font-size:15px; padding:0 12px; } .scom-orders-summary__item + .scom-orders-summary__item:before { top:6px; bottom:6px; } .scom-orders-filters { height:auto; min-height:52px; padding:10px 12px; } .scom-orders-filters__label { margin-left:0; padding-left:16px; } .scom-orders-table thead th, .scom-orders-table tbody td { padding-left:8px; padding-right:8px; } .scom-orders-bottom { padding:0 12px; } }
 </style>
-<div class="row form-row">
-    <div class="row-col col-lg-5 col-md-12 pl-0 scom-conters">
-        <div class="d-flex flex-row align-items-center">
-            <div class="scom-conters-item scom-all pl-0">@lang('sCommerce::global.total_orders'): <span>{{$total ?? 0}}</span></div>
-            <div class="scom-conters-item scom-status-title scom-disactive">@lang('sCommerce::global.unprocessed_orders'): <span>{{$unprocessed ?? 0}}</span></div>
-            <div class="scom-conters-item scom-status-title scom-progress">@lang('sCommerce::global.working_orders'): <span>{{$working ?? 0}}</span></div>
-            <div class="scom-conters-item scom-status-title scom-active">@lang('sCommerce::global.completed_orders'): <span>{{$completed ?? 0}}</span></div>
-        </div>
+@php
+    $formatPhone = static function ($phone): string {
+        $phone = trim((string) $phone);
+        $digits = preg_replace('/\D+/', '', $phone);
+        if (strlen($digits) === 12 && substr($digits, 0, 3) === '380') return sprintf('+38 (%s) %s-%s-%s', substr($digits, 2, 3), substr($digits, 5, 3), substr($digits, 8, 2), substr($digits, 10, 2));
+        if (strlen($digits) === 10 && substr($digits, 0, 1) === '0') return sprintf('+38 (%s) %s-%s-%s', substr($digits, 0, 3), substr($digits, 3, 3), substr($digits, 6, 2), substr($digits, 8, 2));
+        return $phone;
+    };
+    $paymentClass = static function (int $status): string {
+        if (in_array($status, [sOrder::PAYMENT_STATUS_PAID, sOrder::PAYMENT_STATUS_PARTIALLY_PAID], true)) return 'scom-orders-payment--paid';
+        if (in_array($status, [sOrder::PAYMENT_STATUS_FAILED, sOrder::PAYMENT_STATUS_CANCELED, sOrder::PAYMENT_STATUS_REJECTED, sOrder::PAYMENT_STATUS_EXPIRED, sOrder::PAYMENT_STATUS_DISPUTED], true)) return 'scom-orders-payment--failed';
+        return '';
+    };
+@endphp
+<div class="scom-orders-page">
+<div class="scom-orders-toolbar">
+    <div class="scom-orders-summary">
+        <span class="scom-orders-summary__item"><span class="scom-orders-summary__label">@lang('sCommerce::global.orders')</span><span class="scom-orders-summary__value">{{$total ?? 0}}</span></span>
+        <span class="scom-orders-summary__item scom-orders-summary__item--new"><span class="scom-orders-summary__label">@lang('sCommerce::global.unprocessed_orders')</span><span class="scom-orders-summary__value">{{$unprocessed ?? 0}}</span></span>
+        <span class="scom-orders-summary__item scom-orders-summary__item--working"><span class="scom-orders-summary__label">@lang('sCommerce::global.working_orders')</span><span class="scom-orders-summary__value">{{$working ?? 0}}</span></span>
+        <span class="scom-orders-summary__item scom-orders-summary__item--completed"><span class="scom-orders-summary__label">@lang('sCommerce::global.completed_orders')</span><span class="scom-orders-summary__value">{{$completed ?? 0}}</span></span>
     </div>
-    <div class="row-col col-lg-7 col-md-12 input-group mb-2">
+    <div class="input-group scom-orders-search">
         <input name="search"
                value="{{request()->search ?? ''}}"
                type="search"
                class="form-control rounded-left scom-input seiger__search"
-               placeholder="@lang('sCommerce::global.search_among_products') (@lang('sCommerce::global.sku'), @lang('sCommerce::global.product_name'), @lang('global.long_title'), @lang('global.resource_summary'), @lang('sCommerce::global.content'))"
-               aria-label="@lang('sCommerce::global.search_among_products') (@lang('sCommerce::global.sku'), @lang('sCommerce::global.product_name'), @lang('global.long_title'), @lang('global.resource_summary'), @lang('sCommerce::global.content'))"
+               placeholder="@lang('sCommerce::global.search_orders')"
+               aria-label="@lang('sCommerce::global.search_orders')"
                aria-describedby="basic-addon2" />
         <span class="scom-clear-search">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -40,28 +113,37 @@
             </svg>
         </span>
         <div class="input-group-append">
-            <button class="btn btn-outline-secondary rounded-right scom-submit-search" type="button"><i class="fas fa-search"></i></button>
+            <button class="btn btn-outline-secondary rounded-right scom-submit-search" type="button">@svg('tabler-search')</button>
         </div>
     </div>
 </div>
-<div class="row form-row mb-2 scom-btn-container">
-    <a @class(['btn', 'btn-info' => $status == 0, 'btn-light' => $status != 0]) href="{!!sCommerce::moduleUrl()!!}&get=orders" class="btn btn-info">@lang('sCommerce::global.all_statuses')</a>
+<div class="scom-orders-filters">
+    <a @class(['btn', 'btn-info' => $status == 0, 'btn-light' => $status != 0]) href="{!!sCommerce::moduleUrl()!!}&get=orders">@lang('sCommerce::global.all_statuses')</a>
     @foreach($statuses as $id => $name)
-        <a @class(['btn', 'btn-info' => $status == $id, 'btn-light' => $status != $id]) href="{!!sCommerce::moduleUrl()!!}&get=orders&status={{$id}}">{{$name}}</a>
+        <a @class([
+            'btn',
+            'scom-orders-status-filter',
+            'scom-orders-status-filter--new' => in_array($id, $unprocessedes),
+            'scom-orders-status-filter--working' => in_array($id, $workings),
+            'scom-orders-status-filter--completed' => in_array($id, $completeds),
+            'scom-orders-status-filter--cancelled' => in_array($id, $canceleds),
+            'is-active' => $status == $id,
+        ]) href="{!!sCommerce::moduleUrl()!!}&get=orders&status={{$id}}">{{$name}}</a>
     @endforeach
     @if($domains)
-        <a class="btn domain-btn" @style(['background-color:#60a5fa', 'border-color:#60a5fa']) href="{!!sCommerce::moduleUrl()!!}&get=orders">@lang('sCommerce::global.all_domains')</a>
+        <span class="scom-orders-filters__label">@lang('sCommerce::global.domains')</span>
+        <a @class(['btn', 'scom-orders-domain-filter', 'btn-info' => !request()->filled('domain')]) href="{!!sCommerce::moduleUrl()!!}&get=orders">@lang('sCommerce::global.all_domains')</a>
         @foreach($domains as $domain)
-            <a class="btn domain-btn" @style(['background-color:'.($domain->site_color ?? '#60a5fa'), 'border-color:'.($domain->site_color ?? '#60a5fa')]) href="{!!sCommerce::moduleUrl()!!}&get=orders&domain={{$domain->key}}">{{$domain->domain}}</a>
+            <a @class(['btn', 'scom-orders-domain-filter', 'is-active' => request()->input('domain') === $domain->key]) href="{!!sCommerce::moduleUrl()!!}&get=orders&domain={{$domain->key}}" style="--domain-color: {{$domain->site_color ?: '#60a5fa'}}"><span class="scom-orders-domain-dot"></span>{{$domain->domain}}</a>
         @endforeach
     @endif
 </div>
-<div class="table-responsive seiger__module-table">
-    <table class="table table-condensed table-hover sectionTrans scom-table">
+<div class="table-responsive seiger__module-table scom-orders-table-panel">
+    <table class="table table-condensed table-hover sectionTrans scom-table scom-orders-table">
         <thead>
             <tr>
                 <th class="sorting @if($order == 'id') sorted @endif" data-order="id">
-                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.order_number') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.number') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
                 <th class="sorting @if($order == 'client') sorted @endif" data-order="client">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.client') <i class="fas fa-sort" style="color: #036efe;"></i></button>
@@ -72,53 +154,43 @@
                 <th class="sorting @if($order == 'cost') sorted @endif" data-order="cost">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.sum') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
-                <th class="sorting @if($order == 'payment_status') sorted @endif" data-order="payment_status">
-                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.payment') <i class="fas fa-sort" style="color: #036efe;"></i></button>
-                </th>
                 <th class="sorting @if($order == 'status') sorted @endif" data-order="status">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.status') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+                </th>
+                <th class="sorting @if($order == 'payment_status') sorted @endif" data-order="payment_status">
+                    <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.payment') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
                 <th id="action-btns">@lang('global.onlineusers_action')</th>
             </tr>
         </thead>
         <tbody>
         @foreach($items as $item)
-            <tr id="order-{{$item->id}}" style="position:relative;height:42px;@if($domains)border-left:30px solid {{$domains[$item->domain]->site_color ?? '#60a5fa'}}@endif;">
-                <td><b>#{{$item->order_number ?? $item->id}}</b>@if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif</td>
+            @php
+                $domain = $domains?->get($item->domain);
+                $phone = $formatPhone($item->user_info['phone'] ?? '');
+            @endphp
+            <tr id="order-{{$item->id}}">
+                <td>@if($domain)<span class="scom-orders-domain-dot" aria-label="{{$domain->domain}}" role="img" title="{{$domain->domain}}" style="--domain-color: {{$domain->site_color ?: '#60a5fa'}}"></span>@endif <span class="scom-orders-order-reference"><a class="scom-orders-order-number" href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$item->id}}">#{{$item->order_number ?? $item->id}}</a>@if($item->is_quick)<span class="scom-orders-quick" title="@lang('sCommerce::global.one_click')">@svg('tabler-bolt-filled')</span>@endif</span></td>
                 <td>
-                    {{preg_replace('/\s+/u', ' ', trim(html_entity_decode(implode(' ', [$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? '']), ENT_QUOTES | ENT_HTML5, 'UTF-8')))}}
-                    @if(trim($item->user_info['phone'] ?? ''))({{$item->user_info['phone'] ?? ''}})@endif
+                    <span class="scom-orders-client">{{preg_replace('/\s+/u', ' ', trim(html_entity_decode(implode(' ', [$item->user_info['first_name'] ?? '', $item->user_info['middle_name'] ?? '', $item->user_info['last_name'] ?? '']), ENT_QUOTES | ENT_HTML5, 'UTF-8')))}} </span>
+                    @if($phone !== '')<span class="scom-orders-phone">{{$phone}}</span>@endif
                 </td>
                 <td>{{$item->created_at}}</td>
                 <td>{{sCommerce::convertPrice($item->cost, $item->currency)}}@if(($currencies[$item->currency]['show'] ?? 0) == 0) {{$item->currency}}@endif</td>
-                <td>
-                    <span @class(['badge', 'bg-paid' => $item->payment_status == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => $item->payment_status != sOrder::PAYMENT_STATUS_PAID])>
-                        {{sOrder::getPaymentStatusName($item->payment_status)}}
-                    </span>
-                </td>
                 <td>
                     <span @class(['badge', 'bg-disactive' => in_array($item->status, $unprocessedes), 'bg-progress' => in_array($item->status, $workings), 'bg-active' => in_array($item->status, $completeds), 'bg-cancelled' => in_array($item->status, $canceleds)])>
                         {{sOrder::getOrderStatusName($item->status)}}
                     </span>
                 </td>
-                <td style="text-align:center;">
-                    <div class="btn-group">
-                        <a href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}" class="btn btn-outline-success">
-                            <i class="fa fa-pencil"></i> <span>@lang('global.edit')</span>
-                        </a>
-                        @if (evo()->hasPermission('settings'))
-                            <span data-href="{!!sCommerce::moduleUrl()!!}&get=orderDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="#{{$item->id}}" class="btn btn-outline-danger">
-                                <i class="fa fa-trash"></i> <span>@lang('global.remove')</span>
-                            </span>
-                        @endif
-                    </div>
+                <td><span @class(['scom-orders-payment', $paymentClass((int) $item->payment_status)])>{{sOrder::getPaymentStatusName($item->payment_status)}}</span></td>
+                <td style="text-align:center;"><span class="scom-orders-actions"><a class="scom-orders-edit" href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$item->id}}{{request()->has('page') ? '&page=' . request()->page : ''}}" title="@lang('global.edit')" aria-label="@lang('global.edit')">@svg('tabler-pencil')</a>@if (evo()->hasPermission('settings'))<span class="scom-orders-delete" data-href="{!!sCommerce::moduleUrl()!!}&get=orderDelete&i={{$item->id}}" data-delete="{{$item->id}}" data-name="#{{$item->id}}" title="@lang('global.remove')" role="button" aria-label="@lang('global.remove')">@svg('tabler-trash')</span>@endif</span>
                 </td>
             </tr>
         @endforeach
         </tbody>
     </table>
 </div>
-<div class="seiger__bottom">
+<div class="seiger__bottom scom-orders-bottom">
     <div class="seiger__bottom-item"></div>
     <div class="paginator">{{$items->render()}}</div>
     <div class="seiger__list">
@@ -149,54 +221,4 @@
         </div>
     </div>
 </div>
-@push('scripts.bot')
-    <script>
-        // Automatic contrast text color for domain buttons
-        $(document).ready(function() {
-            function hexToRgb(hex) {
-                hex = hex.replace('#', '');
-                if (hex.length === 3) {
-                    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-                }
-                return {
-                    r: parseInt(hex.substr(0, 2), 16),
-                    g: parseInt(hex.substr(2, 2), 16),
-                    b: parseInt(hex.substr(4, 2), 16)
-                };
-            }
-
-            function getContrastTextColor(r, g, b) {
-                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                return luminance > 0.5 ? '#000000' : '#ffffff';
-            }
-
-            function setButtonTextColor(btn) {
-                // Try to get color from inline style first
-                const style = btn.getAttribute('style') || '';
-                const match = style.match(/background-color:\s*([^;]+)/);
-                if (match) {
-                    const colorStr = match[1].trim();
-                    if (colorStr.startsWith('#')) {
-                        const rgb = hexToRgb(colorStr);
-                        btn.style.color = getContrastTextColor(rgb.r, rgb.g, rgb.b);
-                        return;
-                    }
-                }
-
-                // Fallback: try computed style
-                const bgColor = window.getComputedStyle(btn).backgroundColor;
-                const rgbMatch = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                if (rgbMatch) {
-                    const r = parseInt(rgbMatch[1]);
-                    const g = parseInt(rgbMatch[2]);
-                    const b = parseInt(rgbMatch[3]);
-                    btn.style.color = getContrastTextColor(r, g, b);
-                }
-            }
-
-            $('.domain-btn').each(function() {
-                setButtonTextColor(this);
-            });
-        });
-    </script>
-@endpush
+</div>

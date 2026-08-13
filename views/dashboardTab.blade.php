@@ -25,8 +25,11 @@
     .scom-dashboard__table td { border:0; color:#475467; padding:6px 8px; vertical-align:middle; }
     .scom-dashboard__table tbody tr { border-bottom:1px solid #edf0f4; }
     .scom-dashboard__table tbody tr:last-child { border-bottom:0; }
+    .scom-dashboard__order-reference { align-items:center; display:inline-flex; }
     .scom-dashboard__order-number { color:#1476dd; font-weight:700; }
     .scom-dashboard__order-domain { background:var(--domain-color, #60a5fa); border-radius:50%; display:inline-block; height:7px; margin:0 5px 1px 0; vertical-align:middle; width:7px; }
+    .scom-dashboard__quick-order { color:#1476dd; display:inline-flex; margin-left:5px; }
+    .scom-dashboard__quick-order svg { height:14px; width:14px; }
     .scom-dashboard__client { display:block; max-width:245px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .scom-dashboard__client-phone { color:#344054; display:block; font-size:12px; font-weight:700; line-height:1.2; }
     .scom-dashboard__payment { color:#718096; font-size:11px; white-space:nowrap; }
@@ -144,7 +147,7 @@
             <div class="scom-dashboard__card-head"><h3 class="scom-dashboard__card-title">@lang('sCommerce::global.recent_orders')</h3><a class="scom-dashboard__link" href="{!!sCommerce::moduleUrl()!!}&get=orders">@lang('sCommerce::global.to_list_orders') @svg('tabler-arrow-right', 'scom-dashboard__link-icon')</a></div>
             <table class="scom-dashboard__table">
                 <colgroup><col style="width:7%"><col style="width:31%"><col style="width:20%"><col style="width:13%"><col style="width:12%"><col style="width:17%"></colgroup>
-                <thead><tr><th>#</th><th>@lang('sCommerce::global.client')</th><th>@lang('sCommerce::global.created')</th><th>@lang('sCommerce::global.sum')</th><th>@lang('sCommerce::global.status')</th><th>@lang('sCommerce::global.payment_status')</th></tr></thead>
+                <thead><tr><th>#</th><th>@lang('sCommerce::global.client')</th><th>@lang('sCommerce::global.created')</th><th>@lang('sCommerce::global.sum')</th><th>@lang('sCommerce::global.status')</th><th>@lang('sCommerce::global.payment')</th></tr></thead>
                 <tbody>
                 @forelse($recentOrders as $order)
                     @php
@@ -152,7 +155,7 @@
                         $phone = $formatPhone($order->user_info['phone'] ?? '');
                         $domain = $domains?->get($order->domain);
                     @endphp
-                    <tr><td>@if($domain)<span class="scom-dashboard__order-domain" aria-label="{{$domain->domain}}" role="img" title="{{$domain->domain}}" style="--domain-color: {{$domain->site_color ?: '#60a5fa'}}"></span>@endif<a class="scom-dashboard__order-number" href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$order->id}}">#{{$order->order_number ?? $order->id}}</a></td><td><span class="scom-dashboard__client">{{implode(' ', array_filter([$order->user_info['first_name'] ?? '', $order->user_info['middle_name'] ?? '', $order->user_info['last_name'] ?? ''])) ?: '—'}}</span>@if($phone !== '')<span class="scom-dashboard__client-phone">{{$phone}}</span>@endif</td><td>{{$order->created_at->format('d.m.Y H:i')}}</td><td>{{sCommerce::convertPrice($order->cost, $order->currency)}}</td><td><span @class(['badge', 'bg-disactive' => in_array($order->status, $unprocessedes), 'bg-progress' => in_array($order->status, $workings), 'bg-active' => in_array($order->status, $completeds), 'bg-cancelled' => in_array($order->status, $canceleds)])>{{sOrder::getOrderStatusName($order->status)}}</span></td><td><span @class(['scom-dashboard__payment', $paymentStatusClass($paymentStatus)])>{{sOrder::getPaymentStatusName($paymentStatus)}}</span></td></tr>
+                    <tr><td>@if($domain)<span class="scom-dashboard__order-domain" aria-label="{{$domain->domain}}" role="img" title="{{$domain->domain}}" style="--domain-color: {{$domain->site_color ?: '#60a5fa'}}"></span>@endif<span class="scom-dashboard__order-reference"><a class="scom-dashboard__order-number" href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$order->id}}">#{{$order->order_number ?? $order->id}}</a>@if($order->is_quick)<span class="scom-dashboard__quick-order" title="@lang('sCommerce::global.one_click')">@svg('tabler-bolt-filled')</span>@endif</span></td><td><span class="scom-dashboard__client">{{implode(' ', array_filter([$order->user_info['first_name'] ?? '', $order->user_info['middle_name'] ?? '', $order->user_info['last_name'] ?? ''])) ?: '—'}}</span>@if($phone !== '')<span class="scom-dashboard__client-phone">{{$phone}}</span>@endif</td><td>{{$order->created_at->format('d.m.Y H:i')}}</td><td>{{sCommerce::convertPrice($order->cost, $order->currency)}}</td><td><span @class(['badge', 'bg-disactive' => in_array($order->status, $unprocessedes), 'bg-progress' => in_array($order->status, $workings), 'bg-active' => in_array($order->status, $completeds), 'bg-cancelled' => in_array($order->status, $canceleds)])>{{sOrder::getOrderStatusName($order->status)}}</span></td><td><span @class(['scom-dashboard__payment', $paymentStatusClass($paymentStatus)])>{{sOrder::getPaymentStatusName($paymentStatus)}}</span></td></tr>
                 @empty
                     <tr><td colspan="6" class="scom-dashboard__empty">@lang('sCommerce::global.no_data_found')</td></tr>
                 @endforelse
