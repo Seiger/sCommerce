@@ -76,6 +76,34 @@
     .scom-orders-delete svg { height:16px; width:16px; }
     @media (max-width:1200px) { .scom-orders-toolbar { height:auto; min-height:52px; padding:8px 43px; } .scom-orders-summary { flex-wrap:wrap; } .scom-orders-search { flex:1 1 100%; margin-top:8px; width:auto; } }
     @media (max-width:992px) { .scom-orders-page { padding-left:0; padding-right:0; } .scom-orders-toolbar { padding:12px; } .scom-orders-summary__item { font-size:15px; padding:0 12px; } .scom-orders-summary__item + .scom-orders-summary__item:before { top:6px; bottom:6px; } .scom-orders-filters { height:auto; min-height:52px; padding:10px 12px; } .scom-orders-filters__label { margin-left:0; padding-left:16px; } .scom-orders-table thead th, .scom-orders-table tbody td { padding-left:8px; padding-right:8px; } .scom-orders-bottom { padding:0 12px; } }
+    @media (max-width:640px) {
+        .scom-orders-page { padding:0 0 16px; }
+        .scom-orders-toolbar { align-items:stretch; flex-direction:column; gap:12px; height:auto; margin-bottom:12px; padding:16px 18px; }
+        .scom-orders-summary { align-items:stretch; flex-direction:column; gap:4px; }
+        .scom-orders-summary__item { font-size:14px; height:30px; padding:0 0 0 18px; }
+        .scom-orders-summary__item:first-child { padding-left:0; }
+        .scom-orders-summary__item + .scom-orders-summary__item:before { bottom:4px; left:0; top:4px; }
+        .scom-orders-summary__item--new:after, .scom-orders-summary__item--working:after, .scom-orders-summary__item--completed:after { left:4px; }
+        .scom-orders-search { flex:0 0 auto; margin:0; width:100%; }
+        .scom-orders-filters { gap:8px; margin-bottom:12px; padding:12px 18px; }
+        .scom-orders-filters .btn { font-size:13px; padding:0 12px; }
+        .scom-orders-table-panel { overflow:visible; }
+        .scom-orders-table { table-layout:auto; }
+        .scom-orders-table thead { display:none; }
+        .scom-orders-table, .scom-orders-table tbody, .scom-orders-table tr, .scom-orders-table td { display:block; width:100%; }
+        .scom-orders-table tbody tr { padding:11px 14px; position:relative; }
+        .scom-orders-table tbody td { padding:2px 0; }
+        .scom-orders-table tbody td:first-child { padding-right:36px; }
+        .scom-orders-table tbody td:nth-child(3), .scom-orders-table tbody td:nth-child(4), .scom-orders-table tbody td:nth-child(5), .scom-orders-table tbody td:nth-child(6) { display:inline-block; margin:5px 10px 0 0; width:auto; }
+        .scom-orders-table tbody td:nth-child(3):before, .scom-orders-table tbody td:nth-child(4):before, .scom-orders-table tbody td:nth-child(5):before, .scom-orders-table tbody td:nth-child(6):before { color:#98a2b3; font-size:10px; font-weight:600; margin-right:4px; text-transform:uppercase; }
+        .scom-orders-table tbody td:nth-child(3):before { content:'Дата'; }
+        .scom-orders-table tbody td:nth-child(4):before { content:'Сума'; }
+        .scom-orders-table tbody td:nth-child(5):before { content:'Статус'; }
+        .scom-orders-table tbody td:nth-child(6):before { content:'Оплата'; }
+        .scom-orders-actions { position:absolute; right:6px; top:7px; }
+        .scom-orders-bottom { min-height:48px; padding:0 14px; }
+        .scom-orders-bottom .paginator { display:none; }
+    }
 </style>
 @php
     $formatPhone = static function ($phone): string {

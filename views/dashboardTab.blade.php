@@ -74,7 +74,48 @@
     .scom-dashboard__empty { color:#98a2b3; font-size:13px; padding:30px 0; text-align:center; }
     @media (max-width:1100px) { .scom-dashboard__summary { grid-template-columns:repeat(2, 1fr); } .scom-dashboard__metric:nth-child(3):before { display:none; } .scom-dashboard__grid { grid-template-columns:1fr; } }
     @media (max-width:1100px) { .scom-dashboard__chart-head { flex-direction:column; gap:15px; } .scom-dashboard__chart-content { width:100%; justify-content:space-between; } .scom-dashboard__chart-actions { align-items:flex-start; flex-direction:row; } .scom-dashboard__chart-metrics { grid-template-columns:repeat(2, minmax(130px, 1fr)); } }
-    @media (max-width:640px) { .scom-dashboard__summary { grid-template-columns:1fr; } .scom-dashboard__metric + .scom-dashboard__metric:before { display:none; } .scom-dashboard__grid { gap:12px; } .scom-dashboard__card { overflow-x:auto; padding:15px; } .scom-dashboard__chart-card { padding:0 15px 15px; } .scom-dashboard__chart-metrics { grid-template-columns:repeat(2, minmax(110px, 1fr)); gap:12px; } .scom-dashboard__chart-actions { align-items:flex-start; flex-direction:column; gap:10px; } .scom-dashboard__period { padding:6px 8px; } .scom-dashboard__chart { height:240px; } }
+    @media (max-width:640px) {
+        .scom-dashboard { padding:0 0 16px; }
+        .scom-dashboard__summary { grid-template-columns:1fr; margin-bottom:12px; }
+        .scom-dashboard__metric { gap:14px; padding:15px 18px; }
+        .scom-dashboard__metric + .scom-dashboard__metric:before { display:none; }
+        .scom-dashboard__metric-detail { white-space:normal; }
+        .scom-dashboard__grid { gap:12px; margin-bottom:12px; }
+        .scom-dashboard__card { overflow:hidden; padding:15px; }
+        .scom-dashboard__card-head { align-items:flex-start; }
+        .scom-dashboard__card-title { font-size:15px; }
+        .scom-dashboard__link { font-size:11px; }
+        .scom-dashboard__table { table-layout:auto; }
+        .scom-dashboard__table thead { display:none; }
+        .scom-dashboard__table, .scom-dashboard__table tbody, .scom-dashboard__table tr, .scom-dashboard__table td { display:block; width:100%; }
+        .scom-dashboard__table tbody tr { padding:10px 0; position:relative; }
+        .scom-dashboard__table td { padding:2px 0; }
+        .scom-dashboard__table td:first-child { padding-right:42px; }
+        .scom-dashboard__table td:nth-child(2) { max-width:100%; }
+        .scom-dashboard__table td:nth-child(3), .scom-dashboard__table td:nth-child(4), .scom-dashboard__table td:nth-child(5), .scom-dashboard__table td:nth-child(6) { display:inline-block; margin:5px 10px 0 0; width:auto; }
+        .scom-dashboard__table td:nth-child(3):before, .scom-dashboard__table td:nth-child(4):before, .scom-dashboard__table td:nth-child(5):before, .scom-dashboard__table td:nth-child(6):before { color:#98a2b3; font-size:10px; font-weight:600; margin-right:4px; text-transform:uppercase; }
+        .scom-dashboard__table td:nth-child(3):before { content:'Дата'; }
+        .scom-dashboard__table td:nth-child(4):before { content:'Сума'; }
+        .scom-dashboard__table td:nth-child(5):before { content:'Статус'; }
+        .scom-dashboard__table td:nth-child(6):before { content:'Оплата'; }
+        .scom-dashboard__order-reference { font-size:14px; }
+        .scom-dashboard__client { max-width:100%; }
+        .scom-dashboard__products { display:block; }
+        .scom-dashboard__product { grid-template-columns:42px minmax(0, 1fr) auto; padding:11px 0; }
+        .scom-dashboard__product > div { min-width:0; }
+        .scom-dashboard__product-revenue { grid-column:3; grid-row:1; padding:0; }
+        .scom-dashboard__product-name { padding-right:0; }
+        .scom-dashboard__product-meta { flex-wrap:wrap; gap:5px 10px; }
+        .scom-dashboard__chart-card { padding:0 15px 15px; }
+        .scom-dashboard__chart-head { gap:12px; padding-top:15px; }
+        .scom-dashboard__chart-content { align-items:stretch; flex-direction:column; gap:14px; }
+        .scom-dashboard__chart-metrics { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px 18px; max-width:none; }
+        .scom-dashboard__chart-actions { align-items:stretch; flex-direction:column; gap:10px; }
+        .scom-dashboard__periods { overflow-x:auto; }
+        .scom-dashboard__period { flex:0 0 auto; padding:6px 10px; }
+        .scom-dashboard__legend { gap:14px; }
+        .scom-dashboard__chart { height:250px; margin:0 -6px; }
+    }
 </style>
 
 @php
