@@ -181,9 +181,6 @@ class sCart
     {
         $totalSum = 0;
         $items = [];
-        $currency = sCommerce::currentCurrency();
-        $currencyConfig = sCommerce::getCurrencies([$currency])->first() ?? [];
-        $currencyExponent = max(0, (int)($currencyConfig['exp'] ?? 2));
         $productIds = array_keys($this->cartData);
         $products = sCommerce::getProducts($productIds);
 
@@ -193,8 +190,8 @@ class sCart
                 $pricing = $this->resolveProductPricing($product, (int)$optionId);
                 $price = (float)$pricing['priceAsFloat'];
                 $lineSum = $price * $quantity;
-                $sumAsFloat = round($lineSum, $currencyExponent);
-                $sum = sCommerce::convertPrice($lineSum, $currency, $currency);
+                $sumAsFloat = round($lineSum, 3);
+                $sum = sCommerce::convertPrice($sumAsFloat);
                 $items[] = array_merge(
                     $this->getProductFields($product, $pricing),
                     compact('quantity', 'sumAsFloat', 'sum')
@@ -203,8 +200,8 @@ class sCart
             }
         }
 
-        $cart['totalSum'] = round($totalSum, $currencyExponent);
-        $cart['totalSumFormatted'] = sCommerce::convertPrice($totalSum, $currency, $currency);
+        $cart['totalSum'] = round($totalSum, 3);
+        $cart['totalSumFormatted'] = sCommerce::convertPrice($totalSum);
         $cart['items'] = $items;
 
         return $cart;
