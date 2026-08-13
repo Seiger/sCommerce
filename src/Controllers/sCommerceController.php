@@ -776,7 +776,7 @@ class sCommerceController
      */
     public function validatePrice(mixed $price): float
     {
-        return round(floatval(str_replace(',', '.', $price)), 2);
+        return round(floatval(str_replace(',', '.', $price)), 3);
     }
 
     /**
