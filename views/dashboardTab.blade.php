@@ -3,9 +3,9 @@
     .scom-dashboard { color:#475467; padding:4px 0 20px; }
     .scom-dashboard__summary, .scom-dashboard__card { background:#fff; border:1px solid #dde3ea; border-radius:0; box-shadow:0 4px 14px rgba(38,50,56,.05); }
     .scom-dashboard__summary { display:grid; grid-template-columns:repeat(4, 1fr); margin-bottom:20px; overflow:hidden; }
-    .scom-dashboard__metric { min-width:0; display:flex; gap:13px; align-items:flex-start; padding:15px 20px; position:relative; }
+    .scom-dashboard__metric { min-width:0; display:flex; gap:13px; align-items:center; padding:15px 20px; position:relative; }
     .scom-dashboard__metric + .scom-dashboard__metric:before { content:''; width:1px; background:#e7ebf0; position:absolute; left:0; top:14px; bottom:14px; }
-    .scom-dashboard__metric-icon { width:22px; height:22px; flex:0 0 22px; stroke-width:2; margin:1px 3px 0; }
+    .scom-dashboard__metric-icon { width:22px; height:22px; flex:0 0 22px; stroke-width:2; margin:0 3px; }
     .scom-dashboard__metric--orders .scom-dashboard__metric-icon { color:#ec4a5e; }
     .scom-dashboard__metric--revenue .scom-dashboard__metric-icon { color:#24aa5c; }
     .scom-dashboard__metric--products .scom-dashboard__metric-icon { color:#129fc1; }
@@ -26,6 +26,7 @@
     .scom-dashboard__table tbody tr { border-bottom:1px solid #edf0f4; }
     .scom-dashboard__table tbody tr:last-child { border-bottom:0; }
     .scom-dashboard__order-number { color:#1476dd; font-weight:700; }
+    .scom-dashboard__order-domain { background:var(--domain-color, #60a5fa); border-radius:50%; display:inline-block; height:7px; margin:0 5px 1px 0; vertical-align:middle; width:7px; }
     .scom-dashboard__client { display:block; max-width:245px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .scom-dashboard__client-phone { color:#344054; display:block; font-size:12px; font-weight:700; line-height:1.2; }
     .scom-dashboard__payment { color:#718096; font-size:11px; white-space:nowrap; }
@@ -146,8 +147,12 @@
                 <thead><tr><th>#</th><th>@lang('sCommerce::global.client')</th><th>@lang('sCommerce::global.created')</th><th>@lang('sCommerce::global.sum')</th><th>@lang('sCommerce::global.status')</th><th>@lang('sCommerce::global.payment_status')</th></tr></thead>
                 <tbody>
                 @forelse($recentOrders as $order)
-                    @php $paymentStatus = (int) $order->payment_status; $phone = $formatPhone($order->user_info['phone'] ?? ''); @endphp
-                    <tr><td><a class="scom-dashboard__order-number" href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$order->id}}">#{{$order->order_number ?? $order->id}}</a></td><td><span class="scom-dashboard__client">{{implode(' ', array_filter([$order->user_info['first_name'] ?? '', $order->user_info['middle_name'] ?? '', $order->user_info['last_name'] ?? ''])) ?: '—'}}</span>@if($phone !== '')<span class="scom-dashboard__client-phone">{{$phone}}</span>@endif</td><td>{{$order->created_at->format('d.m.Y H:i')}}</td><td>{{sCommerce::convertPrice($order->cost, $order->currency)}}</td><td><span @class(['badge', 'bg-disactive' => in_array($order->status, $unprocessedes), 'bg-progress' => in_array($order->status, $workings), 'bg-active' => in_array($order->status, $completeds), 'bg-cancelled' => in_array($order->status, $canceleds)])>{{sOrder::getOrderStatusName($order->status)}}</span></td><td><span @class(['scom-dashboard__payment', $paymentStatusClass($paymentStatus)])>{{sOrder::getPaymentStatusName($paymentStatus)}}</span></td></tr>
+                    @php
+                        $paymentStatus = (int) $order->payment_status;
+                        $phone = $formatPhone($order->user_info['phone'] ?? '');
+                        $domain = $domains?->get($order->domain);
+                    @endphp
+                    <tr><td>@if($domain)<span class="scom-dashboard__order-domain" aria-label="{{$domain->domain}}" role="img" title="{{$domain->domain}}" style="--domain-color: {{$domain->site_color ?: '#60a5fa'}}"></span>@endif<a class="scom-dashboard__order-number" href="{!!sCommerce::moduleUrl()!!}&get=order&i={{$order->id}}">#{{$order->order_number ?? $order->id}}</a></td><td><span class="scom-dashboard__client">{{implode(' ', array_filter([$order->user_info['first_name'] ?? '', $order->user_info['middle_name'] ?? '', $order->user_info['last_name'] ?? ''])) ?: '—'}}</span>@if($phone !== '')<span class="scom-dashboard__client-phone">{{$phone}}</span>@endif</td><td>{{$order->created_at->format('d.m.Y H:i')}}</td><td>{{sCommerce::convertPrice($order->cost, $order->currency)}}</td><td><span @class(['badge', 'bg-disactive' => in_array($order->status, $unprocessedes), 'bg-progress' => in_array($order->status, $workings), 'bg-active' => in_array($order->status, $completeds), 'bg-cancelled' => in_array($order->status, $canceleds)])>{{sOrder::getOrderStatusName($order->status)}}</span></td><td><span @class(['scom-dashboard__payment', $paymentStatusClass($paymentStatus)])>{{sOrder::getPaymentStatusName($paymentStatus)}}</span></td></tr>
                 @empty
                     <tr><td colspan="6" class="scom-dashboard__empty">@lang('sCommerce::global.no_data_found')</td></tr>
                 @endforelse
