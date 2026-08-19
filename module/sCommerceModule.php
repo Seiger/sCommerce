@@ -1700,7 +1700,16 @@ switch ($get) {
             case "category":
                 $query->addSelect(
                     '*',
-                    DB::Raw('(select `' . DB::getTablePrefix() . 'site_content`.`pagetitle` from `' . DB::getTablePrefix() . 'site_content` where `' . DB::getTablePrefix() . 'site_content`.`id` = `' . DB::getTablePrefix() . 's_products`.`category`) as cat')
+                    DB::Raw(
+                        '(select `' . DB::getTablePrefix() . 'site_content`.`pagetitle`
+                        from `' . DB::getTablePrefix() . 'site_content`
+                        where `' . DB::getTablePrefix() . 'site_content`.`id` = (
+                            select `' . DB::getTablePrefix() . 's_attribute_category`.`category`
+                            from `' . DB::getTablePrefix() . 's_attribute_category`
+                            where `' . DB::getTablePrefix() . 's_attribute_category`.`attribute` = `' . DB::getTablePrefix() . 's_attributes`.`id`
+                            limit 1)
+                        ) as cat'
+                    )
                 );
                 $query->orderBy('cat', $direc);
                 break;
