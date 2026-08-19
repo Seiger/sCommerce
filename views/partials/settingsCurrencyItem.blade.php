@@ -82,6 +82,8 @@
                                 <option value="1" @if(($exp ?? 2) == 1) selected @endif>1</option>
                                 <option value="2" @if(($exp ?? 2) == 2) selected @endif>2</option>
                                 <option value="3" @if(($exp ?? 2) == 3) selected @endif>3</option>
+                                <option value="4" @if(($exp ?? 2) == 4) selected @endif>4</option>
+                                <option value="5" @if(($exp ?? 2) == 5) selected @endif>5</option>
                             </select>
                         </div>
                     </div>
