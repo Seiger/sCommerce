@@ -524,4 +524,13 @@
     "city_ref" => "ID города",
     "warehouse" => "Склад/Отделение/Почтомат",
     "warehouse_ref" => "ID отделения/почтомата",
+    "dashboard_catalog_total" => "Всего в каталоге",
+    "dashboard_new_reviews" => "Новые",
+    "dashboard_average_rating" => "Средняя оценка",
+    "dashboard_top_products_by_views" => "Топ товаров по просмотрам",
+    "dashboard_recent_reviews" => "Последние отзывы",
+    "dashboard_views_dynamics" => "Динамика просмотров",
+    "dashboard_cumulative_counter" => "Накопительный счетчик",
+    "dashboard_history_unavailable" => "История просмотров пока не сохраняется",
+    "dashboard_documentation" => "Документация sCommerce",
 ];

@@ -144,6 +144,69 @@ switch ($get) {
             break;
         }
     case "dashboard":
+        $ordersAvailable = (int) sCommerce::config('basic.orders_on', 1) === 1;
+        $data['ordersAvailable'] = $ordersAvailable;
+
+        if (!$ordersAvailable) {
+            $totalProducts = sProduct::count();
+            $publishedProducts = sProduct::where('published', 1)->count();
+            $unpublishedProducts = $totalProducts - $publishedProducts;
+            $totalViews = (int) sProduct::sum('views');
+
+            $topProductsData = sProduct::query()
+                ->orderByDesc('views')
+                ->orderByDesc('id')
+                ->limit(5)
+                ->get()
+                ->map(static fn (sProduct $product): array => [
+                    'id' => (int) $product->id,
+                    'title' => (string) ($product->pagetitle ?? ''),
+                    'cover' => (string) $product->cover_src,
+                    'views' => (int) ($product->views ?? 0),
+                    'sku' => trim((string) ($product->sku ?? '')),
+                    'price' => (string) $product->price,
+                ])
+                ->all();
+
+            $totalReviews = sReview::count();
+            $newReviews = sReview::whereDate('created_at', today())->count();
+            $averageRating = round((float) (sReview::avg('rating') ?? 0), 1);
+            $recentReviews = sReview::query()
+                ->with('toProduct')
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get();
+
+            $dashboardPeriod = (int) request()->input('dashboard_period', 30);
+            if (!in_array($dashboardPeriod, [7, 30, 90, 365], true)) {
+                $dashboardPeriod = 30;
+            }
+
+            // Products store a cumulative counter, not dated view events. Keep
+            // the current snapshot explicit instead of inventing a time series.
+            $viewsChartData = [[
+                'date' => now()->format('Y-m-d'),
+                'label' => now()->format('d.m'),
+                'views' => $totalViews,
+            ]];
+
+            $data['totalProducts'] = $totalProducts;
+            $data['publishedProducts'] = $publishedProducts;
+            $data['unpublishedProducts'] = $unpublishedProducts;
+            $data['totalViews'] = $totalViews;
+            $data['topProducts'] = $topProductsData;
+            $data['totalReviews'] = $totalReviews;
+            $data['newReviews'] = $newReviews;
+            $data['averageRating'] = $averageRating;
+            $data['recentReviews'] = $recentReviews;
+            $data['dashboardPeriod'] = $dashboardPeriod;
+            $data['viewsChartData'] = $viewsChartData;
+
+            $_SESSION['itemaction'] = 'Viewing Dashboard';
+            $_SESSION['itemname'] = __('sCommerce::global.title');
+            break;
+        }
+
         $unprocessedes = [
             sOrder::ORDER_STATUS_NEW,
             sOrder::ORDER_STATUS_FAILED,
@@ -246,7 +309,7 @@ switch ($get) {
             ->count();
 
         // Recent orders
-        $recentOrders = sOrder::orderBy('created_at', 'desc')->limit(7)->get();
+        $recentOrders = sOrder::orderBy('created_at', 'desc')->limit(9)->get();
 
         // Top products
         $topProductsData = [];

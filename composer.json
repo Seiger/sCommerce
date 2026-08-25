@@ -1,6 +1,6 @@
 {
   "name": "seiger/scommerce",
-  "license": "GPL-3.0",
+  "license": "GPL-3.0-or-later",
   "type": "evolutioncms-module",
   "description": "E-commerce tools package for Evolution CMS.",
   "keywords": [

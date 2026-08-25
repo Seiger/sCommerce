@@ -1,5 +1,5 @@
 # sCommerce for Evolution CMS
-![Dashboard](https://github.com/user-attachments/assets/feadb597-f7c1-4540-9455-fa4d4be21332)
+![Dashboard](https://github.com/user-attachments/assets/a03e4564-c087-4839-887f-b9c6106e85b8)
 ![List of Orders](https://github.com/user-attachments/assets/9fd727fd-3299-43a3-8b03-1d090a89f304)
 ![List of Products](https://github.com/user-attachments/assets/8dd1127c-5055-4795-954c-95eb75eadf31)
 ![Products by Category](https://github.com/user-attachments/assets/c6d9a6e3-aad4-4efd-b775-0ee626a4714c)
