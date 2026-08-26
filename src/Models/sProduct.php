@@ -30,6 +30,7 @@ use Seiger\sGallery\sGallery;
  * @property-read string $link The URL of the product.
  * @property-read string $coverSrc The URL of the cover image source attribute.
  * @property-read string $price The formatted price of the product.
+ * @property-read string $oldPrice The formatted old price of the product.
  * @property-read string $specialPrice The formatted special price of the product.
  * @property-read int $reviewsCount The count of reviews for the product.
  */
@@ -76,6 +77,7 @@ class sProduct extends Model
         'link',
         'coverSrc',
         'price',
+        'oldPrice',
         'specialPrice',
         'reviewsCount',
     ];
