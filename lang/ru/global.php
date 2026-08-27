@@ -532,5 +532,8 @@
     "dashboard_views_dynamics" => "Динамика просмотров",
     "dashboard_cumulative_counter" => "Накопительный счетчик",
     "dashboard_history_unavailable" => "История просмотров пока не сохраняется",
+    "dashboard_metrics_worker" => "Метрики панели управления",
+    "dashboard_metrics_worker_desc" => "Создает ежедневный снимок метрик панели управления.",
+    "dashboard_metrics_worker_done" => "Метрики панели управления сохранены за :date.",
     "dashboard_documentation" => "Документация sCommerce",
 ];

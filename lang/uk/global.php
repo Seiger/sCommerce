@@ -533,5 +533,8 @@
     "dashboard_views_dynamics" => "Динаміка переглядів",
     "dashboard_cumulative_counter" => "Накопичувальний лічильник",
     "dashboard_history_unavailable" => "Історія переглядів ще не зберігається",
+    "dashboard_metrics_worker" => "Метрики дашборда",
+    "dashboard_metrics_worker_desc" => "Створює щоденний знімок метрик дашборда.",
+    "dashboard_metrics_worker_done" => "Метрики дашборда збережено за :date.",
     "dashboard_documentation" => "Документація sCommerce",
 ];

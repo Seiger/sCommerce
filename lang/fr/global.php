@@ -45,5 +45,8 @@ return array_replace($labels, [
     'dashboard_views_dynamics' => 'Évolution des vues',
     'dashboard_cumulative_counter' => 'Compteur cumulatif',
     'dashboard_history_unavailable' => "L'historique des vues n'est pas encore enregistré",
+    'dashboard_metrics_worker' => 'Métriques du tableau de bord',
+    'dashboard_metrics_worker_desc' => 'Crée un instantané quotidien des métriques du tableau de bord.',
+    'dashboard_metrics_worker_done' => 'Métriques du tableau de bord enregistrées pour le :date.',
     'dashboard_documentation' => 'Documentation sCommerce',
 ]);

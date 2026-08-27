@@ -45,5 +45,8 @@ return array_replace($labels, [
     'dashboard_views_dynamics' => 'Dynamika wyświetleń',
     'dashboard_cumulative_counter' => 'Licznik skumulowany',
     'dashboard_history_unavailable' => 'Historia wyświetleń nie jest jeszcze zapisywana',
+    'dashboard_metrics_worker' => 'Metryki pulpitu',
+    'dashboard_metrics_worker_desc' => 'Tworzy dzienny zrzut metryk pulpitu.',
+    'dashboard_metrics_worker_done' => 'Metryki pulpitu zapisano dla :date.',
     'dashboard_documentation' => 'Dokumentacja sCommerce',
 ]);

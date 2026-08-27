@@ -531,5 +531,8 @@
     "dashboard_views_dynamics" => "Views dynamics",
     "dashboard_cumulative_counter" => "Cumulative counter",
     "dashboard_history_unavailable" => "Historical views are not stored yet",
+    "dashboard_metrics_worker" => "Dashboard metrics",
+    "dashboard_metrics_worker_desc" => "Creates a daily snapshot of the dashboard metrics.",
+    "dashboard_metrics_worker_done" => "Dashboard metrics saved for :date.",
     "dashboard_documentation" => "sCommerce documentation",
 ];

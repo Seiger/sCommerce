@@ -45,5 +45,8 @@ return array_replace($labels, [
     'dashboard_views_dynamics' => 'Aufrufentwicklung',
     'dashboard_cumulative_counter' => 'Kumulativer Zähler',
     'dashboard_history_unavailable' => 'Historische Aufrufe werden noch nicht gespeichert',
+    'dashboard_metrics_worker' => 'Dashboard-Metriken',
+    'dashboard_metrics_worker_desc' => 'Erstellt täglich einen Snapshot der Dashboard-Metriken.',
+    'dashboard_metrics_worker_done' => 'Dashboard-Metriken für den :date gespeichert.',
     'dashboard_documentation' => 'sCommerce-Dokumentation',
 ]);

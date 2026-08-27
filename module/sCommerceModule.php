@@ -23,6 +23,7 @@ use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
+use Seiger\sCommerce\Models\sDashboardMetric;
 use Seiger\sCommerce\Models\sDeliveryMethod;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sOrderPayment;
@@ -156,7 +157,7 @@ switch ($get) {
             $topProductsData = sProduct::query()
                 ->orderByDesc('views')
                 ->orderByDesc('id')
-                ->limit(5)
+                ->limit(7)
                 ->get()
                 ->map(static fn (sProduct $product): array => [
                     'id' => (int) $product->id,
@@ -182,13 +183,20 @@ switch ($get) {
                 $dashboardPeriod = 30;
             }
 
-            // Products store a cumulative counter, not dated view events. Keep
-            // the current snapshot explicit instead of inventing a time series.
-            $viewsChartData = [[
-                'date' => now()->format('Y-m-d'),
-                'label' => now()->format('d.m'),
-                'views' => $totalViews,
-            ]];
+            $viewsChartData = Schema::hasTable('s_commerce_dashboard')
+                ? sDashboardMetric::viewsChartData($dashboardPeriod, $totalViews)
+                : [];
+            $viewsHistoryAvailable = count($viewsChartData) > 0;
+
+            if (!$viewsHistoryAvailable) {
+                // Preserve the cumulative snapshot until the daily worker has
+                // collected enough data to produce a real time series.
+                $viewsChartData = [[
+                    'date' => now()->format('Y-m-d'),
+                    'label' => now()->format('d.m'),
+                    'views' => $totalViews,
+                ]];
+            }
 
             $data['totalProducts'] = $totalProducts;
             $data['publishedProducts'] = $publishedProducts;
@@ -201,6 +209,7 @@ switch ($get) {
             $data['recentReviews'] = $recentReviews;
             $data['dashboardPeriod'] = $dashboardPeriod;
             $data['viewsChartData'] = $viewsChartData;
+            $data['viewsHistoryAvailable'] = $viewsHistoryAvailable;
 
             $_SESSION['itemaction'] = 'Viewing Dashboard';
             $_SESSION['itemname'] = __('sCommerce::global.title');
