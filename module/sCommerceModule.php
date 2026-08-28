@@ -343,7 +343,7 @@ switch ($get) {
                 }
             }
             uasort($productStats, static fn(array $left, array $right) => $right['orders'] <=> $left['orders']);
-            $topProductIds = array_slice(array_keys($productStats), 0, 5);
+            $topProductIds = array_slice(array_keys($productStats), 0, 7);
 
             if (count($topProductIds) > 0) {
                 $topProducts = sProduct::whereIn('id', $topProductIds)->get()->keyBy('id');
