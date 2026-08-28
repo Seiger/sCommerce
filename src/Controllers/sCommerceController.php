@@ -1,6 +1,7 @@
 <?php namespace Seiger\sCommerce\Controllers;
 
 use EvolutionCMS\Models\SiteContent;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -631,6 +632,38 @@ class sCommerceController
             return self::$staticProductIdsCache[$cacheKey];
         }
 
+        $foundIds = $this->buildProductIdsQuery($category, $dept, $filters)
+            ->get()
+            ->pluck('product')
+            ->toArray();
+
+        self::$staticProductIdsCache[$cacheKey] = $foundIds;
+        return $foundIds;
+    }
+
+    /**
+     * Build a product ID subquery for category product listings.
+     *
+     * Keeping the IDs in SQL prevents large categories from exceeding the
+     * prepared statement placeholder limit when products are paginated.
+     *
+     * @since 1.4.0
+     */
+    public function productIdsQuery(?int $category = null, int $dept = 10): Builder
+    {
+        $category = $category ?: evo()->documentIdentifier;
+        $filters = sFilter::getValidatedFiltersIds() ?? [];
+
+        return $this->buildProductIdsQuery($category, $dept, $filters);
+    }
+
+    /**
+     * Build the shared product-category query used by array and subquery APIs.
+     *
+     * @since 1.4.0
+     */
+    protected function buildProductIdsQuery(int $category, int $dept, array $filters): Builder
+    {
         $categories = array_merge([$category], $this->listAllActiveSubCategories($category, $dept));
 
         $query = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories);
@@ -658,9 +691,7 @@ class sCommerceController
 
         sFilter::applyAttributeFilters($query, $filters);
 
-        $foundIds = $query->get()->pluck('product')->toArray();
-        self::$staticProductIdsCache[$cacheKey] = $foundIds;
-        return $foundIds;
+        return $query;
     }
 
     /**

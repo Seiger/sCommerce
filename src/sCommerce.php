@@ -2,6 +2,7 @@
 
 use EvolutionCMS\Models\ClosureTable;
 use EvolutionCMS\Models\SiteContent;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
@@ -60,12 +61,12 @@ class sCommerce
      * This method fetches products filtered by their IDs and active status,
      * with optional language support and pagination settings.
      *
-     * @param array $productIds An array of product IDs to fetch.
+     * @param array|QueryBuilder $productIds Product IDs or a subquery that selects them.
      * @param string|null $lang The language to fetch the products in. Defaults to the current locale.
      * @param int $perPage The number of products to return per page. Defaults to 1000.
      * @return object The paginated list of products as a Laravel collection.
      */
-    public function getProducts(array $productIds, ?string $lang = null, int $perPage = 10000): object
+    public function getProducts(array|QueryBuilder $productIds, ?string $lang = null, int $perPage = 10000): object
     {
         $lang = !$lang ? evo()->getLocale() : $lang;
         $this->sort = empty($this->sort) ? [$this->controller->validateSort()] : $this->sort;
@@ -210,7 +211,7 @@ class sCommerce
     public function getCategoryProducts(int $perPage = 1000, ?int $category = null, ?string $lang = null, int $dept = 10): object
     {
         $category = $this->getCategoryId($category);
-        $productIds = $this->controller->productIds($category, $dept);
+        $productIds = $this->controller->productIdsQuery($category, $dept);
         return $this->getProducts($productIds, $lang, $perPage);
     }
 

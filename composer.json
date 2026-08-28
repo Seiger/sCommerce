@@ -21,6 +21,7 @@
   ],
   "require": {
     "php": "^8.4",
+    "dmi3yy/ddocs": "^1.0",
     "evolution-cms/evolution": "^3.5.8",
     "seiger/sgallery": "^1.5",
     "seiger/stask": "^2.0"
