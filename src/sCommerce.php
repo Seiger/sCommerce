@@ -19,6 +19,7 @@ use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
+use Seiger\sCommerce\Services\ProductListingService;
 use Seiger\sCommerce\Services\sPriceResolver;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 use View;
@@ -213,6 +214,24 @@ class sCommerce
         $category = $this->getCategoryId($category);
         $productIds = $this->controller->productIdsQuery($category, $dept);
         return $this->getProducts($productIds, $lang, $perPage);
+    }
+
+    /**
+     * Build query-efficient card data for an ordered list of products.
+     *
+     * This opt-in listing API avoids serializing complete sProduct models and
+     * therefore does not trigger database-backed appended accessors in Blade.
+     * Existing product retrieval methods remain unchanged for compatibility.
+     *
+     * @param array<int, int|string> $productIds Ordered product identifiers
+     * @param string|null $lang Requested storefront locale
+     * @param string|null $siteKey Requested multisite key
+     * @return array<int, array<string, mixed>> Blade-compatible product card arrays
+     * @since 1.4.0
+     */
+    public function getProductCards(array $productIds, ?string $lang = null, ?string $siteKey = null): array
+    {
+        return app(ProductListingService::class)->cards($productIds, $lang, $siteKey);
     }
 
     /**
