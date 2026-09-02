@@ -28,7 +28,6 @@ class sCommerceServiceProvider extends ServiceProvider
      * This method is called after all service providers have been registered.
      * It sets up routes, views, translations, migrations, and registers
      * core sCommerce services as singletons in the application container.
-     * Manager boot also registers audited read views for safe session/tab restoration.
      *
      * @return void
      */
@@ -51,22 +50,6 @@ class sCommerceServiceProvider extends ServiceProvider
 
         // MultiLang
         $this->loadTranslations();
-
-        // Opt in only audited read views. Other modules remain non-restorable by default.
-        if (IN_MANAGER_MODE) {
-            $this->app['config']->set('cms.manager_tab_restore.modules.' . md5(__('sCommerce::global.title')), [
-                'views' => ['', 'dashboard', 'orders', 'order'],
-                'params' => [
-                    'i' => '^\\d+$', 'page' => '^\\d+$', 'lang' => '^[a-zA-Z_-]{2,12}$',
-                    'search' => '^[^\\x00-\\x1f]{0,512}$',
-                    'order' => '^(id|client|created_at|cost|status|payment_status)$',
-                    'direc' => '^(asc|desc)$', 'status' => '^[0-9,]*$',
-                    'payment_status' => '^[0-9,]*$', 'payment_method' => '^[a-zA-Z0-9_,.-]*$',
-                    'delivery_method' => '^[a-zA-Z0-9_,.-]*$', 'domain' => '^[a-zA-Z0-9_,.-]*$',
-                    'date_from' => '^\\d{4}-\\d{2}-\\d{2}$', 'date_to' => '^\\d{4}-\\d{2}-\\d{2}$',
-                ],
-            ]);
-        }
 
         // Check sCommerce configuration
         $this->mergeConfigFrom(dirname(__DIR__) . '/config/sCommerceCheck.php', 'cms.settings');
@@ -234,6 +217,8 @@ class sCommerceServiceProvider extends ServiceProvider
      *
      * Registers the sCommerce module with the EvolutionCMS manager interface,
      * including title, icon, and language-specific configuration.
+     * Registers audited read views against the returned module ID, independently
+     * of translator initialization, so manager tabs survive a page reload.
      * Only executed in manager mode.
      *
      * @return void
@@ -253,6 +238,23 @@ class sCommerceServiceProvider extends ServiceProvider
             }
         }
         $lang = include dirname(__DIR__) . '/lang/' . $lang . '/global.php';
-        $this->app->registerModule($lang['title'], dirname(__DIR__) . '/module/sCommerceModule.php', $lang['icon']);
+        $moduleId = $this->app->registerModule($lang['title'], dirname(__DIR__) . '/module/sCommerceModule.php', $lang['icon']);
+
+        // Use the registered ID: the translator locale is not ready during provider boot.
+        // Opt in only audited read views. Other modules remain non-restorable by default.
+        if ($moduleId) {
+            $this->app['config']->set('cms.manager_tab_restore.modules.' . $moduleId, [
+                'views' => ['', 'dashboard', 'orders', 'order'],
+                'params' => [
+                    'i' => '^\\d+$', 'page' => '^\\d+$', 'lang' => '^[a-zA-Z_-]{2,12}$',
+                    'search' => '^[^\\x00-\\x1f]{0,512}$',
+                    'order' => '^(id|client|created_at|cost|status|payment_status)$',
+                    'direc' => '^(asc|desc)$', 'status' => '^[0-9,]*$',
+                    'payment_status' => '^[0-9,]*$', 'payment_method' => '^[a-zA-Z0-9_,.-]*$',
+                    'delivery_method' => '^[a-zA-Z0-9_,.-]*$', 'domain' => '^[a-zA-Z0-9_,.-]*$',
+                    'date_from' => '^\\d{4}-\\d{2}-\\d{2}$', 'date_to' => '^\\d{4}-\\d{2}-\\d{2}$',
+                ],
+            ]);
+        }
     }
 }
