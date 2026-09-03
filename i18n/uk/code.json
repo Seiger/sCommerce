@@ -1,0 +1,7 @@
+{
+  "docs.status.current": {"message": "Актуальна"},
+  "docs.status.previous": {"message": "Попередня"},
+  "docs.status.legacy": {"message": "Застаріла"},
+  "docs.legacy.message": {"message": "Ти читаєш документацію попередньої версії."},
+  "docs.legacy.current": {"message": "Перейти до актуальної документації"}
+}
