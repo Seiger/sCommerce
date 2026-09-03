@@ -537,6 +537,22 @@ switch ($get) {
             $item = sOrder::withTrashed()->findOrFail($requestId);
         }
 
+        if ($requestId === 0 && request()->has('repeat_from')) {
+            if (!request()->isMethod('GET') || empty($_SESSION['mgrValidated']) || !evo()->hasPermission('exec_module')) {
+                throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException();
+            }
+            $repeatInput = request()->input('repeat_from');
+            $repeatId = (is_string($repeatInput) || is_int($repeatInput))
+                ? filter_var($repeatInput, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : false;
+            if (!$repeatId) {
+                throw new \Symfony\Component\HttpKernel\Exception\BadRequestHttpException();
+            }
+            $sourceOrder = sOrder::query()->findOrFail($repeatId);
+            $item = (new \Seiger\sCommerce\Services\OrderRepeater())->draft($sourceOrder);
+            $data['repeatSourceId'] = (int) $sourceOrder->id;
+            $data['repeatToken'] = bin2hex(random_bytes(32));
+        }
+
         $domains = null;
         if (evo()->getConfig('check_sMultisite', false)) {
             $domains = \Seiger\sMultisite\Models\sMultisite::all()->keyBy('key');
@@ -628,6 +644,9 @@ switch ($get) {
             session()->save();
         }
         $response->send();
+        exit;
+    case "orderRepeatSave":
+        (new \Seiger\sCommerce\Controllers\OrderRepeatController())->handle(request())->send();
         exit;
     case "orderSave":
         $requestId = request()->integer('i');

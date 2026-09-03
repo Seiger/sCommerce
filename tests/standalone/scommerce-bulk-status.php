@@ -151,6 +151,7 @@ try {
     preg_match_all('/type="radio" name="status" value="(\d+)"/', $html, $radioMatches);
     $check(count($radioMatches[1]) === 13 && !in_array('0', $radioMatches[1], true), 'Status picker contains all non-deletion statuses');
     $check(str_contains($html, 'data-orders-bulk-message') && str_contains($html, 'scom-orders-status--confirmed'), 'Feedback and shared badges render');
+    $check(!str_contains($html, __('sCommerce::global.payment_link')), 'No payment-link menu item without an available payment link');
     $check((bool) preg_match('/<button[^>]*data-orders-bulk-export[^>]*get=ordersBulkExport[^>]*>/', $html), 'Actual Blade renders export endpoint');
     $check(!str_contains($html, "@lang('sCommerce::global.bulk_status"), 'No uncompiled bulk translation directives');
 } finally {

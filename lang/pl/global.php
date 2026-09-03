@@ -3,6 +3,9 @@
 $labels = include dirname(__DIR__) . '/en/global.php';
 
 return array_replace($labels, [
+    "repeat_draft" => "Kopia zamówienia nr :number. Sprawdź pierwotne produkty i ceny, a następnie zapisz. Płatności, numery przesyłek i historia nie są kopiowane.",
+    "repeat_invalid" => "Sprawdź produkty, ilości, ceny i dane klienta.",
+    "repeat_error" => "Nie potwierdzono zapisu. Spróbuj ponownie w tym samym formularzu.",
     "order_history_deleted" => "Zamówienie usunięte",
     "print_order_heading" => "Zamówienie klienta nr :number · :date",
     "print_seller" => "Sprzedawca",

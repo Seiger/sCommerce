@@ -10,8 +10,14 @@
     $userFullName = preg_replace('/\s+/u', ' ', trim(html_entity_decode(implode(' ', [$userInfo['first_name'] ?? '', $userInfo['middle_name'] ?? '', $userInfo['last_name'] ?? '']), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
     $userId = (int)($item?->user_id ?? 0);
 @endphp
-<form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!sCommerce::moduleUrl()!!}&get=orderSave" onsubmit="documentDirty=false;">
+<form id="form" name="form" method="post" enctype="multipart/form-data" action="{{sCommerce::moduleUrl()}}&get={{isset($repeatSourceId) ? 'orderRepeatSave' : 'orderSave'}}" onsubmit="documentDirty=false;">
     @csrf
+    @isset($repeatSourceId)
+        <input type="hidden" name="repeat_from" value="{{$repeatSourceId}}">
+        <input type="hidden" name="repeat_token" value="{{$repeatToken}}">
+        <div class="alert alert-info">{{__('sCommerce::global.repeat_draft', ['number' => $repeatSourceId])}}</div>
+        <p data-repeat-feedback role="status" hidden></p>
+    @endisset
     <input type="hidden" name="back" value="&get=order&i={{(int)request()->input('i', 0)}}"/>
     <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}"/>
     <input type="hidden" name="products_data" id="products-data" value="{{json_encode($item->products)}}"/>
@@ -47,7 +53,7 @@
                 @endif
                 <p>
                     <strong>@lang('sCommerce::global.order_status'):</strong>
-                    <select name="status" @style(['display:inline-block', 'width:auto', 'margin-left:10px', 'padding:5px'])>
+                    <select name="status" @disabled(isset($repeatSourceId)) @style(['display:inline-block', 'width:auto', 'margin-left:10px', 'padding:5px'])>
                         @foreach(sOrder::listOrderStatuses() as $sId => $sName)
                             <option value="{{$sId}}" @if($sId == $item->status) selected @endif>{{$sName}}</option>
                         @endforeach
@@ -63,7 +69,7 @@
                 <p><strong>@lang('sCommerce::global.payment_name'):</strong>@if(!$payment) @lang('sCommerce::global.not_selected_or_unknown') @else {{$payment['title']}}@endif</p>
                 <p>
                     <strong>@lang('sCommerce::global.payment_status'):</strong>
-                    <select name="payment_status" @style(['display:inline-block', 'width:auto', 'margin-left:10px', 'padding:5px'])>
+                    <select name="payment_status" @disabled(isset($repeatSourceId)) @style(['display:inline-block', 'width:auto', 'margin-left:10px', 'padding:5px'])>
                         @foreach(sOrder::listPaymentStatuses() as $psId => $psName)
                             <option value="{{$psId}}" @if($psId == $item->payment_status) selected @endif>{{$psName}}</option>
                         @endforeach
@@ -493,6 +499,9 @@
             $('#form').on('submit', function() {
                 updateProductsData();
             });
+            @isset($repeatSourceId)
+                @include('sCommerce::scripts.orderRepeat')
+            @endisset
 
             // Update product sum in row
             function updateProductSum(index) {

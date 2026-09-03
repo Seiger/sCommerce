@@ -1,4 +1,7 @@
 <?php return [
+    "repeat_draft" => "Copy of order #:number. Review the original products and prices, then save to create a new order. Payments, tracking and previous history are not copied.",
+    "repeat_invalid" => "Check products, quantities, prices and customer details.",
+    "repeat_error" => "Could not confirm saving the copy. Retry in this same form.",
     "order_history_deleted" => "Order deleted",
     "print_order_heading" => "Customer order #:number · :date",
     "print_seller" => "Supplier",

@@ -357,8 +357,8 @@
 .scom-order-actions-menu { margin:0; position:relative; }
 .scom-order-actions-menu > summary::-webkit-details-marker { display:none; }
 .scom-order-actions-menu__popup { background:#fff; border:1px solid var(--sc-color-border-default); box-shadow:0 8px 24px rgba(31,45,69,.16); min-width:176px; padding:4px 0; position:absolute; right:0; top:26px; z-index:40; }
-.scom-order-actions-menu__popup button { appearance:none; background:#fff; border:0; color:var(--sc-color-text-default); cursor:pointer; display:block; font:inherit; line-height:18px; margin:0; padding:8px 12px; text-align:left; white-space:nowrap; width:100%; }
-.scom-order-actions-menu__popup button:hover { background:var(--sc-color-background-page); }
+.scom-order-actions-menu__popup button, .scom-order-actions-menu__popup a { appearance:none; background:#fff; border:0; box-sizing:border-box; color:var(--sc-color-text-default); cursor:pointer; display:block; font:inherit; line-height:18px; margin:0; padding:8px 12px; text-align:left; text-decoration:none; white-space:nowrap; width:100%; }
+.scom-order-actions-menu__popup button:hover, .scom-order-actions-menu__popup a:hover { background:var(--sc-color-background-page); }
 .scom-order-actions-menu__popup button:disabled { color:#98a2b3; cursor:not-allowed; }
 .scom-order-actions-menu__popup button.scom-orders-delete { color:var(--sc-color-status-negative); }
 .scom-orders-checkbox { align-items:center; cursor:pointer; display:inline-flex; height:20px; justify-content:center; margin:0; position:relative; width:20px; }

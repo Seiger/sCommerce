@@ -10,9 +10,12 @@ php tests/standalone/scommerce-bulk-menu.php
 php tests/standalone/scommerce-bulk-export.php
 php tests/standalone/scommerce-new-order.php
 php tests/standalone/scommerce-review.php
+php tests/standalone/scommerce-review-migration.php
+php tests/standalone/scommerce-repeat.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs
+node tests/standalone/scommerce-repeat.mjs
 ```
 
 Package classes, Blade templates and translations are loaded from this checkout,
