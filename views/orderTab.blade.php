@@ -11,6 +11,7 @@
     $userId = (int)($item?->user_id ?? 0);
 @endphp
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{!!sCommerce::moduleUrl()!!}&get=orderSave" onsubmit="documentDirty=false;">
+    @csrf
     <input type="hidden" name="back" value="&get=order&i={{(int)request()->input('i', 0)}}"/>
     <input type="hidden" name="i" value="{{(int)request()->input('i', 0)}}"/>
     <input type="hidden" name="products_data" id="products-data" value="{{json_encode($item->products)}}"/>
@@ -18,23 +19,23 @@
         <div class="row">
             <div class="col-md">
                 <h3>
-                    <b>#{{$item->order_number ?? $item->id}}</b>
+                    <b>@if($item->exists)#{{$item->order_number ?? $item->id}}@else @lang('sCommerce::global.order') @endif</b>
                     @if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif
                     <b>{{$userFullName}} {{$userInfo['phone'] ?? ''}}</b>
                 </h3>
-                @if($domains)
+                @if(isset($domains[$item->domain]))
                     <p>
                         <span @class(['badge', 'domain-badge']) @style(['font-size:100%;', 'line-height:inherit;', 'background-color:'.($domains[$item->domain]->site_color ?? '#60a5fa')])>
                             {{$domains[$item->domain]->domain}}
                         </span>
                     </p>
                 @endif
+                @if($item->exists)
                 <p>
                     <strong>@lang('sCommerce::global.created'):</strong>
-                    <span @class(['badge', 'bg-disactive' => in_array($item->status, $unprocessedes), 'bg-progress' => in_array($item->status, $workings), 'bg-active' => in_array($item->status, $completeds), 'bg-cancelled' => in_array($item->status, $canceleds)])>
-                        {{$item->created_at}} &mdash; {{sOrder::getOrderStatusName($item->status)}}
-                    </span>
+                    @include('sCommerce::partials.orderStatus', ['status' => (int) $item->status, 'orderStatusLabel' => $item->created_at . ' — ' . sOrder::getOrderStatusName($item->status)])
                 </p>
+                @endif
                 <p>
                     <strong>@lang('sCommerce::global.sum'):</strong>
                     <span @class(['badge', 'bg-paid' => $item->payment_status == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => $item->payment_status != sOrder::PAYMENT_STATUS_PAID])>
@@ -293,9 +294,7 @@
                     @endphp
                     @switch(true)
                         @case(isset($history['status']))
-                            <span @class(['badge', 'bg-disactive' => in_array((int)$history['status'], $unprocessedes), 'bg-progress' => in_array((int)$history['status'], $workings), 'bg-active' => in_array((int)$history['status'], $completeds), 'bg-cancelled' => in_array((int)$history['status'], $canceleds)])>
-                                {{sOrder::getOrderStatusName((int)$history['status'])}}
-                            </span>
+                            @include('sCommerce::partials.orderStatus', ['status' => (int) $history['status']])
                             @break
                         @case(isset($history['payment_status']))
                             <span @class(['badge', 'bg-paid' => (int)$history['payment_status'] == sOrder::PAYMENT_STATUS_PAID, 'bg-pending' => (int)$history['payment_status'] != sOrder::PAYMENT_STATUS_PAID])>
@@ -310,6 +309,11 @@
                         @case(isset($history['user_info_updated']))
                             <span class="badge bg-info">
                                 @lang('sCommerce::global.customer_information') @lang('sCommerce::global.changed')
+                            </span>
+                            @break
+                        @case(($history['action'] ?? null) === 'bulk_soft_delete')
+                            <span class="badge bg-secondary">
+                                @lang('sCommerce::global.order_history_deleted')
                             </span>
                             @break
                         @case($historyFallbackKey !== null)
@@ -471,8 +475,8 @@
 
             // Order products management
             let orderProducts = JSON.parse($('#products-data').val() || '[]');
-            const orderId = {{$item->id}};
-            const orderCurrency = '{{$item->currency}}';
+            const orderId = @js((int) $item->id);
+            const orderCurrency = @js($item->currency);
 
             // Update products data in hidden field
             function updateProductsData() {

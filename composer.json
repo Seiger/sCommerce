@@ -2,7 +2,7 @@
   "name": "seiger/scommerce",
   "license": "GPL-3.0-or-later",
   "type": "evolutioncms-module",
-  "description": "E-commerce tools package for Evolution CMS.",
+  "description": "A powerful, flexible, and extensible e-commerce solution for Evolution CMS, designed to build modern online stores with product catalogs, shopping carts, checkout, order management, payments, APIs, and integrations.",
   "keywords": [
     "evocms",
     "evolution-cms",
@@ -33,7 +33,8 @@
   },
   "extra": {
     "ddocs": {
-      "name": "sCommerce"
+      "name": "sCommerce",
+      "icon_svg": "images/scommerce.svg"
     },
     "laravel": {
       "providers": [

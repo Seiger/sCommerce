@@ -46,6 +46,9 @@
             <th class="sorting @if($order == 'name') sorted @endif" data-order="name">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('global.user') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
+            <th class="sorting @if($order == 'image') sorted @endif" data-order="image">
+                <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.photo') <i class="fas fa-sort" style="color: #036efe;"></i></button>
+            </th>
             <th class="sorting @if($order == 'created_at') sorted @endif" data-order="created_at">
                 <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('global.publish_date') <i class="fas fa-sort" style="color: #036efe;"></i></button>
             </th>
@@ -63,7 +66,7 @@
                 @endif
                 <td>
                     @if($item->toProduct)
-                        <img src="{{$item->toProduct->coverSrc}}" alt="{{$item->toProduct->coverSrc}}" class="product-thumbnail">
+                        <img src="{{$item->toProduct->coverSrc}}" alt="{{$item->toProduct->coverSrc}}" class="product-thumbnail" style="object-fit:scale-down">
                         <a href="{{$item->toProduct->link}}" target="_blank"><b>{{$item->toProduct->title}}</b></a>
                     @else
                         <a><b>@lang('sCommerce::global.review_global')</b></a>
@@ -71,6 +74,8 @@
                 </td>
                 <td>{{$item->rating}}</td>
                 <td>{{$item->name}}</td>
+                @php($ch = (!empty($item->image) && is_file(EVO_BASE_PATH . $item->image)) ? 'checked' : '')
+                <td><input type="checkbox" {{$ch}} style="pointer-events:none"></td>
                 <td>{{$item->created_at ?? ''}}</td>
                 <td>
                     @if($item->published)

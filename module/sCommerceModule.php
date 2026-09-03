@@ -412,9 +412,22 @@ switch ($get) {
     case "orders":
         $perpage = Cookie::get('scom_orders_page_items', 50);
         $dbStatuses = array_flip(sOrder::select('status')->distinct()->pluck('status')->toArray());
-        $status = request()->input('status', 0);
-        $status = isset($dbStatuses[$status]) ? $status : 0;
-        $domain = request()->input('domain', '');
+        $dbPaymentStatuses = array_flip(sOrder::select('payment_status')->distinct()->pluck('payment_status')->toArray());
+        $parseFilterValues = static function ($value): array {
+            $values = is_array($value) ? $value : explode(',', (string)$value);
+            return array_values(array_unique(array_filter(array_map(static fn($item) => trim((string)$item), $values), static fn($item) => $item !== '')));
+        };
+        $selectedStatuses = array_values(array_filter(array_map('intval', $parseFilterValues(request()->input('status', []))), static fn($value) => isset($dbStatuses[$value])));
+        $selectedPaymentStatuses = array_values(array_filter(array_map('intval', $parseFilterValues(request()->input('payment_status', []))), static fn($value) => isset($dbPaymentStatuses[$value])));
+        $selectedPaymentMethods = $parseFilterValues(request()->input('payment_method', []));
+        $selectedDeliveryMethods = $parseFilterValues(request()->input('delivery_method', []));
+        $selectedDomains = $parseFilterValues(request()->input('domain', []));
+        $validDate = static function (string $value): string {
+            $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+            return $date && $date->format('Y-m-d') === $value ? $value : '';
+        };
+        $dateFrom = $validDate(trim((string)request()->input('date_from', '')));
+        $dateTo = $validDate(trim((string)request()->input('date_to', '')));
         $order = request()->input('order', 'id');
         $order = in_array($order, ['id', 'client', 'created_at', 'cost', 'status', 'payment_status'], true) ? $order : 'id';
         $direc = request()->input('direc', 'desc') === 'asc' ? 'asc' : 'desc';
@@ -422,10 +435,19 @@ switch ($get) {
         $domains = null;
         if (evo()->getConfig('check_sMultisite', false)) {
             $domains = \Seiger\sMultisite\Models\sMultisite::all()->keyBy('key');
+            $selectedDomains = array_values(array_intersect($selectedDomains, $domains->keys()->all()));
+        } else {
+            $selectedDomains = [];
         }
 
         $query = sOrder::query()->select('*');
-        if ($domains && trim($domain)) {$query->where('domain', $domain);}
+        if ($selectedDomains) {$query->whereIn('domain', $selectedDomains);}
+        if ($selectedStatuses) {$query->whereIn('status', $selectedStatuses);}
+        if ($selectedPaymentStatuses) {$query->whereIn('payment_status', $selectedPaymentStatuses);}
+        if ($selectedPaymentMethods) {$query->whereIn(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(payment_info, '$.method'))"), $selectedPaymentMethods);}
+        if ($selectedDeliveryMethods) {$query->whereIn(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(delivery_info, '$.method'))"), $selectedDeliveryMethods);}
+        if ($dateFrom !== '') {$query->whereDate('created_at', '>=', $dateFrom);}
+        if ($dateTo !== '') {$query->whereDate('created_at', '<=', $dateTo);}
         if (request()->filled('search')) {$query->search();}
         if ($order === 'client') {
             $query->orderByRaw("CONCAT_WS(' ', JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.first_name')), JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.middle_name')), JSON_UNQUOTE(JSON_EXTRACT(user_info, '$.last_name'))) {$direc}");
@@ -457,13 +479,28 @@ switch ($get) {
             sOrder::ORDER_STATUS_DELETED,
         ];
 
-        $data['items'] = $query->paginate($perpage);
+        $data['items'] = $query->paginate($perpage)->withQueryString();
         $data['unprocessedes'] = $unprocessedes;
         $data['workings'] = $workings;
         $data['completeds'] = $completeds;
         $data['canceleds'] = $canceleds;
-        $data['status'] = $status;
+        $data['selectedStatuses'] = $selectedStatuses;
         $data['statuses'] = array_intersect_key(sOrder::listOrderStatuses(), $dbStatuses);
+        $data['selectedPaymentStatuses'] = $selectedPaymentStatuses;
+        $data['selectedPaymentMethods'] = $selectedPaymentMethods;
+        $data['selectedDeliveryMethods'] = $selectedDeliveryMethods;
+        $data['selectedDomains'] = $selectedDomains;
+        $data['paymentStatuses'] = array_intersect_key(sOrder::listPaymentStatuses(), $dbPaymentStatuses);
+        try {
+            $data['paymentMethods'] = collect(sCheckout::getPayments())->keyBy('name');
+        } catch (\Throwable) {
+            $data['paymentMethods'] = collect();
+        }
+        try {
+            $data['deliveryMethods'] = collect(sCheckout::getDeliveries())->keyBy('name');
+        } catch (\Throwable) {
+            $data['deliveryMethods'] = collect();
+        }
         $data['total'] = sOrder::count();
         $data['unprocessed'] = sOrder::whereIn('status', $unprocessedes)->count();
         $data['working'] = sOrder::whereIn('status', $workings)->count();
@@ -477,7 +514,28 @@ switch ($get) {
         $tabs = ['order'];
         $iUrl = trim($iUrl) ?: '&i=0';
         $requestId = (int)request()->input('i', 0);
-        $item = sOrder::withTrashed()->find($requestId);
+        if ($requestId === 0) {
+            // Opening the form must not persist an order or reserve a reference.
+            $item = (new sOrder())->forceFill([
+                'status' => sOrder::ORDER_STATUS_NEW,
+                'payment_status' => sOrder::PAYMENT_STATUS_PENDING,
+                'currency' => sCommerce::config('basic.main_currency', 'USD'),
+                'cost' => 0,
+                'user_id' => 0,
+                'user_info' => [],
+                'delivery_info' => [],
+                'payment_info' => [],
+                'products' => [],
+                'manager_info' => [],
+                'manager_notes' => [],
+                'history' => [],
+                'domain' => trim((string)evo()->getConfig('site_key', 'default')),
+                'is_quick' => false,
+                'do_not_call' => false,
+            ]);
+        } else {
+            $item = sOrder::withTrashed()->findOrFail($requestId);
+        }
 
         $domains = null;
         if (evo()->getConfig('check_sMultisite', false)) {
@@ -549,9 +607,28 @@ switch ($get) {
         }
         $data['delivery'] = $deliveryMethod;
         $data['domains'] = $domains;
-        $_SESSION['itemaction'] = 'Editing a Order of #' . $item->id;
+        $_SESSION['itemaction'] = $item->exists ? 'Editing a Order of #' . $item->id : 'Creating an Order';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
+    case "ordersBulkMenu":
+        $response = (new \Seiger\sCommerce\Controllers\OrderBulkMenuController())->handle(request());
+        if ($response->getStatusCode() === 200 && request()->input('action') !== 'print') {
+            session()->flash('success', $response->getData(true)['message']);
+            session()->save();
+        }
+        $response->send();
+        exit;
+    case "ordersBulkExport":
+        (new \Seiger\sCommerce\Controllers\OrderBulkExportController())->handle(request())->send();
+        exit;
+    case "ordersBulkStatus":
+        $response = (new \Seiger\sCommerce\Controllers\OrderBulkStatusController())->handle(request());
+        if ($response->getStatusCode() === 200) {
+            session()->flash('success', $response->getData(true)['message']);
+            session()->save();
+        }
+        $response->send();
+        exit;
     case "orderSave":
         $requestId = request()->integer('i');
         $item = sOrder::find($requestId);
@@ -661,14 +738,9 @@ switch ($get) {
             }
 
             $status = request()->integer('status', $item->status);
-            if ($status != $item->status) {
-                $item->status = $status;
-                $history[] = [
-                    'status' => $status,
-                    'timestamp' => now()->toDateTimeString(),
-                    'user_id' => (int)evo()->getLoginUserID('mgr'),
-                ];
-            }
+            $item->history = $history;
+            (new \Seiger\sCommerce\Services\OrderStatusUpdater())->apply($item, $status, (int)evo()->getLoginUserID('mgr'));
+            $history = $item->history;
 
             if (request()->string('note')->isNotEmpty()) {
                 $manager_notes = $item->manager_notes;
