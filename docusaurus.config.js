@@ -72,7 +72,7 @@ module.exports = {
         docs: {sidebar: {hideable: true, autoCollapseCategories: true}},
         footer: {
             style: 'light',
-            copyright: 'Developed by <a href="https://seigerit.com/">Seiger IT</a>'
+            copyright: 'Developed by <a href="https://seigerit.com/" target="_blank" rel="noopener noreferrer">Seiger IT</a>'
         },
         tableOfContents: {minHeadingLevel: 2, maxHeadingLevel: 3},
         prism: {additionalLanguages: ['php', 'bash', 'json']}
