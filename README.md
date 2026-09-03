@@ -16,10 +16,14 @@ branch. dDocs reads that same tree from the installed Composer package.
 - Docusaurus supplies Markdown rendering, localized navigation, theme switching,
   sidebar trees and table of contents. Small theme wrappers supply the branch
   selector and the reusable older-version banner.
-- The shared footer credits [Seiger IT](https://seigerit.com/); canonical localized
+- A persistent sidebar credit (fixed bottom bar on mobile) links to
+  [Seiger IT](https://seigerit.com/). Article edit links and Previous/Next cards
+  are intentionally omitted; canonical localized
   overview pages carry the same developer credit for dDocs readers.
 - English is the default locale. Missing translated pages use Docusaurus's normal
-  English fallback. The existing en, uk and ru content is preserved; de, fr and pl
+  English fallback. `localeSources: {"ru": "uk"}` makes existing `/ru/` URLs
+  serve the canonical Ukrainian tree, without changing package `docs/ru` files.
+  The alias also shares Ukrainian site UI translations and HTML language; de, fr and pl
   are also enabled because the package already contains those locale trees.
 
 `.generated/i18n/<locale>/docusaurus-plugin-content-docs-<id>/current` is the standard
@@ -149,7 +153,7 @@ npm run build
 ```
 
 The fixture command creates synthetic, ignored 3.x/2.x/1.x content and builds both
-English and Ukrainian into `build-fixture`. It checks current/previous/legacy
+English, Ukrainian and the Ukrainian `/ru/` alias into `build-fixture`. It checks current/previous/legacy
 routes, warnings and relative document/image links. These are not real releases.
 After it runs, prepare the real inputs again before the normal build or dev server.
 Missing local Markdown links and broken generated links fail the production build.

@@ -13,6 +13,11 @@ function validateConfig(config) {
     if (Object.keys(config.locales).some((locale) => !/^[a-z]{2}$/.test(locale))) {
         throw new Error('Locale keys must be two lowercase letters.');
     }
+    for (const [locale, source] of Object.entries(config.localeSources || {})) {
+        if (!config.locales[locale] || !config.locales[source] || config.localeSources[source]) {
+            throw new Error('Locale sources must reference a declared, non-aliased locale.');
+        }
+    }
     if (config.lines.filter((line) => line.status === 'current').length !== 1) {
         throw new Error('Exactly one documentation line must be current.');
     }

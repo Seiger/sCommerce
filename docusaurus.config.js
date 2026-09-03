@@ -35,7 +35,7 @@ module.exports = {
         locales: Object.keys(registry.locales),
         path: '.generated/i18n',
         localeConfigs: Object.fromEntries(Object.entries(registry.locales)
-            .map(([locale, label]) => [locale, {label, htmlLang: locale}]))
+            .map(([locale, label]) => [locale, {label, htmlLang: registry.localeSources?.[locale] || locale}]))
     },
     customFields: {documentation: registry},
     presets: [['classic', {
@@ -50,10 +50,7 @@ module.exports = {
             id: line.id,
             path: path.join(__dirname, '.generated/content', line.id),
             routeBasePath: line.route || '/',
-            sidebarPath: require.resolve('./sidebars.js'),
-            editLocalizedFiles: true,
-            editUrl: ({locale, docPath}) =>
-                `https://github.com/Seiger/sCommerce/edit/${line.branch}/docs/${locale}/${docPath}`
+            sidebarPath: require.resolve('./sidebars.js')
         }]),
         ['@docusaurus/plugin-client-redirects', {
             createRedirects: (route) => route.endsWith('/admin/producs/')

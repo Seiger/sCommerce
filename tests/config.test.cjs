@@ -23,12 +23,15 @@ test('supports three lines and rejects ambiguous or unsafe registries', () => {
     assert.throws(() => validateConfig({...config, lines: [config.lines[2]]}));
     assert.throws(() => validateConfig({...config, lines: [{...config.lines[0], branch: 'master'}]}));
     assert.throws(() => validateConfig({...config, lines: [{...config.lines[0], version: '../outside'}]}));
+    assert.throws(() => validateConfig({...config, localeSources: {uk: '../outside'}}));
+    assert.throws(() => validateConfig({...config, localeSources: {uk: 'en', en: 'uk'}}));
 });
 
 test('build views link canonical sources without modifying them on repeated preparation', (t) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'scommerce-docs-'));
     t.after(() => fs.rmSync(root, {recursive: true, force: true}));
-    const config = validateConfig({defaultLocale: 'en', locales: {en: 'English', uk: 'Українська'},
+    const config = validateConfig({defaultLocale: 'en', locales: {en: 'English', uk: 'Українська', ru: 'Українська (/ru/)'},
+        localeSources: {ru: 'uk'},
         lines: [{version: '1.x', branch: '1.x', label: '1.x', status: 'current'}]});
     const docs = path.join(root, 'package', 'docs');
     for (const locale of ['en', 'uk']) {
@@ -36,6 +39,8 @@ test('build views link canonical sources without modifying them on repeated prep
         fs.writeFileSync(path.join(docs, locale, 'README.md'), `# ${locale}`);
     }
     fs.writeFileSync(path.join(docs, 'docs.json'), JSON.stringify({package: 'seiger/scommerce'}));
+    fs.mkdirSync(path.join(root, 'i18n/uk'), {recursive: true});
+    fs.writeFileSync(path.join(root, 'i18n/uk/code.json'), JSON.stringify({'docs.status.current': {message: 'Актуальна'}}));
     prepare(config, {'1.x': 'package'}, root);
     prepare(config, {'1.x': 'package'}, root);
     assert.equal(fs.readFileSync(path.join(docs, 'en/README.md'), 'utf8'), '# en');
@@ -45,4 +50,9 @@ test('build views link canonical sources without modifying them on repeated prep
     assert.equal(fs.readFileSync(path.join(root,
         '.generated/i18n/uk/docusaurus-plugin-content-docs-line-1-x/current/README.md'), 'utf8'), '# uk');
     assert.ok(!fs.existsSync(path.join(root, 'versioned_docs')));
+    const alias = path.join(root, '.generated/i18n/ru/docusaurus-plugin-content-docs-line-1-x/current');
+    assert.equal(fs.realpathSync(alias), fs.realpathSync(path.join(docs, 'uk')));
+    const aliasUi = JSON.parse(fs.readFileSync(path.join(root, '.generated/i18n/ru/code.json'), 'utf8'));
+    assert.equal(aliasUi['docs.status.current'].message, 'Актуальна');
+    assert.equal(aliasUi['theme.CodeBlock.copy'].message, 'Копіювати');
 });

@@ -26,14 +26,17 @@ function prepare(config, sources = {}, root = siteDir) {
         if (metadata.package !== 'seiger/scommerce') {
             throw new Error(`Unexpected documentation package in ${docs}`);
         }
-        const primary = path.join(docs, config.defaultLocale);
+        const primary = path.join(docs, config.localeSources?.[config.defaultLocale] || config.defaultLocale);
         if (!fs.existsSync(path.join(primary, 'README.md'))) {
             throw new Error(`Missing ${line.version}/${config.defaultLocale}/README.md`);
         }
         connections.push([primary, path.join(generated, 'content', line.id)]);
         for (const locale of Object.keys(config.locales)) {
             if (locale === config.defaultLocale) continue;
-            const translated = path.join(docs, locale);
+            const translated = path.join(docs, config.localeSources?.[locale] || locale);
+            if (config.localeSources?.[locale] && !fs.existsSync(path.join(translated, 'README.md'))) {
+                throw new Error(`Missing source documentation for locale alias ${locale}`);
+            }
             if (fs.existsSync(translated)) {
                 connections.push([translated, path.join(generated, 'i18n', locale,
                     `docusaurus-plugin-content-docs-${line.id}`, 'current')]);
@@ -49,6 +52,22 @@ function prepare(config, sources = {}, root = siteDir) {
     const translations = path.join(root, 'i18n');
     if (fs.existsSync(translations)) {
         fs.cpSync(translations, path.join(generated, 'i18n'), {recursive: true});
+        for (const [locale, source] of Object.entries(config.localeSources || {})) {
+            const sourceUi = path.join(translations, source);
+            const targetUi = path.join(generated, 'i18n', locale);
+            if (fs.existsSync(sourceUi)) {
+                fs.cpSync(sourceUi, targetUi, {recursive: true});
+            }
+            // Docusaurus otherwise loads built-in messages using the URL locale.
+            const defaults = require(`@docusaurus/theme-translations/locales/${source}/theme-common.json`);
+            const codePath = path.join(targetUi, 'code.json');
+            const custom = fs.existsSync(codePath) ? JSON.parse(fs.readFileSync(codePath, 'utf8')) : {};
+            fs.mkdirSync(targetUi, {recursive: true});
+            fs.writeFileSync(codePath, JSON.stringify({
+                ...Object.fromEntries(Object.entries(defaults).map(([id, message]) => [id, {message}])),
+                ...custom
+            }, null, 2));
+        }
     }
     fs.writeFileSync(path.join(generated, 'registry.json'), JSON.stringify(config, null, 2));
 }
