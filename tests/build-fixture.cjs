@@ -7,7 +7,7 @@ const {prepare} = require('../scripts/prepare.cjs');
 
 const root = path.resolve(__dirname, '..');
 const fixture = path.join(root, '.test-output');
-const config = {defaultLocale: 'en', locales: {en: 'English', uk: 'Українська', ru: 'Українська (/ru/)'}, localeSources: {ru: 'uk'}, lines: [
+const config = {defaultLocale: 'en', locales: {en: 'English', uk: 'Українська', ru: 'Русский'}, localeSources: {ru: 'uk'}, lines: [
     {version: '3.x', branch: '3.x', label: '3.x', status: 'current'},
     {version: '2.x', branch: '2.x', label: '2.x', status: 'previous'},
     {version: '1.x', branch: '1.x', label: '1.x', status: 'legacy'}
@@ -58,4 +58,4 @@ for (const {version, status} of config.lines) {
         assert.ok(fs.existsSync(path.join(root, 'build-fixture', prefix, 'products/index.html')));
     }
 }
-process.stdout.write('Three-line build, Ukrainian /ru/ alias, minimal shell, legacy banners, links and assets verified.\n');
+process.stdout.write('Three-line multilingual build, minimal shell, legacy banners, links and assets verified.\n');

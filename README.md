@@ -21,10 +21,7 @@ branch. dDocs reads that same tree from the installed Composer package.
   are intentionally omitted; canonical localized
   overview pages carry the same developer credit for dDocs readers.
 - English is the default locale. Missing translated pages use Docusaurus's normal
-  English fallback. `localeSources: {"ru": "uk"}` makes existing `/ru/` URLs
-  serve the canonical Ukrainian tree, without changing package `docs/ru` files.
-  The alias also shares Ukrainian site UI translations and HTML language; de, fr and pl
-  are also enabled because the package already contains those locale trees.
+  English fallback. The language selector provides en, uk, de, fr, pl and ru.
 
 `.generated/i18n/<locale>/docusaurus-plugin-content-docs-<id>/current` is the standard
 Docusaurus translation input location, linked to the branch's locale directory.
@@ -152,8 +149,8 @@ npm run docs:prepare -- 1.x=../..
 npm run build
 ```
 
-The fixture command creates synthetic, ignored 3.x/2.x/1.x content and builds both
-English, Ukrainian and the Ukrainian `/ru/` alias into `build-fixture`. It checks current/previous/legacy
+The fixture command creates synthetic, ignored 3.x/2.x/1.x content and builds
+the configured test locales into `build-fixture`. It checks current/previous/legacy
 routes, warnings and relative document/image links. These are not real releases.
 After it runs, prepare the real inputs again before the normal build or dev server.
 Missing local Markdown links and broken generated links fail the production build.

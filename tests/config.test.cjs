@@ -30,7 +30,7 @@ test('supports three lines and rejects ambiguous or unsafe registries', () => {
 test('build views link canonical sources without modifying them on repeated preparation', (t) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'scommerce-docs-'));
     t.after(() => fs.rmSync(root, {recursive: true, force: true}));
-    const config = validateConfig({defaultLocale: 'en', locales: {en: 'English', uk: 'Українська', ru: 'Українська (/ru/)'},
+    const config = validateConfig({defaultLocale: 'en', locales: {en: 'English', uk: 'Українська', ru: 'Русский'},
         localeSources: {ru: 'uk'},
         lines: [{version: '1.x', branch: '1.x', label: '1.x', status: 'current'}]});
     const docs = path.join(root, 'package', 'docs');
