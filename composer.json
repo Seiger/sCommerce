@@ -32,6 +32,9 @@
     }
   },
   "extra": {
+    "ddocs": {
+      "name": "sCommerce"
+    },
     "laravel": {
       "providers": [
         "Seiger\\sCommerce\\sCommerceServiceProvider"
