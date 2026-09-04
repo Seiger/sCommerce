@@ -7,7 +7,7 @@ sidebar_position: 1
 
 # sCommerce
 
-sCommerce est le paquet indépendant de catalogue, panier et checkout pour Evolution CMS. Lorsque sPricing est installé, il applique les prix contextuels sans modifier l'API produit existante.
+**sCommerce** est une solution e-commerce complète conçue spécialement pour Evolution CMS. Elle fournit un framework complet pour créer des boutiques en ligne avec des produits, des catégories, des commandes, des paiements, la gestion des stocks et de nombreuses autres fonctionnalités.
 
 ## Développeur
 

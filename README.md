@@ -1,6 +1,6 @@
 # sCommerce for Evolution CMS
 ![Dashboard](https://github.com/user-attachments/assets/a03e4564-c087-4839-887f-b9c6106e85b8)
-![List of Orders](https://github.com/user-attachments/assets/9fd727fd-3299-43a3-8b03-1d090a89f304)
+![List of Orders](https://github.com/user-attachments/assets/16031ada-cd5d-4c38-abf4-66d6031c666d)
 ![List of Products](https://github.com/user-attachments/assets/8dd1127c-5055-4795-954c-95eb75eadf31)
 ![Products by Category](https://github.com/user-attachments/assets/c6d9a6e3-aad4-4efd-b775-0ee626a4714c)
 ![sCommerce Settings block](https://github.com/user-attachments/assets/3c2283bf-a2b8-4af1-a01b-97e88b0ecc21)
@@ -14,6 +14,10 @@
 [![Liberapay](https://img.shields.io/liberapay/patrons/seigerkornelyuk.svg?logo=liberapay)](https://packagist.org/packages/seiger/scommerce)
 
 # Welcome to sCommerce!
+
+**sCommerce** is a comprehensive e-commerce solution designed specifically for Evolution CMS. 
+It provides a complete framework for building online stores with products, categories, orders, 
+payments, inventory management, and many other features.
 
 **sCommerce** stands as a comprehensive suite of **e-commerce** tools meticulously crafted
 for Evolution CMS. Tailored to empower Evolution CMS users, this dynamic package

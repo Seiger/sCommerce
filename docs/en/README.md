@@ -7,7 +7,7 @@ sidebar_position: 1
 
 # sCommerce for Evolution CMS
 
-sCommerce is the independent Evolution CMS catalog, cart and checkout package. When sPricing is installed, it can apply contextual prices without changing the existing product API.
+**sCommerce** is a comprehensive e-commerce solution designed specifically for Evolution CMS. It provides a complete framework for building online stores with products, categories, orders, payments, inventory management, and many other features.
 
 ![List of Products](https://github.com/user-attachments/assets/8dd1127c-5055-4795-954c-95eb75eadf31)
 ![Products by Category](https://github.com/user-attachments/assets/c6d9a6e3-aad4-4efd-b775-0ee626a4714c)
