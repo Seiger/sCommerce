@@ -691,7 +691,11 @@ class sProduct extends Model
     }
 
     /**
-     * Convert the product regular price to a number in a specified currency.
+     * Convert the effective storefront price to a number in a specified currency.
+     *
+     * A request-scoped resolved price is reused when available; otherwise the
+     * optional pricing listener chain is resolved lazily before legacy fields
+     * are used as the fallback.
      *
      * @param string $currency The desired currency to convert to.
      *
@@ -704,6 +708,11 @@ class sProduct extends Model
             if ($resolved !== null) {
                 return $resolved;
             }
+
+            $pricing = sCommerce::resolveProductPricing($this, (string)$currency);
+            $this->applyResolvedPricing($pricing, (string)$currency);
+
+            return (float)$pricing['priceAsFloat'];
         }
 
         return $this->legacyPriceToNumber($currency, $priceMode);
@@ -878,7 +887,11 @@ class sProduct extends Model
     }
 
     /**
-     * Convert the product old price to a number in a specified currency.
+     * Convert the effective storefront old price to a number in a specified currency.
+     *
+     * A request-scoped resolved price is reused when available; otherwise the
+     * optional pricing listener chain is resolved lazily before legacy fields
+     * are used as the fallback.
      *
      * @param string $currency The desired currency to convert to.
      *
@@ -891,6 +904,11 @@ class sProduct extends Model
             if ($resolved !== null) {
                 return $resolved;
             }
+
+            $pricing = sCommerce::resolveProductPricing($this, (string)$currency);
+            $this->applyResolvedPricing($pricing, (string)$currency);
+
+            return (float)$pricing['oldPriceAsFloat'];
         }
 
         return $this->legacyOldPriceToNumber($currency, $priceMode);
