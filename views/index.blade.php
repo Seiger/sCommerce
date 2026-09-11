@@ -63,7 +63,7 @@
     <script src="https://cdn.jsdelivr.net/npm/nice-select2@2.2.0/dist/js/nice-select2.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
     @include('sCommerce::partials.style')
-    <link href="{{asset('modules/scommerce/css/scommerce.css')}}?v={{$sCommerceStylesVersion}}" rel="stylesheet">
+    <link href="{{asset('site/scommerce.css')}}?v={{$sCommerceStylesVersion}}" rel="stylesheet">
     <script>
         function evoRenderImageCheck(a) {
             var b = document.getElementById('image_for_' + a.target.id), c = new Image;

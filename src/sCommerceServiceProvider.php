@@ -188,7 +188,7 @@ class sCommerceServiceProvider extends ServiceProvider
             'symlink:' . dirname(__DIR__) . '/images/scommerce.ico' => public_path('assets/site/scommerce.ico'),
             'symlink:' . dirname(__DIR__) . '/images/scommerce.svg' => public_path('assets/site/scommerce.svg'),
             'symlink:' . dirname(__DIR__) . '/images/seigerit-blue.svg' => public_path('assets/site/seigerit-blue.svg'),
-            'symlink:' . dirname(__DIR__) . '/css/scommerce.css' => public_path('assets/modules/scommerce/css/scommerce.css'),
+            'symlink:' . dirname(__DIR__) . '/css/scommerce.css' => public_path('assets/site/scommerce.css'),
             dirname(__DIR__) . '/views/s_commerce_product.blade.php' => public_path('views/s_commerce_product.blade.php'),
             dirname(__DIR__) . '/builder/accordion/config.php' => public_path('assets/modules/scommerce/builder/accordion/config.php'),
             dirname(__DIR__) . '/builder/accordion/render.blade.php' => public_path('assets/modules/scommerce/builder/accordion/render.blade.php'),
