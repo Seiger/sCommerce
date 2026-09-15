@@ -920,6 +920,9 @@ class sCommerceController
                 $order = strtolower($order) == 'desc' ? 'desc' : 'asc';
 
                 switch ($sortParameter) {
+                    case "name":
+                        $sort = 'spt.pagetitle'; // Product name in the requested locale (with base fallback)
+                        break;
                     case "cheap":
                         $sort = 'price_regular'; // Sort by product price (low to high)
                         break;
