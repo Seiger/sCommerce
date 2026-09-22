@@ -49,7 +49,9 @@ class sCheckout
      * This method dynamically generates validation rules for the checkout process
      * based on the provided order data. It includes base validation rules for user,
      * delivery, and payment fields and integrates additional rules from the selected
-     * delivery method.
+     * delivery method. Plugins can then add, replace, or remove rules through
+     * the sCommerce.CheckoutValidationRules event. Its payload contains
+     * the input data and the rules array passed by reference.
      *
      * @param array $data The input data for the checkout process.
      *                    Example: ['delivery' => ['method' => 'courier', ...], ...].
@@ -103,6 +105,8 @@ class sCheckout
             $deliveryMethod = $this->deliveryMethods[$data['delivery']['method']];
             $rules = array_merge($rules, $deliveryMethod->getValidationRules());
         }
+
+        Event::dispatch('sCommerce.CheckoutValidationRules', [['data' => $data, 'rules' => &$rules]]);
 
         return $rules;
     }
@@ -934,7 +938,7 @@ class sCheckout
     {
         $priceMode = static::getSessionPriceMode();
 
-        foreach (Event::dispatch('evolution.sCommerceResolveProductPriceMode', [[
+        foreach (Event::dispatch('sCommerce.ResolveProductPriceMode', [[
             'product' => $product,
             'optionId' => $optionId,
             'priceMode' => $priceMode,

@@ -270,7 +270,7 @@ class sCart
     {
         $priceMode = $this->getSessionPriceMode();
 
-        foreach (Event::dispatch('evolution.sCommerceResolveProductPriceMode', [[
+        foreach (Event::dispatch('sCommerce.ResolveProductPriceMode', [[
             'product' => $product,
             'optionId' => $optionId,
             'priceMode' => $priceMode,

@@ -52,7 +52,7 @@ final class sPriceResolver
             'oldPrice' => '',
         ];
 
-        foreach (Event::dispatch('evolution.sCommerceResolveProductPrice', [[
+        foreach (Event::dispatch('sCommerce.ResolveProductPrice', [[
             'product' => $product,
             'optionId' => $optionId,
             'priceMode' => $priceMode,

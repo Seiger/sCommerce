@@ -102,14 +102,42 @@ sCart::clearPriceMode();
 - `price_opt_special` используется, если она больше `0` и меньше `price_opt_regular`;
 - иначе используется `price_opt_regular`.
 
-### sCommerceResolveProductPriceMode
+### sCommerce.CheckoutValidationRules
+
+Вызывается в `sCheckout::getValidationRules(array $data)` после объединения базовых правил с правилами выбранного способа доставки.
+
+- `data` — входные данные, переданные в `getValidationRules()`.
+- `rules` — итоговый массив правил по ссылке. Можно добавлять и заменять ключи или удалять их через `unset()`.
+
+Разместите слушатель в `core/custom/packages/main/plugins/sCommerceEvents.php`, если service provider пакета main загружает эту папку. Изменяйте `rules` напрямую: возвращённый массив не применяется. Каждый следующий слушатель видит изменения предыдущих и может их переопределить.
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.CheckoutValidationRules', function (array $params) {
+    $rules = &$params['rules'];
+    $data = $params['data'];
+
+    $rules['user.email'] = 'nullable|email|max:255';
+    $rules['user.first_name'] = ['required', 'string', 'max:100'];
+    unset($rules['user.middle_name']);
+});
+```
+
+`setOrderData()` затем оставляет только правила для ключей, присутствующих в переданных данных. Поэтому добавление `required` не делает отсутствующее поле обязательным при таком частичном обновлении. Удаление правила также исключает поле из этого пути валидации, а не обеспечивает сохранение произвольных полей. Быстрый заказ использует собственные правила и не вызывает этот хук.
+
+Для этих трёх событий используйте точные имена с этой страницы, без префикса `evolution.`. Предыдущие ценовые события `evolution.sCommerceResolveProductPriceMode` и `evolution.sCommerceResolveProductPrice` больше не вызываются; обновляйте слушатели проекта и sPricing вместе с sCommerce.
+
+### sCommerce.ResolveProductPriceMode
+
+Вызывается в `sCart` при добавлении товара и получении мини-корзины, а также в `sCheckout` при определении цены товара для быстрого заказа. Используется первый непустой строковый ответ: `wholesale` и `opt` нормализуются в `wholesale`, остальные строки — в `auto` (регистр и пробелы по краям игнорируются). Верните `null`, чтобы сохранить режим сессии, если другой слушатель его не переопределит. Событие не изменяет сессию.
 
 Используйте это событие, чтобы изменить режим цены для конкретного товара поверх режима из сессии.
 
 ```php
 use Illuminate\Support\Facades\Event;
 
-Event::listen('evolution.sCommerceResolveProductPriceMode', function(array $payload) {
+Event::listen('sCommerce.ResolveProductPriceMode', function(array $payload) {
     $product = $payload['product'];
 
     if ((int)$product->id === 123) {
@@ -126,14 +154,19 @@ Payload содержит:
 - `optionId`: ID опции в корзине;
 - `priceMode`: режим из сессии до товарного override.
 
-### sCommerceResolveProductPrice
+### sCommerce.ResolveProductPrice
+
+Вызывается в `sPriceResolver::resolve()` после определения базовой/акционной цены. Параметры: `product` — объект товара; `optionId` — ID опции, по умолчанию `0`; `priceMode` — `auto` или `wholesale`; `currency` — код валюты отображения; `pricing` — исходный массив с ключами `priceMode`, `priceAsFloat`, `oldPriceAsFloat`, `price`, `oldPrice`. Суммы нужно возвращать в валюте отображения.
+
+Применяется первый числовой ответ или массив; ответы разных слушателей не объединяются. Число задаёт текущую цену и сбрасывает старую в `0`. Массив заменяет только переданные поддерживаемые ключи. Верните `null`, чтобы не менять цену и позволить другому слушателю задать её. Все слушатели вызываются до анализа ответов. `sPricing` слушает это событие и возвращает `priceAsFloat` и `oldPriceAsFloat`; учитывайте порядок регистрации дополнительных поставщиков цен.
+
 
 Используйте это событие, когда проекту нужна полностью кастомная цена для конкретного товара.
 
 ```php
 use Illuminate\Support\Facades\Event;
 
-Event::listen('evolution.sCommerceResolveProductPrice', function(array $payload) {
+Event::listen('sCommerce.ResolveProductPrice', function(array $payload) {
     $product = $payload['product'];
 
     if ((int)$product->id === 123) {
