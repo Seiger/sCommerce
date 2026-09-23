@@ -667,6 +667,9 @@ class sCommerceController
         $categories = array_merge([$category], $this->listAllActiveSubCategories($category, $dept));
 
         $query = DB::table('s_product_category')->select(['product'])->whereIn('category', $categories);
+        $query->whereIn('product', function ($subQuery) {
+            $subQuery->select('id')->from('s_products')->where('published', 1);
+        });
 
         if (!empty(evo()->getPlaceholder('checkAsSearch')) && evo()->getPlaceholder('checkAsSearch')) {
             $correctingProductIds = sProduct::search()->pluck('id')->toArray();
