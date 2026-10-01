@@ -106,6 +106,7 @@
     "categories_product_help" => "List of categories in which the product should be displayed. Formed from the resource tree from the root, which is designated as a directory. If a subcategory is selected, the product will be displayed in all higher categories.",
     "category" => "Category",
     "category_help" => "Define the main category of the product. Used to form the main link and navigation chain.",
+    "primary_category_id" => "Primary category (ID)",
     "cash" => "Сash",
     "check_connection" => "Check connection",
     "bank_invoice" => "Bank Invoice",

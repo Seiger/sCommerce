@@ -335,6 +335,15 @@ class ImportExportCSV extends BaseWorker
                                             $a[$field] = implode('||', $categoryIds);
                                         }
                                         break;
+                                    case 'parent':
+                                        $a[$field] = '';
+                                        foreach ($p?->categories ?? [] as $category) {
+                                            if (($category->pivot->scope ?? 'primary') === 'primary') {
+                                                $a[$field] = $category->id;
+                                                break;
+                                            }
+                                        }
+                                        break;
                                     case 'cover':
                                         $a[$field] = $this->sanitizeCsvValue($this->normalizeCsvMediaPath($p?->{$field} ?? ''));
                                         break;
@@ -658,6 +667,7 @@ class ImportExportCSV extends BaseWorker
 
             // Categories and relationships
             'category' => __('sCommerce::global.category'),
+            'parent' => __('sCommerce::global.primary_category_id'),
             // 'categories' => __('sCommerce::global.categories'),
             // 'relevants' => __('sCommerce::global.relevant'),
             // 'similar' => __('sCommerce::global.relevant'),
