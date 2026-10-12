@@ -1,6 +1,6 @@
 <div class="tab-page {{$tabId}}Tab" id="{{$tabId}}Tab">
     <h2 class="tab">
-        <a onclick="javascript:tabSave('{!!$saveUri!!}')" href="{!!$fullUrl!!}">
+        <a onclick="javascript:tabSave('{!!$saveUri!!}');" href="{!!$fullUrl!!}">
             <span><i class="{{$tabIcon}}" data-tooltip="{!!$tabHelp!!}"></i> {{$tabName}}</span>
         </a>
     </h2>
