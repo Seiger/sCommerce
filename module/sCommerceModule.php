@@ -1257,7 +1257,7 @@ switch ($get) {
         $product->availability = (int)request()->input('availability', 0);
         $product->sku = request()->input('sku', '');
         $product->alias = $sCommerceController->validateAlias($alias, (int)$product->id);
-        $product->rating = ($rating == 0 ? 5 : $rating);
+        $product->rating = $rating;
         if (sCommerce::config('product.inventory_on', 0) == 2) {
             $product->inventory = (int)request()->input('inventory', 0);
         }
@@ -2150,7 +2150,7 @@ switch ($get) {
                         }
                     }
 
-                    $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 5, 1);
+                    $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 0, 1);
                     $product->votes = json_encode($votes);
                     $product->update();
                 }
@@ -2185,7 +2185,7 @@ switch ($get) {
                     }
                 }
 
-                $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 5, 1);
+                $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 0, 1);
                 $product->votes = json_encode($votes);
                 $product->update();
             }
@@ -2236,7 +2236,7 @@ switch ($get) {
                             }
                         }
 
-                        $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 5, 1);
+                        $product->rating = round((int)$votes['total'] ? $summ / $votes['total'] : 0, 1);
                         $product->votes = json_encode($votes);
                         $product->update();
                     }

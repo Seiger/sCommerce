@@ -11,6 +11,21 @@ use Illuminate\Support\Str;
  */
 class sReview extends Model
 {
+    /** Invalidate cached storefront data when the visible review set changes. */
+    protected static function booted(): void
+    {
+        static::saved(function (self $review): void {
+            if ($review->wasChanged(['published', 'product']) || ($review->wasRecentlyCreated && (int) $review->published === 1)) {
+                evo()->clearCache('full');
+            }
+        });
+        static::deleted(function (self $review): void {
+            if ((int) $review->published === 1) {
+                evo()->clearCache('full');
+            }
+        });
+    }
+
     /**
      * Apply search filters to the query
      *

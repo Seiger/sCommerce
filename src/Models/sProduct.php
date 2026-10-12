@@ -102,6 +102,22 @@ class sProduct extends Model
 
     protected $fillable = ['uuid'];
 
+    /** New products start unrated, including on databases with the old default. */
+    protected $attributes = ['rating' => 0];
+
+    /** Do not display the legacy five-star default when there are no votes. */
+    public function getRatingAttribute(mixed $value): float
+    {
+        if (array_key_exists('votes', $this->attributes)) {
+            $raw = $this->attributes['votes'];
+            $votes = is_array($raw) ? $raw : json_decode((string) $raw, true);
+            if (!is_array($votes) || (int) ($votes['total'] ?? 0) === 0) {
+                return 0.0;
+            }
+        }
+        return (float) ($value ?? 0);
+    }
+
     /**
      * Availability constants
      */
@@ -1030,25 +1046,27 @@ class sProduct extends Model
 
     /**
      * Gets the reviews count attribute of the sProduct.
-     * Returns the total number of reviews associated with the product.
+     * Returns the number of published reviews visible on the storefront.
      * Uses eager loading to avoid N+1 queries when possible.
      *
      * @return int The count of reviews for the product.
      */
     public function getReviewsCountAttribute(): int
     {
-        // If reviews_count is already loaded via withCount(), use it
-        if (isset($this->attributes['reviews_count'])) {
-            return (int) $this->attributes['reviews_count'];
+        // Only trust an aggregate explicitly scoped to published reviews.
+        if (isset($this->attributes['published_reviews_count'])) {
+            return (int) $this->attributes['published_reviews_count'];
         }
 
-        // Otherwise, count the loaded reviews or make a query
+        if ($this->relationLoaded('activeReviews')) {
+            return $this->activeReviews->count();
+        }
+
         if ($this->relationLoaded('reviews')) {
-            return $this->reviews->count();
+            return $this->reviews->where('published', 1)->count();
         }
 
-        // Fallback to database query
-        return $this->reviews()->count();
+        return $this->activeReviews()->count();
     }
 
     /**

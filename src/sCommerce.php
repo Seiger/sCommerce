@@ -72,7 +72,7 @@ class sCommerce
         $lang = !$lang ? evo()->getLocale() : $lang;
         $this->sort = empty($this->sort) ? [$this->controller->validateSort()] : $this->sort;
 
-        $query = sProduct::lang($lang)->withCount('reviews')
+        $query = sProduct::lang($lang)->withCount(['activeReviews as published_reviews_count'])
             ->addSelect(['position' =>
                 DB::table('s_product_category')
                     ->select('position')

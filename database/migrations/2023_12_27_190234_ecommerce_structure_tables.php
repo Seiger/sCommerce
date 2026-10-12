@@ -71,7 +71,7 @@ return new class extends Migration
             $table->string('gtin', 50)->nullable()->index()->comment('Global Trade Item Number (GTIN) - UPC, EAN, JAN, ISBN, or ITF-14 for Google Merchant');
             $table->string('alias', 512)->index()->comment('It using for generate url');
             $table->integer('views')->unsigned()->default(0)->index()->comment('Count view the product');
-            $table->integer('rating')->unsigned()->default(5)->index()->comment('Rating the product base on votes');
+            $table->integer('rating')->unsigned()->default(0)->index()->comment('Rating the product base on votes');
             $table->smallInteger('mode')->unsigned()->default(0)->comment('Type the product');
             $table->decimal('price_regular', 12, 5)->unsigned()->default(0)->comment('The regular price of the product');
             $table->decimal('price_special', 12, 5)->unsigned()->default(0)->comment('The special price of the product');

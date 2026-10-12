@@ -23,6 +23,7 @@ $app = new class extends Container {
     public function getLoginUserID($context) { return 42; }
     public function hasPermission($permission) { return $this->permitted && $permission === 'exec_module'; }
     public function getConfig($key, $default = null) { return $default; }
+    public function clearCache($type) {}
     public function invokeEvent($name, $params) {
         if ($this['db']->connection()->transactionLevel() !== 0) {
             throw new RuntimeException('Event must run after commit');

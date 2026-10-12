@@ -52,7 +52,7 @@
                         @endif
                         @if(sCommerce::config('product.rating_on', 1) == 1)&emsp;
                         <i class="fa fa-star" data-tooltip="@lang('sCommerce::global.rating')">
-                            <b>{{$item->rating ?? 5}}</b>
+                            <b>{{$item->rating ?? 0}}</b>
                         </i>
                         @endif
                         @if(sCommerce::config('product.inventory_on', 1))&emsp;
