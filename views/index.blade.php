@@ -199,7 +199,7 @@
         for (let i = 0; i < submitting.length; i++) {
             oldClick = submitting[i].getAttribute('onclick');
             newClick = oldClick.replace('if (!window.__cfRLUnblockHandlers) return false; ', '');
-            submitting[i].setAttribute('onclick', newClick + ' if(!window.__cfRLUnblockHandlers){return false;}');
+            submitting[i].setAttribute('onclick', newClick + '; if(!window.__cfRLUnblockHandlers){return false;}');
         }
 
         const stabs = document.querySelectorAll('[data-target]');
