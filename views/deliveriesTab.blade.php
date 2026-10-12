@@ -85,6 +85,6 @@
 </div>
 @push('scripts.top')
     <script>
-        const cookieName = "scom_deliveries_page_items";
+        window.cookieName = "scom_deliveries_page_items";
     </script>
 @endpush
