@@ -132,7 +132,7 @@
 </div>
 @push('scripts.top')
     <script>
-        const cookieName = "scom_reviews_page_items";
+        window.cookieName = "scom_reviews_page_items";
     </script>
 @endpush
 @push('scripts.bot')

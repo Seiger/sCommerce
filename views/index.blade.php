@@ -214,6 +214,9 @@
         }
 
         function tabSave(starget) {
+            if (!document.form || !document.form.back) {
+                return;
+            }
             document.form.back.value = starget;
             saveForm('#form');
         }
