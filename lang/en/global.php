@@ -135,6 +135,7 @@
     "click_to_import_products_to_csv" => "Click <strong>Import products from CSV</strong> to import from CSV, or drag and drop a CSV file into this field.",
     "client" => "Client",
     "code" => "Code",
+    "marketing_tags" => "Advertising tags",
     "comment_to_order" => "Comment on the order",
     "comments_and_notes" => "Comments and notes",
     "completed_orders" => "Completed",

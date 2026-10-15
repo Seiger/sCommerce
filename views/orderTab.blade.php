@@ -51,6 +51,9 @@
                 @if(trim($item->comment ?? ''))
                     <p><strong>@lang('sCommerce::global.comment_to_order'):</strong> {{$item->comment}}</p>
                 @endif
+                @if(!empty($item->marketing))
+                    <p><strong>@lang('sCommerce::global.marketing_tags'):</strong> {{collect($item->marketing)->map(fn($v, $k) => $k . '=' . $v)->implode('; ')}}</p>
+                @endif
                 <p>
                     <strong>@lang('sCommerce::global.order_status'):</strong>
                     <select name="status" @disabled(isset($repeatSourceId)) @style(['display:inline-block', 'width:auto', 'margin-left:10px', 'padding:5px'])>

@@ -885,6 +885,7 @@ class sCheckout
         $order->status = sOrder::ORDER_STATUS_NEW;
         $order->do_not_call = intval($this->orderData['do_not_call'] ?? 0);
         $order->comment = $this->orderData['comment'] ?? '';
+        $order->marketing = sCommerce::marketingTags() ?: null;
         $order->lang = evo()->getLocale();
         $order->domain = trim((string)evo()->getConfig('site_key', 'default'));
         $order->identifier = $identifier;

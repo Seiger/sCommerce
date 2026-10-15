@@ -68,6 +68,7 @@ class sOrder extends Model
         'manager_info' => 'array',
         'manager_notes' => 'array',
         'history' => 'array',
+        'marketing' => 'array',
         'do_not_call' => 'boolean',
     ];
 

@@ -1067,4 +1067,60 @@ class sCommerce
         }
         return (int)$this->categoryId;
     }
+
+    /**
+     * Store advertising tags (gclid, UTM) from the request query in a cookie for 90 days.
+     *
+     * @param array $query Request query parameters.
+     */
+    public function captureMarketingTags(array $query): void
+    {
+        $tags = $this->filterMarketingTags($query);
+
+        if ($tags && !headers_sent()) {
+            $value = http_build_query($tags);
+            setcookie('sc_marketing', $value, ['expires' => time() + 7776000, 'path' => '/', 'samesite' => 'Lax']);
+            $_COOKIE['sc_marketing'] = $value;
+        }
+    }
+
+    /**
+     * Return advertising tags remembered for the current visitor.
+     *
+     * @return array
+     */
+    public function marketingTags(): array
+    {
+        $raw = (string)($_COOKIE['sc_marketing'] ?? '');
+
+        if ($raw === '') {
+            return [];
+        }
+
+        parse_str($raw, $params);
+
+        return $this->filterMarketingTags($params);
+    }
+
+    /**
+     * Keep only known advertising tags with safe values.
+     *
+     * @param array $params Raw parameters.
+     * @return array
+     */
+    protected function filterMarketingTags(array $params): array
+    {
+        $allowed = ['gclid', 'gbraid', 'wbraid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+        $tags = [];
+
+        foreach ($allowed as $key) {
+            $value = preg_replace('/[^\w\-.~%+:]/u', '', trim((string)($params[$key] ?? '')));
+
+            if ($value !== '') {
+                $tags[$key] = mb_substr($value, 0, 200);
+            }
+        }
+
+        return $tags;
+    }
 }
