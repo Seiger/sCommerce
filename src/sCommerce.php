@@ -1103,17 +1103,48 @@ class sCommerce
     }
 
     /**
-     * Keep only known advertising tags with safe values.
+     * Return the advertising tags to track as key => admin title.
+     *
+     * Configured in the orders settings as "key|Title" pairs separated by semicolons. Falls back to gclid and UTM tags.
+     *
+     * @return array
+     */
+    public function marketingFields(): array
+    {
+        $fields = [];
+
+        foreach (preg_split('/[;\r\n]+/', (string)self::config('orders.marketing_fields', '')) as $line) {
+            [$key, $title] = array_pad(explode('|', $line, 2), 2, '');
+            $key = preg_replace('/[^\w\-]/u', '', trim($key));
+
+            if ($key !== '') {
+                $fields[$key] = trim($title) !== '' ? trim($title) : $key;
+            }
+        }
+
+        return $fields ?: [
+            'gclid' => 'GCLID',
+            'gbraid' => 'GBRAID',
+            'wbraid' => 'WBRAID',
+            'utm_source' => 'UTM Source',
+            'utm_medium' => 'UTM Medium',
+            'utm_campaign' => 'UTM Campaign',
+            'utm_term' => 'UTM Term',
+            'utm_content' => 'UTM Content',
+        ];
+    }
+
+    /**
+     * Keep only configured advertising tags with safe values.
      *
      * @param array $params Raw parameters.
      * @return array
      */
     protected function filterMarketingTags(array $params): array
     {
-        $allowed = ['gclid', 'gbraid', 'wbraid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
         $tags = [];
 
-        foreach ($allowed as $key) {
+        foreach (array_keys($this->marketingFields()) as $key) {
             $value = preg_replace('/[^\w\-.~%+:]/u', '', trim((string)($params[$key] ?? '')));
 
             if ($value !== '') {

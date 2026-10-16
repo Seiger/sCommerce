@@ -52,7 +52,9 @@
                     <p><strong>@lang('sCommerce::global.comment_to_order'):</strong> {{$item->comment}}</p>
                 @endif
                 @if(!empty($item->marketing))
-                    <p><strong>@lang('sCommerce::global.marketing_tags'):</strong> {{collect($item->marketing)->map(fn($v, $k) => $k . '=' . $v)->implode('; ')}}</p>
+                    @foreach($item->marketing as $tagKey => $tagValue)
+                        <p><strong>{{sCommerce::marketingFields()[$tagKey] ?? $tagKey}}:</strong> {{$tagValue}}</p>
+                    @endforeach
                 @endif
                 <p>
                     <strong>@lang('sCommerce::global.order_status'):</strong>

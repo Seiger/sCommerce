@@ -159,6 +159,10 @@ class sCommerceController
             }
         }
 
+        if (isset($all['orders__marketing_fields'])) {
+            $all['orders__marketing_fields'] = trim(preg_replace('/["\\\\$\[\]{}]/', '', str_replace(["\r\n", "\r", "\n"], ';', (string)$all['orders__marketing_fields'])), '; ');
+        }
+
         ksort($all);
         $config = [];
 
