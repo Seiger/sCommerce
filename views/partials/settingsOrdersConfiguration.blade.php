@@ -23,6 +23,6 @@
     <label for="orders__marketing_fields">
         @lang('sCommerce::global.orders_marketing_fields')
     </label>
-    <input type="text" class="form-control" id="orders__marketing_fields" name="orders__marketing_fields" value="{{sCommerce::config('orders.marketing_fields', '')}}" placeholder="gclid|Google Click ID; utm_source|UTM Source" onchange="documentDirty=true;">
+    <input type="text" class="form-control" id="orders__marketing_fields" name="orders__marketing_fields" value="{{sCommerce::config('orders.marketing_fields', '')}}" placeholder="Google Click ID==gclid||UTM Source==utm_source" onchange="documentDirty=true;">
     <small class="scommerce-checkout-settings-help">@lang('sCommerce::global.orders_marketing_fields_help')</small>
 </div>

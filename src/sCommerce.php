@@ -1105,7 +1105,7 @@ class sCommerce
     /**
      * Return the advertising tags to track as key => admin title.
      *
-     * Configured in the orders settings as "key|Title" pairs separated by semicolons. Falls back to gclid and UTM tags.
+     * Configured in the orders settings in the Evolution option format "Title==key||Title==key". Falls back to gclid and UTM tags.
      *
      * @return array
      */
@@ -1113,9 +1113,10 @@ class sCommerce
     {
         $fields = [];
 
-        foreach (preg_split('/[;\r\n]+/', (string)self::config('orders.marketing_fields', '')) as $line) {
-            [$key, $title] = array_pad(explode('|', $line, 2), 2, '');
-            $key = preg_replace('/[^\w\-]/u', '', trim($key));
+        foreach (preg_split('/\|\||[\r\n]+/', (string)self::config('orders.marketing_fields', '')) as $line) {
+            $pair = str_contains($line, '==') ? explode('==', $line, 2) : explode('=', $line, 2);
+            $title = $pair[0];
+            $key = preg_replace('/[^\w\-]/u', '', trim($pair[1] ?? $pair[0]));
 
             if ($key !== '') {
                 $fields[$key] = trim($title) !== '' ? trim($title) : $key;
