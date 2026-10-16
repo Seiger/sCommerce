@@ -147,6 +147,8 @@
     "orders_reference_start_help" => "Initial value of the counter for generating the order number.",
     "orders_reference_pad_left" => "Left zero padding",
     "orders_reference_pad_left_help" => "Minimum number length padded with leading zeros (0 = no padding).",
+    "orders_marketing_fields" => "Advertising tags to track",
+    "orders_marketing_fields_help" => "Tags in the Evolution option format Title==key||Title==key, for example Google Click ID==gclid||UTM Source==utm_source. The key is the URL parameter, the title is shown in the order details. Empty = gclid and UTM tags.",
     "confirm_delete" => "Confirm deletion",
     "confirm_duplicate" => "Confirm duplication",
     "content" => "Content",

@@ -147,6 +147,8 @@
     "orders_reference_start_help" => "Начальное значение счетчика для формирования номера заказа.",
     "orders_reference_pad_left" => "Дополнение нулями слева",
     "orders_reference_pad_left_help" => "Минимальная длина номера с дополнением нулями слева (0 = без дополнения).",
+    "orders_marketing_fields" => "Рекламные метки для отслеживания",
+    "orders_marketing_fields_help" => "Метки в формате Evolution Название==ключ||Название==ключ, например Google Click ID==gclid||UTM Source==utm_source. Ключ это параметр в URL, название показывается в деталях заказа. Пусто = gclid и UTM-метки.",
     "confirm_copy" => "Подтвердить копирование",
     "confirm_duplicate" => "Подтвердить дублирование",
     "confirm_delete" => "Подтвердить удаление",

@@ -51,6 +51,11 @@
                 @if(trim($item->comment ?? ''))
                     <p><strong>@lang('sCommerce::global.comment_to_order'):</strong> {{$item->comment}}</p>
                 @endif
+                @if(!empty($item->marketing))
+                    @foreach($item->marketing as $tagKey => $tagValue)
+                        <p><strong>{{sCommerce::marketingFields()[$tagKey] ?? $tagKey}}:</strong> {{$tagValue}}</p>
+                    @endforeach
+                @endif
                 <p>
                     <strong>@lang('sCommerce::global.order_status'):</strong>
                     <select name="status" @disabled(isset($repeatSourceId)) @style(['display:inline-block', 'width:auto', 'margin-left:10px', 'padding:5px'])>

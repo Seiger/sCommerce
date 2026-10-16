@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Facades\sCart;
@@ -885,6 +886,9 @@ class sCheckout
         $order->status = sOrder::ORDER_STATUS_NEW;
         $order->do_not_call = intval($this->orderData['do_not_call'] ?? 0);
         $order->comment = $this->orderData['comment'] ?? '';
+        if (Schema::hasColumn((new sOrder)->getTable(), 'marketing')) {
+            $order->marketing = sCommerce::marketingTags() ?: null;
+        }
         $order->lang = evo()->getLocale();
         $order->domain = trim((string)evo()->getConfig('site_key', 'default'));
         $order->identifier = $identifier;

@@ -19,3 +19,10 @@
     <input type="number" class="form-control" id="orders__reference_pad_left" name="orders__reference[pad_left]" value="{{sCommerce::config('orders.reference.pad_left', 0)}}" min="0" onchange="documentDirty=true;">
     <small class="scommerce-checkout-settings-help">@lang('sCommerce::global.orders_reference_pad_left_help')</small>
 </div>
+<div class="scommerce-checkout-settings-field scommerce-checkout-settings-field--wide">
+    <label for="orders__marketing_fields">
+        @lang('sCommerce::global.orders_marketing_fields')
+    </label>
+    <input type="text" class="form-control" id="orders__marketing_fields" name="orders__marketing_fields" value="{{sCommerce::config('orders.marketing_fields', '')}}" placeholder="Google Click ID==gclid||UTM Source==utm_source" onchange="documentDirty=true;">
+    <small class="scommerce-checkout-settings-help">@lang('sCommerce::global.orders_marketing_fields_help')</small>
+</div>

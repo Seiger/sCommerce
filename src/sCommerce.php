@@ -1067,4 +1067,92 @@ class sCommerce
         }
         return (int)$this->categoryId;
     }
+
+    /**
+     * Store advertising tags (gclid, UTM) from the request query in a cookie for 90 days.
+     *
+     * @param array $query Request query parameters.
+     */
+    public function captureMarketingTags(array $query): void
+    {
+        $tags = $this->filterMarketingTags($query);
+
+        if ($tags && !headers_sent()) {
+            $value = http_build_query($tags);
+            setcookie('sc_marketing', $value, ['expires' => time() + 7776000, 'path' => '/', 'samesite' => 'Lax']);
+            $_COOKIE['sc_marketing'] = $value;
+        }
+    }
+
+    /**
+     * Return advertising tags remembered for the current visitor.
+     *
+     * @return array
+     */
+    public function marketingTags(): array
+    {
+        $raw = (string)($_COOKIE['sc_marketing'] ?? '');
+
+        if ($raw === '') {
+            return [];
+        }
+
+        parse_str($raw, $params);
+
+        return $this->filterMarketingTags($params);
+    }
+
+    /**
+     * Return the advertising tags to track as key => admin title.
+     *
+     * Configured in the orders settings in the Evolution option format "Title==key||Title==key". Falls back to gclid and UTM tags.
+     *
+     * @return array
+     */
+    public function marketingFields(): array
+    {
+        $fields = [];
+
+        foreach (preg_split('/\|\||[\r\n]+/', (string)self::config('orders.marketing_fields', '')) as $line) {
+            $pair = str_contains($line, '==') ? explode('==', $line, 2) : explode('=', $line, 2);
+            $title = $pair[0];
+            $key = preg_replace('/[^\w\-]/u', '', trim($pair[1] ?? $pair[0]));
+
+            if ($key !== '') {
+                $fields[$key] = trim($title) !== '' ? trim($title) : $key;
+            }
+        }
+
+        return $fields ?: [
+            'gclid' => 'GCLID',
+            'gbraid' => 'GBRAID',
+            'wbraid' => 'WBRAID',
+            'utm_source' => 'UTM Source',
+            'utm_medium' => 'UTM Medium',
+            'utm_campaign' => 'UTM Campaign',
+            'utm_term' => 'UTM Term',
+            'utm_content' => 'UTM Content',
+        ];
+    }
+
+    /**
+     * Keep only configured advertising tags with safe values.
+     *
+     * @param array $params Raw parameters.
+     * @return array
+     */
+    protected function filterMarketingTags(array $params): array
+    {
+        $tags = [];
+
+        foreach (array_keys($this->marketingFields()) as $key) {
+            $value = preg_replace('/[^\w\-.~%+:]/u', '', trim((string)($params[$key] ?? '')));
+
+            if ($value !== '') {
+                $tags[$key] = mb_substr($value, 0, 200);
+            }
+        }
+
+        return $tags;
+    }
 }
