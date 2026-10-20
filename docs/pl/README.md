@@ -9,6 +9,8 @@ sidebar_position: 1
 
 sCommerce udostępnia katalog produktów, koszyk, składanie i obsługę zamówień w Evolution CMS. Interfejs i zakładki zależą od konfiguracji oraz zainstalowanych integracji.
 
+## Zrzuty ekranu
+
 ![Dashboard](https://github.com/user-attachments/assets/a03e4564-c087-4839-887f-b9c6106e85b8)
 ![List of Orders](https://github.com/user-attachments/assets/16031ada-cd5d-4c38-abf4-66d6031c666d)
 ![List of Products](https://github.com/user-attachments/assets/8dd1127c-5055-4795-954c-95eb75eadf31)
