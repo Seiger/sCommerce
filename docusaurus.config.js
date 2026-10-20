@@ -50,7 +50,8 @@ module.exports = {
             id: line.id,
             path: path.join(__dirname, '.generated/content', line.id),
             routeBasePath: line.route || '/',
-            sidebarPath: require.resolve('./sidebars.js')
+            sidebarPath: require.resolve('./sidebars.js'),
+            remarkPlugins: [require('./scripts/remark-image-groups.cjs')]
         }]),
         ['@docusaurus/plugin-client-redirects', {
             createRedirects: (route) => route.endsWith('/admin/producs/')

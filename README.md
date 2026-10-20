@@ -158,3 +158,18 @@ Missing local Markdown links and broken generated links fail the production buil
 The shared Markdown contract is ordinary Markdown with YAML frontmatter. Keep
 assets alongside each locale's pages so both dDocs and Docusaurus can resolve them.
 Site UI translations belong here in `i18n`; package Markdown translations do not.
+
+## Screenshot galleries
+
+The site groups consecutive image-only Markdown paragraphs into an accessible
+gallery. Add, replace, reorder or remove ordinary `![Alt](URL)` images in the
+canonical pages; blank lines between images are supported. A heading or prose
+paragraph separates galleries. A single image keeps its ordinary rendering.
+No source URLs or slide counts are stored in the theme, and dDocs still receives
+plain Markdown. The gallery supports buttons, keyboard navigation, touch swipes
+and full-size image links. It does not autoplay. An unavailable image keeps its
+original link, and does not prevent navigation to the other images.
+
+The root GitHub README uses a preview and a `<details>` block because GitHub does
+not run custom carousel JavaScript. Keep its images in sync with the canonical
+overview; the public gallery link targets the English `#screenshots` section.
