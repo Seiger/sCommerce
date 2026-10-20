@@ -314,28 +314,31 @@ class ImportExportCSV extends BaseWorker
                                         $value = $this->exportProductAttributeValue($p, $alias);
                                         $a[$field] = $this->sanitizeCsvValue($value);
                                         break;
-                                    case 'category':
-                                        if (evo()->getConfig('check_sMultisite', false)) {
-                                            // Multisite mode: return domain:id format
-                                            $categories = [];
-                                            foreach ($p?->categories ?? [] as $category) {
-                                                $scope = $category->pivot->scope ?? 'primary';
-
-                                                if ($scope === 'primary') {
-                                                    $domain = 'default';
-                                                } else {
-                                                    $domain = str_replace('primary_', '', $scope);
-                                                }
-                                                $categories[] = $domain . ':' . $category->id;
+                                    case 'categories':
+                                        $primaryCategoryId = null;
+                                        foreach ($p?->categories ?? [] as $category) {
+                                            if (($category->pivot->scope ?? 'primary') === 'primary') {
+                                                $primaryCategoryId = (int)$category->id;
+                                                break;
                                             }
-                                            $a[$field] = implode('||', $categories);
-                                        } else {
-                                            // Single site mode: return category IDs
-                                            $categoryIds = $p?->categories->pluck('id')->toArray();
-                                            $a[$field] = implode('||', $categoryIds);
                                         }
+                                        $categories = [];
+                                        $multisite = evo()->getConfig('check_sMultisite', false);
+                                        foreach ($p?->categories ?? [] as $category) {
+                                            if ((int)$category->id === $primaryCategoryId) {
+                                                continue;
+                                            }
+                                            $scope = $category->pivot->scope ?? 'primary';
+                                            if ($multisite && $scope !== '') {
+                                                $domain = $scope === 'primary' ? 'default' : str_replace('primary_', '', $scope);
+                                                $categories[] = $domain . ':' . $category->id;
+                                            } else {
+                                                $categories[] = $category->id;
+                                            }
+                                        }
+                                        $a[$field] = implode('||', $categories);
                                         break;
-                                    case 'parent':
+                                    case 'category':
                                         $a[$field] = '';
                                         foreach ($p?->categories ?? [] as $category) {
                                             if (($category->pivot->scope ?? 'primary') === 'primary') {
@@ -346,11 +349,6 @@ class ImportExportCSV extends BaseWorker
                                         break;
                                     case 'cover':
                                         $a[$field] = $this->sanitizeCsvValue($this->normalizeCsvMediaPath($p?->{$field} ?? ''));
-                                        break;
-                                    case 'categories':
-                                        // Cross-domain category list: always return simple IDs
-                                        $categoryIds = $p?->categories->pluck('id')->toArray();
-                                        $a[$field] = implode('||', $categoryIds);
                                         break;
                                     case 'gallery':
                                         $a[$field] = $this->sanitizeCsvValue($this->exportProductGallery($p));
@@ -667,8 +665,7 @@ class ImportExportCSV extends BaseWorker
 
             // Categories and relationships
             'category' => __('sCommerce::global.category'),
-            'parent' => __('sCommerce::global.primary_category_id'),
-            // 'categories' => __('sCommerce::global.categories'),
+            'categories' => __('sCommerce::global.categories'),
             // 'relevants' => __('sCommerce::global.relevant'),
             // 'similar' => __('sCommerce::global.relevant'),
 
@@ -972,6 +969,7 @@ class ImportExportCSV extends BaseWorker
             $table->string('cover', 500)->nullable();
             $table->longText('gallery')->nullable();
             $table->integer('category')->nullable();
+            $table->text('categories')->nullable();
             $table->string('pagetitle', 255)->nullable();
             $table->string('longtitle', 255)->nullable();
             $table->text('introtext')->nullable();
@@ -1048,6 +1046,7 @@ class ImportExportCSV extends BaseWorker
                 'cover' => $data['cover'] ?? null,
                 'gallery' => $data['gallery'] ?? null,
                 'category' => isset($data['category']) && is_numeric($data['category']) ? (int)$data['category'] : null,
+                'categories' => $data['categories'] ?? null,
                 'pagetitle' => $data['pagetitle'] ?? ($defaultPayload['pagetitle'] ?? null),
                 'longtitle' => $data['longtitle'] ?? ($defaultPayload['longtitle'] ?? null),
                 'introtext' => $data['introtext'] ?? ($defaultPayload['introtext'] ?? null),
@@ -1341,8 +1340,8 @@ class ImportExportCSV extends BaseWorker
             }
         }
 
-        // Process category field (domain:id format for multisite, simple IDs for single site)
-        $categoryData = $data['category'] ?? '';
+        // Process the category list (domain:id for multisite, simple IDs for single site).
+        $categoryData = $data['categories'] ?? '';
         $categories = [];
 
         if (!empty($categoryData)) {
@@ -1357,7 +1356,7 @@ class ImportExportCSV extends BaseWorker
                         [$domain, $catId] = explode(':', $cat, 2);
                         $catId = intval($catId);
                         if ($catId > 0) {
-                            $categories[$catId] = ['scope' => 'primary_' . $domain, 'position' => ($prodCats[$catId] ?? 0)];
+                            $categories[$catId] = ['scope' => $domain === 'default' ? 'primary' : 'primary_' . $domain, 'position' => ($prodCats[$catId] ?? 0)];
                         }
                     } else {
                         // Fallback: treat as simple ID
@@ -1376,33 +1375,10 @@ class ImportExportCSV extends BaseWorker
             }
         }
 
-        // Process categories field (always simple IDs, cross-domain)
-        $categoriesData = $data['categories'] ?? '';
-        if (!empty($categoriesData)) {
-            $inputCats = explode('||', $categoriesData);
-            foreach ($inputCats as $cat) {
-                $cat = trim($cat);
-                if (empty($cat)) continue;
-
-                $catId = intval($cat);
-                if ($catId > 0) {
-                    $categories[$catId] = ['position' => ($prodCats[$catId] ?? 0)];
-                }
-            }
-        }
-
-        if (evo()->getConfig('check_sMultisite', false)) {
-            foreach(\Seiger\sMultisite\Models\sMultisite::all() as $domain) {
-                $parent = intval($data['parent_' . $domain->key] ?? 0);
-                if ($parent > 0) {
-                    $categories[$parent] = ['scope' => 'primary_' . $domain->key, 'position' => ($prodCats[$parent] ?? 0)];
-                }
-            }
-        } else {
-            $parent = intval($data['parent'] ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)));
-            if ($parent > 0) {
-                $categories[$parent] = ['scope' => 'primary', 'position' => ($prodCats[$parent] ?? 0)];
-            }
+        // The singular category field is the primary category ID, not a list.
+        $primaryCategory = intval($data['category'] ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)));
+        if ($primaryCategory > 0) {
+            $categories[$primaryCategory] = ['scope' => 'primary', 'position' => ($prodCats[$primaryCategory] ?? 0)];
         }
         $product->categories()->sync([]);
         $product->categories()->sync($categories);

@@ -101,7 +101,7 @@
     "caption" => "Caption",
     "catalog_root" => "Catalog root",
     "catalog_root_help" => "Define the resource that will be used as the root of the product catalog by default.",
-    "categories" => "Categories",
+    "categories" => "Additional categories",
     "categories_attribute_help" => "List of categories for which the attribute works. Formed from the resource tree from the root, which is designated as the root directory. If the root directory is selected, it will work for all categories, otherwise - for the selected category and all its child categories.",
     "categories_product_help" => "List of categories in which the product should be displayed. Formed from the resource tree from the root, which is designated as a directory. If a subcategory is selected, the product will be displayed in all higher categories.",
     "category" => "Category",

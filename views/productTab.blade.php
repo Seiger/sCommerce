@@ -269,9 +269,14 @@
                         </div>
                         <div class="col">
                             @php($listCategories = $listCategories ?? $sCommerceController->listCategories())
+                            @php($primaryCategoryIds = [(int) ($item->category ?? sCommerce::config('basic.catalog_root', evo()->getConfig('site_start', 1)))])
+                            @if(evo()->getConfig('check_sMultisite', false))
+                                @php($primaryCategoryIds = $item->categories->filter(static fn ($category) => str_starts_with((string) ($category->pivot->scope ?? ''), 'primary_'))->pluck('id')->map(static fn ($id) => (int) $id)->all())
+                            @endif
                             <select id="categories" class="form-control select2" name="categories[]" multiple onchange="documentDirty=true;">
                                 @foreach($listCategories as $key => $value)
-                                    <option value="{{$key}}" @if(in_array($key, $categories)) selected @endif>{{$value}}</option>
+                                    @php($isPrimaryCategory = in_array((int) $key, $primaryCategoryIds, true))
+                                    <option value="{{$key}}" @if($isPrimaryCategory) disabled @elseif(in_array($key, $categories)) selected @endif>{{$value}}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -481,6 +486,33 @@
         let nIntervId;
         let parentAction = null;
 
+        function syncAdditionalCategories() {
+            const form = document.getElementById('form');
+            const additional = form?.querySelector('#categories');
+            if (!additional) return;
+
+            const primaryIds = new Set(Array.from(form.querySelectorAll('[name="parent"], [name^="parent_"]'))
+                .map(input => String(input.value)).filter(value => Number(value) > 0));
+            let changed = false;
+            for (const option of additional.options) {
+                const isPrimary = primaryIds.has(String(option.value));
+                if (isPrimary && option.selected) {
+                    option.selected = false;
+                    changed = true;
+                }
+                if (option.disabled !== isPrimary) {
+                    option.disabled = isPrimary;
+                    changed = true;
+                }
+            }
+            if (changed) $(additional).trigger('change.select2');
+        }
+
+        $(document).ready(function () {
+            $('#form').on('change', '[name="parent"], [name^="parent_"]', syncAdditionalCategories);
+            syncAdditionalCategories();
+        });
+
         function enableCatalogRootSelection(a, b, c) {
             if (b) {
                 parent.tree.ca = "parent";
@@ -506,6 +538,7 @@
                 if (parentAction == 'parentRoot') {
                     document.getElementsByName('parent_' + key)[0].value = document.form.parent.value;
                     document.getElementById('parentRootName' + key).innerHTML = document.getElementById('parentName').innerHTML
+                    syncAdditionalCategories();
                 }
             }
         }
@@ -514,6 +547,7 @@
             elm.parentNode.getElementsByTagName('input')[0].value = 0;
             elm.parentNode.getElementsByTagName('b')[0].innerHTML = "(@lang('global.disabled'))";
             documentDirty = true;
+            syncAdditionalCategories();
         }
     </script>
 @endpush
