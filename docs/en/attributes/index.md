@@ -68,3 +68,14 @@ value of this Attribute.
 
 In the Description field, you can write a text that can be displayed on the frontend when displaying
 the value of this Attribute.
+
+## TYPE_ATTR_*
+
+- `TYPE_ATTR_NUMBER`
+- `TYPE_ATTR_CHECKBOX`
+- `TYPE_ATTR_SELECT`
+- `TYPE_ATTR_MULTISELECT`
+- `TYPE_ATTR_TEXT`
+- `TYPE_ATTR_COLOR`
+- `TYPE_ATTR_CUSTOM`
+- `TYPE_ATTR_PRICE_RANGE`

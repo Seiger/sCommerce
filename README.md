@@ -131,7 +131,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
 ## Requirements
 
 - PHP **8.4+**
-- Evolution CMS 3.5+
+- Evolution CMS **3.5.8+**
 - Composer
 
 ## Install by artisan package installer

@@ -69,3 +69,14 @@ sidebar_position: 5
 
 В полі Опис ви можете написати текст, який може відображатися на фронтенді при відображенні
 значення цього Атрибута.
+
+## TYPE_ATTR_*
+
+- `TYPE_ATTR_NUMBER`
+- `TYPE_ATTR_CHECKBOX`
+- `TYPE_ATTR_SELECT`
+- `TYPE_ATTR_MULTISELECT`
+- `TYPE_ATTR_TEXT`
+- `TYPE_ATTR_COLOR`
+- `TYPE_ATTR_CUSTOM`
+- `TYPE_ATTR_PRICE_RANGE`

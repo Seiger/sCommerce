@@ -81,11 +81,6 @@ in the form of a string formatted according to the sCommerce configuration.
 If you want to get only an unformatted number with the price in the selected currency,
 then use the `priceToNumber('XXX')` method.
 
-## Exchange rate
+## Exchange rates
 
-The list for the exchange rate is generated automatically if more than one available currency
-is selected. The list of rates is formed as a **given currency (XXX) --> its equivalent in another
-currency (XXX)**.
-
-If under any circumstances the exchange rate is 0, or is not found, the exchange rate
-will be displayed as 1:1.
+Choose the available currencies and main currency in Settings. The Currencies tab appears when more than one currency is enabled. A → B is a separate conversion multiplier: 50.55 and 0.012345 are valid rates. Configure the reverse pair explicitly; rates are not fetched automatically. Values are stored in core/custom/config/seiger/settings/sCommerceCurrencies.php. A missing pair defaults to 1; an explicitly configured zero is not a reliable 1:1 fallback. Product display precision is configured separately from exchange-rate precision.

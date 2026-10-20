@@ -9,6 +9,12 @@ sidebar_position: 3
 sCommerce provides support for various product types, each designed to cater to specific
 e-commerce needs. Below is a detailed list of product types and their characteristics:
 
+## Primary and additional categories
+
+Category is the primary category. Additional categories contains only other assignments; the primary category cannot be selected there again. Changing the primary selection updates this field immediately. In multisite mode each domain has its own primary category.
+
+[CSV import and export](./import-export.md)
+
 ## Simple Product
 A Simple Product is the most basic and commonly used product type. It represents a standalone
 item without any variations or modifications. This type is ideal for products that do not

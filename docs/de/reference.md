@@ -6,7 +6,7 @@ Priorität: persönliche oder kumulative sPricing-Preis, Aktionspreis, Basisprei
 
 ## Ereignisse
 
-Vollständige Verträge und Beispiele: [sCommerce-Ereignisse (Englisch)](../en/developers/events.md).
+Vollständige Verträge und Beispiele: [sCommerce-Ereignisse (Englisch)](https://seiger.github.io/sCommerce/developers/events/).
 
 - `sCommerce.CheckoutValidationRules` — Checkout-Regeln als Referenz (`data`, `rules`): Regeln hinzufügen, ersetzen oder entfernen.
 - `sCommerce.ResolveProductPriceMode` — Preismodus (`product`, `optionId`, `priceMode`): Die erste nicht leere Zeichenfolge bestimmt `auto` oder `wholesale`.

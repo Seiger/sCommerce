@@ -6,7 +6,7 @@ Priorité: prix personnel ou cumulatif sPricing, prix promotionnel, prix de base
 
 ## Événements
 
-Contrats complets et exemples : [événements sCommerce (anglais)](../en/developers/events.md).
+Contrats complets et exemples : [événements sCommerce (anglais)](https://seiger.github.io/sCommerce/developers/events/).
 
 - `sCommerce.CheckoutValidationRules` — Règles du checkout par référence (`data`, `rules`) : ajout, remplacement ou suppression.
 - `sCommerce.ResolveProductPriceMode` — Mode de prix (`product`, `optionId`, `priceMode`) : la première chaîne non vide détermine `auto` ou `wholesale`.

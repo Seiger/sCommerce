@@ -6,7 +6,7 @@ Priorytet: cena osobista lub narastająca sPricing, potem promocyjna, potem bazo
 
 ## Zdarzenia
 
-Pełne kontrakty i przykłady: [zdarzenia sCommerce (angielski)](../en/developers/events.md).
+Pełne kontrakty i przykłady: [zdarzenia sCommerce (angielski)](https://seiger.github.io/sCommerce/developers/events/).
 
 - `sCommerce.CheckoutValidationRules` — Reguły checkout przez referencję (`data`, `rules`): dodawanie, zastępowanie i usuwanie reguł.
 - `sCommerce.ResolveProductPriceMode` — Tryb ceny (`product`, `optionId`, `priceMode`): pierwszy niepusty ciąg określa `auto` lub `wholesale`.

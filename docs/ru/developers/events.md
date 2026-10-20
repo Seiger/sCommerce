@@ -256,3 +256,20 @@ Event::listen('evolution.sCommerceAfterAddToCart', function($params) {
     'sCommerceEvents' => MODX_BASE_PATH . 'core/custom/packages/main/plugins/sCommerceEvents.php',
 ],
 ```
+
+## Дополнительные события менеджера и frontend
+
+События менеджера используют префикс evolution. События цен имеют точные имена sCommerce.* без префикса. Структура данных frontend callbacks зависит от операции.
+
+- `evolution.sCommerceManagerTabsEvent`
+- `evolution.sCommerceManagerSettingsSaveEvent`
+- `evolution.sCommerceAfterProductContentSave`
+- `evolution.sCommerceAfterOrderSave`
+
+```javascript
+sCommerce.onAddedToCart = (data) => console.log(data);
+sCommerce.onRemovedFromCart = (data) => console.log(data);
+sCommerce.onUpdatedCart = (data) => console.log(data);
+sCommerce.onFastOrder = (data) => console.log(data);
+sCommerce.onWishlist = (data) => console.log(data);
+```

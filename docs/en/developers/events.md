@@ -161,3 +161,20 @@ The listener can return either a numeric price or an array with any of these key
 - `oldPriceAsFloat`
 
 If formatted `price` or `oldPrice` values are omitted, sCommerce formats them from the numeric values.
+
+## Additional manager and frontend events
+
+Manager events use the evolution. prefix with Laravel Event listeners. Pricing events use their literal sCommerce.* names without that prefix. Frontend callbacks use the names below; do not infer that every callback has the same response fields.
+
+- `evolution.sCommerceManagerTabsEvent`
+- `evolution.sCommerceManagerSettingsSaveEvent`
+- `evolution.sCommerceAfterProductContentSave`
+- `evolution.sCommerceAfterOrderSave`
+
+```javascript
+sCommerce.onAddedToCart = (data) => console.log(data);
+sCommerce.onRemovedFromCart = (data) => console.log(data);
+sCommerce.onUpdatedCart = (data) => console.log(data);
+sCommerce.onFastOrder = (data) => console.log(data);
+sCommerce.onWishlist = (data) => console.log(data);
+```
