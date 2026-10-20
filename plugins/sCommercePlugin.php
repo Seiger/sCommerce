@@ -50,6 +50,13 @@ Event::listen('evolution.OnPageNotFound', function() {
 });
 
 /**
+ * Remember advertising tags (gclid, UTM) from the landing URL until checkout
+ */
+Event::listen('evolution.OnWebPageInit', function() {
+    sCommerce::captureMarketingTags(request()->query());
+});
+
+/**
  * Get document fields and add to array of resource fields
  */
 Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {

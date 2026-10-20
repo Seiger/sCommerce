@@ -147,6 +147,8 @@
     "orders_reference_start_help" => "Початкове значення лічильника для формування номера замовлення.",
     "orders_reference_pad_left" => "Доповнення нулями зліва",
     "orders_reference_pad_left_help" => "Мінімальна довжина номера з доповненням нулями зліва (0 = без доповнення).",
+    "orders_marketing_fields" => "Рекламні мітки для відстеження",
+    "orders_marketing_fields_help" => "Мітки у форматі Evolution Назва==ключ||Назва==ключ, наприклад Google Click ID==gclid||UTM Source==utm_source. Ключ це параметр в URL, назва показується в деталях замовлення. Порожньо = gclid і UTM-мітки.",
     "confirm_copy" => "Підтвердити копіювання",
     "confirm_duplicate" => "Підтвердити дублювання",
     "confirm_delete" => "Підтвердити видалення",
