@@ -11,7 +11,7 @@
                             <label for="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}">{{$curr['alpha']}} --> {{$cur['alpha']}}</label>
                         </div>
                         <div class="col col-4 col-md-3 col-lg-1">
-                            <input type="number" id="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}" name="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}" class="form-control" value="{{config('seiger.settings.sCommerceCurrencies.' . $curr['alpha'].'_'.$cur['alpha'], 1)}}" onchange="documentDirty=true;">
+                            <input type="number" step="any" id="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}" name="currencies__{{$curr['alpha']}}_{{$cur['alpha']}}" class="form-control" value="{{config('seiger.settings.sCommerceCurrencies.' . $curr['alpha'].'_'.$cur['alpha'], 1)}}" onchange="documentDirty=true;">
                         </div>
                     </div>
                 @endif

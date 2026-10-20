@@ -32,8 +32,17 @@ of Evolution CMS for seamless and efficient **online commerce**.
 
 - [x] Order Management.
 - [x] Order Status Management.
+- [x] Bulk Order Actions, Status Changes and Export.
+- [x] Repeat Orders.
+- [x] Payment Ledger and Refund Recording.
 - [x] Products Catalog.
 - [x] Product position in each Category.
+- [x] Primary and Additional Product Categories, including Multisite Scopes.
+- [x] CSV Product Import and Export.
+    - [x] Multilingual Content and SEO Fields (with sLang and sSeo).
+    - [x] Product Galleries, Attributes and Category Assignments.
+    - [x] Streaming and Temporary-table Import for Large Files.
+- [x] Google Merchant XML Feeds with Multilingual and Multisite Support.
 - [x] Products Types.
     - [x] Simple Type.
     - [x] Grouped Type.
@@ -48,6 +57,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [ ] Custom Type.
 - [x] Products Attributes.
     - [x] Number Attribute.
+    - [x] Price Range Attribute.
     - [x] Checkbox Attribute.
     - [ ] Radio Attribute.
     - [x] Select Attribute.
@@ -74,16 +84,32 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [ ] Promo Code System.
 - [x] Plugin events.
     - [x] sCommerceManagerAddTabEvent.
+    - [x] sCommerceManagerTabsEvent.
+    - [x] sCommerceManagerSettingsSaveEvent.
     - [x] sCommerceFormFieldRender.
     - [x] sCommerceAfterProductSave.
     - [x] sCommerceAfterProductContentSave.
     - [x] sCommerceAfterProductDuplicate.
-- [x] Javascript events.
+    - [x] sCommerceAfterOrderSave.
+- [x] Pricing Extension Events (Laravel Event Dispatcher).
+    - [x] sCommerce.ResolveProductPrice.
+    - [x] sCommerce.ResolveProductPriceMode.
+- [x] JavaScript Callbacks.
+    - [x] sCommerce.onAddedToCart.
+    - [x] sCommerce.onRemovedFromCart.
+    - [x] sCommerce.onUpdatedCart.
+    - [x] sCommerce.onFastOrder.
+    - [x] sCommerce.onWishlist.
+- [x] Legacy JavaScript CustomEvent Compatibility (deprecated).
     - [x] sCommerceAddedToCart.
     - [x] sCommerceRemovedFromCart.
+    - [x] sCommerceUpdatedCart.
+    - [x] sCommerceFastOrder.
+    - [x] sCommerceWishlist.
 - [x] Multi-currency Support (ISO 4217).
 - [x] Integration with Payment Systems.
     - [x] Cash.
+    - [x] Bank Invoice.
 - [x] Integration with Deliveries Methods.
     - [x] Courier.
     - [x] Pickup.
@@ -93,9 +119,13 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] **[sGallery](https://github.com/Seiger/sGallery)** Integration.
 - [x] **[sMultisite](https://github.com/Seiger/sMultisite)** Integration.
 - [x] **[sApi](https://github.com/Seiger/sApi)** Integration.
+- [x] **[sTask](https://github.com/Seiger/sTask)** Integration.
+- [x] **[sSeo](https://github.com/Seiger/sSeo)** Integration.
 - [ ] Personalized Recommendations.
 - [ ] Social Media Integration.
 - [ ] Automated Email Marketing.
+- [x] Dashboard Statistics and Historical Product/Review Metrics.
+- [x] Optional sPricing Integration for Contextual Product Prices.
 - [ ] Advanced Analytics and Reporting.
 
 ## Requirements
