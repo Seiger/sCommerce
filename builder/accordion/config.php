@@ -18,5 +18,5 @@
     custom.selector = selector_custom = selector_custom + \',#\' + dataId + counts;
     tinymce.init(custom);
     documentDirty=true;}
-    function onDeleteAccord(target){let parent=target.closest(".accord");alertify.confirm("'.__('sSettings::global.are_you_sure').'","'.__('sSettings::global.deleted_irretrievably').'",function(){alertify.error("'.__('sSettings::global.deleted').'");parent.remove()},function(){alertify.success("'.__('sSettings::global.canceled').'")}).set("labels",{ok:"'.__('global.delete').'",cancel:"'.__('global.cancel').'"}).set({transition:"zoom"});documentDirty=true}</script>',
+    function onDeleteAccord(target){let parent=target.closest(".accord");alertify.confirm("'.__('sCommerce::global.are_you_sure').'","'.__('sCommerce::global.deleted_irretrievably').'",function(){alertify.error("'.__('sCommerce::global.deleted').'");parent.remove()},function(){alertify.success("'.__('sCommerce::global.canceled').'")}).set("labels",{ok:"'.__('global.delete').'",cancel:"'.__('global.cancel').'"}).set({transition:"zoom"});documentDirty=true}</script>',
 ];
