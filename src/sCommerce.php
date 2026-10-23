@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sFilter;
 use Seiger\sCommerce\Models\sAttribute;
@@ -34,6 +35,13 @@ use View;
 class sCommerce
 {
     /**
+     * Integration contract version; incremented only on incompatible payload changes.
+     *
+     * @since 1.5.0
+     */
+    public const INTEGRATION_EVENTS_VERSION = 1;
+
+    /**
      * Cached currencies.
      *
      * @var Collection
@@ -54,6 +62,32 @@ class sCommerce
     public function __construct()
     {
         $this->controller = new sCommerceController();
+    }
+
+    /**
+     * List the integration feature keys present in this build.
+     *
+     * Integrations detect features with {@see self::supportsIntegration()} instead of
+     * comparing package versions. Later releases only append keys.
+     *
+     * @return list<string> Feature keys, e.g. `order-events`.
+     * @since 1.5.0
+     */
+    public static function integrationFeatures(): array
+    {
+        return ['order-events'];
+    }
+
+    /**
+     * Check whether this build provides an integration feature.
+     *
+     * @param string $feature Feature key from {@see self::integrationFeatures()}.
+     * @return bool
+     * @since 1.5.0
+     */
+    public static function supportsIntegration(string $feature): bool
+    {
+        return in_array($feature, static::integrationFeatures(), true);
     }
 
     /**
@@ -712,7 +746,7 @@ class sCommerce
         }
 
         try {
-            $response = $instance->handleWebhook();
+            $response = EventScope::run('payment_callback', 0, fn () => $instance->handleWebhook());
             if ($response instanceof HttpResponse) {
                 return $response;
             }

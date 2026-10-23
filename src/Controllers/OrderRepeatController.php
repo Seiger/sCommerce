@@ -4,6 +4,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Services\OrderRepeater;
@@ -38,6 +39,17 @@ final class OrderRepeatController
             || $_SESSION['_token'] === '' || !hash_equals($_SESSION['_token'], $token)) {
             return $this->error('bulk_status_session_expired', 403);
         }
+
+        return EventScope::run('manager_repeat', $managerId, fn () => $this->process($request, $managerId));
+    }
+
+    /**
+     * Validate the reviewed draft and save it inside the repeat event scope.
+     *
+     * @since 1.5.0
+     */
+    private function process(Request $request, int $managerId): JsonResponse
+    {
         $sourceId = $request->input('repeat_from');
         $draftToken = $request->input('repeat_token');
         if (!(is_int($sourceId) || is_string($sourceId))

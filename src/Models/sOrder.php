@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use ReflectionClass;
+use Seiger\sCommerce\Events\DomainEventRecorder;
+use Seiger\sCommerce\Events\OrderCancelled;
+use Seiger\sCommerce\Events\OrderCreated;
+use Seiger\sCommerce\Events\OrderDeleted;
+use Seiger\sCommerce\Events\OrderPaymentStatusChanged;
+use Seiger\sCommerce\Events\OrderStatusChanged;
+use Seiger\sCommerce\Events\OrderUpdated;
 use Seiger\sCommerce\Services\OrderReferenceFormatter;
 
 /**
@@ -72,6 +79,47 @@ class sOrder extends Model
         'do_not_call' => 'boolean',
     ];
 
+    /** @var array<string, true> Tables known to have the `uuid` column. */
+    private static array $uuidColumns = [];
+
+    /**
+     * Fill the public UUID and record domain events after commit.
+     *
+     * @since 1.5.0
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (sOrder $order) {
+            if (empty($order->uuid) && $order->hasUuidColumn()) {
+                $order->uuid = (string)Str::uuid();
+            }
+        });
+        static::created(function (sOrder $order) {
+            DomainEventRecorder::instance()->record(OrderCreated::from($order), $order->getConnection());
+        });
+        static::updated(function (sOrder $order) {
+            $changes = OrderUpdated::diff($order);
+            if ($changes === []) {
+                return;
+            }
+            $recorder = DomainEventRecorder::instance();
+            $connection = $order->getConnection();
+            $recorder->record(OrderUpdated::from($order, $changes), $connection);
+            if (isset($changes['status'])) {
+                $recorder->record(OrderStatusChanged::from($order, (int)$changes['status']['old'], (int)$order->status), $connection);
+            }
+            if (isset($changes['payment_status'])) {
+                $recorder->record(OrderPaymentStatusChanged::from($order, (int)$changes['payment_status']['old'], (int)$order->payment_status), $connection);
+            }
+            if (isset($changes['status']) && (int)$order->status === self::ORDER_STATUS_CANCELED) {
+                $recorder->record(OrderCancelled::from($order, (int)$changes['status']['old']), $connection);
+            }
+        });
+        static::deleted(function (sOrder $order) {
+            DomainEventRecorder::instance()->record(OrderDeleted::from($order, $order->isForceDeleting()), $order->getConnection());
+        });
+    }
+
     /**
      * Return a list of order statuses with labels.
      *
@@ -116,6 +164,30 @@ class sOrder extends Model
         $statuses = self::listPaymentStatuses();
 
         return $statuses[$status] ?? __('Unknown');
+    }
+
+    /**
+     * Stable, untranslated machine key of an order status, e.g. `canceled`.
+     *
+     * @param int $status Order status constant value.
+     * @return string Lowercase constant name without the `ORDER_STATUS_` prefix, or `unknown`.
+     * @since 1.5.0
+     */
+    public static function orderStatusKey(int $status): string
+    {
+        return self::statusConstantKeys('ORDER_STATUS_')[$status] ?? 'unknown';
+    }
+
+    /**
+     * Stable, untranslated machine key of a payment status, e.g. `paid`.
+     *
+     * @param int $status Payment status constant value.
+     * @return string Lowercase constant name without the `PAYMENT_STATUS_` prefix, or `unknown`.
+     * @since 1.5.0
+     */
+    public static function paymentStatusKey(int $status): string
+    {
+        return self::statusConstantKeys('PAYMENT_STATUS_')[$status] ?? 'unknown';
     }
 
     /**
@@ -208,15 +280,44 @@ class sOrder extends Model
     private static function extractStatusConstants(string $prefix): array
     {
         $list = [];
+
+        foreach (self::statusConstantKeys($prefix) as $value => $key) {
+            $list[$value] = __('sCommerce::global.' . strtolower($prefix) . $key);
+        }
+
+        return $list;
+    }
+
+    /**
+     * Map status values to untranslated keys derived from constant names.
+     *
+     * @param string $prefix Constant prefix, e.g. `ORDER_STATUS_`.
+     * @return array<int, string>
+     */
+    private static function statusConstantKeys(string $prefix): array
+    {
+        $list = [];
         $class = new ReflectionClass(__CLASS__);
 
         foreach ($class->getConstants() as $constant => $value) {
             if (str_starts_with($constant, $prefix)) {
-                $const = strtolower($constant);
-                $list[$value] = __('sCommerce::global.' . $const);
+                $list[$value] = strtolower(substr($constant, strlen($prefix)));
             }
         }
 
         return $list;
+    }
+
+    /**
+     * Whether the `uuid` column exists; only positive results are cached.
+     */
+    private function hasUuidColumn(): bool
+    {
+        $key = $this->getConnectionName() . '.' . $this->getTable();
+        if (!isset(self::$uuidColumns[$key]) && $this->getConnection()->getSchemaBuilder()->hasColumn($this->getTable(), 'uuid')) {
+            self::$uuidColumns[$key] = true;
+        }
+
+        return isset(self::$uuidColumns[$key]);
     }
 }

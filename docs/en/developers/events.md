@@ -162,6 +162,92 @@ The listener can return either a numeric price or an array with any of these key
 
 If formatted `price` or `oldPrice` values are omitted, sCommerce formats them from the numeric values.
 
+## Order domain events
+
+Since 1.5.0, sCommerce dispatches typed order events from the `sOrder` model. They cover storefront checkout, quick orders, payment pages and callbacks, the manager order form, bulk actions, repeat orders and any other code that saves orders through Eloquent. Use them instead of `evolution.sCommerceAfterOrderSave` in new code.
+
+Like the pricing events, these names have no `evolution.` prefix. Each listener receives one associative array.
+
+| Event | Dispatched when | Additional keys |
+|---|---|---|
+| `sCommerce.OrderCreated` | An order was created | none |
+| `sCommerce.OrderUpdated` | Order columns changed | `changes` |
+| `sCommerce.OrderStatusChanged` | `status` changed | `oldStatus`, `newStatus`, `oldStatusKey`, `newStatusKey` |
+| `sCommerce.OrderPaymentStatusChanged` | `payment_status` changed | `oldPaymentStatus`, `newPaymentStatus`, `oldPaymentStatusKey`, `newPaymentStatusKey` |
+| `sCommerce.OrderCancelled` | `status` became `ORDER_STATUS_CANCELED` | `previousStatus` |
+| `sCommerce.OrderDeleted` | An order was soft-deleted or force-deleted | `forced` (`false` for a soft delete) |
+
+Every payload contains:
+
+- `event`: the event object (`Seiger\sCommerce\Events\Order*`);
+- `order`: a detached `sOrder` copy of the committed row captured when the change was recorded. Use it only to read data. Do not save it, and re-read the order when you need its current state;
+- `orderId`, `orderUuid`, `reference`, `status`, `paymentStatus`, `cost`, `currency`, `isQuick`, `siteKey` (the order `domain`);
+- `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`: the context of the change (see below);
+- `eventId` (UUID v4) and `occurredAt` (UTC, for example `2026-10-20T08:15:30.123Z`).
+
+`changes` maps every changed column to `['old' => ..., 'new' => ...]`, with JSON columns decoded. `updated_at` is never included. Status keys are untranslated machine names derived from the constants, for example `canceled`, `ready_for_shipment`, `paid` or `authorized`. You can get them with `sOrder::orderStatusKey()` and `sOrder::paymentStatusKey()`. A payment status change is a change of the order projection, not proof that money was captured.
+
+New orders receive a UUID in `s_orders.uuid` when the column exists. Existing orders are not backfilled and may keep `NULL`. The local order `id` remains the stable key for integrations; `uuid` and `reference` are additional identifiers.
+
+### Delivery rules
+
+- Events are dispatched only after the database transaction commits. Rolled-back changes never produce events.
+- Inside an event scope, events are buffered until the outermost scope ends. They are then merged for each order: `OrderCreated` absorbs later updates and carries the final snapshot. Several `OrderUpdated`, `OrderStatusChanged` or `OrderPaymentStatusChanged` events become one event from the first old value to the last new value. A value that returns to its original value is dropped. `OrderCancelled` and `OrderDeleted` are never merged.
+- For each order, events are dispatched in this order: created, updated, status changed, payment status changed, cancelled, deleted. Orders keep the order in which they were first changed.
+- A listener exception is logged to the `scommerce` channel and does not turn a successful checkout or manager action into an error. Later events are still dispatched. Other listeners of the failing event are not called after the exception.
+- Do not return `false` from a listener: Laravel stops calling the remaining listeners of that event.
+- Direct `DB::table('s_orders')->update()` queries bypass model events.
+- Dispatch happens in the same PHP process and is not a durable outbox. If an integration must not lose changes, it needs its own durable storage and periodic reconciliation.
+
+### Event scope
+
+`Seiger\sCommerce\Events\EventScope` tells listeners who made the change. sCommerce uses these `source` values: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat` and `system` (the default when no scope is open).
+
+Code that writes orders on behalf of an integration should open its own scope. Listeners can then ignore changes caused by their own writes:
+
+```php
+use Seiger\sCommerce\Events\EventScope;
+
+EventScope::run('erp', 0, function () use ($order) {
+    $order->status = \Seiger\sCommerce\Models\sOrder::ORDER_STATUS_SHIPPED;
+    $order->save();
+}, correlationId: $flowId, causationId: $remoteEventId, integrationActor: 'erp-sync');
+```
+
+`correlationId` and `causationId` are opaque strings of up to 64 characters. Nested scopes inherit the actor, correlation, causation and integration actor when they are not specified. `EventScope::run()` always closes the scope; when you use `EventScope::begin()`, call `end()` in a `finally` block.
+
+### Example listener
+
+Place listeners in `core/custom/packages/main/plugins/sCommerceEvents.php` when the main service provider loads that directory:
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.OrderStatusChanged', function (array $payload) {
+    if ($payload['integrationActor'] === 'erp-sync') {
+        return; // Ignore the echo of our own write.
+    }
+
+    if ($payload['newStatusKey'] === 'canceled') {
+        // Notify an external system about $payload['orderId'] / $payload['orderUuid'].
+    }
+});
+```
+
+### Detecting support
+
+Detect the feature instead of comparing package versions:
+
+```php
+use Seiger\sCommerce\sCommerce;
+
+$supported = class_exists(sCommerce::class)
+    && defined(sCommerce::class . '::INTEGRATION_EVENTS_VERSION')
+    && sCommerce::supportsIntegration('order-events');
+```
+
+`sCommerce::INTEGRATION_EVENTS_VERSION` (currently `1`) changes only when payloads change incompatibly. `sCommerce::integrationFeatures()` lists the available feature keys.
+
 ## Additional manager and frontend events
 
 Manager events use the evolution. prefix with Laravel Event listeners. Pricing events use their literal sCommerce.* names without that prefix. Frontend callbacks use the names below; do not infer that every callback has the same response fields.
@@ -169,7 +255,7 @@ Manager events use the evolution. prefix with Laravel Event listeners. Pricing e
 - `evolution.sCommerceManagerTabsEvent`
 - `evolution.sCommerceManagerSettingsSaveEvent`
 - `evolution.sCommerceAfterProductContentSave`
-- `evolution.sCommerceAfterOrderSave`
+- `evolution.sCommerceAfterOrderSave`: legacy and manager-only. It fires after successful saves in the manager order form, bulk status changes, bulk "mark as paid" and repeat orders, with the saved order as `item`. It does not fire for storefront orders; use the order domain events above.
 
 ```javascript
 sCommerce.onAddedToCart = (data) => console.log(data);
