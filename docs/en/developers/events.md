@@ -248,6 +248,24 @@ $supported = class_exists(sCommerce::class)
 
 `sCommerce::INTEGRATION_EVENTS_VERSION` (currently `1`) changes only when payloads change incompatibly. `sCommerce::integrationFeatures()` lists the available feature keys.
 
+## Payment ledger events
+
+Since 1.5.0, every write to the payments ledger (`s_order_payments`) dispatches an event, whichever code made it. They follow the same delivery rules as the order events: after commit only, never for rolled-back writes, with the same event scope context. Payment events are never merged.
+
+| Event | Dispatched when | Additional keys |
+|---|---|---|
+| `sCommerce.PaymentRecorded` | A ledger row was created | none |
+| `sCommerce.PaymentStatusChanged` | The `status` of a ledger row changed | `oldStatus`, `newStatus` |
+
+Every payload contains:
+
+- `event` and `payment` (a detached `sOrderPayment` copy for reading only);
+- `paymentId`, `orderId`, `orderUuid`, `sequence`, `kind`, `status`, `provider`, `providerRef`, `parentProviderRef`, `metadata`;
+- `amount` and `amountMinor` (integer minor units, for example cents), and `currency`;
+- the context keys `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` and `occurredAt`.
+
+A status change that also changes the order's payment status is followed by `sCommerce.OrderPaymentStatusChanged`. `sCommerce::supportsIntegration('payment-ledger-api')` reports support. See [Recording payments](payments/index.md#recording-payments-ledger-api) for the API that writes the ledger.
+
 ## Additional manager and frontend events
 
 Manager events use the evolution. prefix with Laravel Event listeners. Pricing events use their literal sCommerce.* names without that prefix. Frontend callbacks use the names below; do not infer that every callback has the same response fields.

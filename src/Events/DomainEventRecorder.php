@@ -18,8 +18,11 @@ use Illuminate\Support\Facades\Log;
  */
 final class DomainEventRecorder
 {
-    /** @var list<DomainEvent> Committed events waiting for the outermost scope to end. */
+    /** @var array<int, DomainEvent> Committed events waiting for the outermost scope to end, keyed by recording sequence. */
     private array $buffer = [];
+
+    /** Recording order; after-commit callbacks of nested transactions run before earlier outer ones. */
+    private int $sequence = 0;
 
     /**
      * Shared recorder from the container; registers the singleton on first use.
@@ -48,17 +51,18 @@ final class DomainEventRecorder
     public function record(DomainEvent $event, ?ConnectionInterface $connection = null): void
     {
         $connection ??= DB::connection();
+        $sequence = ++$this->sequence;
         $accepted = false;
         try {
-            $connection->afterCommit(function () use ($event, &$accepted): void {
+            $connection->afterCommit(function () use ($event, $sequence, &$accepted): void {
                 $accepted = true;
-                $this->accept($event);
+                $this->accept($event, $sequence);
             });
         } catch (\RuntimeException $exception) {
             if ($accepted) {
                 throw $exception;
             }
-            $this->accept($event);
+            $this->accept($event, $sequence);
         }
     }
 
@@ -66,7 +70,7 @@ final class DomainEventRecorder
      * Coalesce and dispatch buffered events; called by the outermost {@see EventScope::end()}.
      *
      * Per aggregate, events are dispatched by {@see DomainEvent::dispatchRank()}; aggregates
-     * keep their first-seen order.
+     * keep the order in which they were first recorded.
      *
      * @since 1.5.0
      */
@@ -74,6 +78,7 @@ final class DomainEventRecorder
     {
         $buffer = $this->buffer;
         $this->buffer = [];
+        ksort($buffer);
 
         $aggregates = [];
         foreach ($buffer as $event) {
@@ -100,10 +105,10 @@ final class DomainEventRecorder
     /**
      * Buffer inside a scope, otherwise dispatch now.
      */
-    private function accept(DomainEvent $event): void
+    private function accept(DomainEvent $event, int $sequence): void
     {
         if (EventScope::active()) {
-            $this->buffer[] = $event;
+            $this->buffer[$sequence] = $event;
             return;
         }
 

@@ -2,6 +2,7 @@
 
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sOrderPayment;
+use Seiger\sCommerce\Payment\LedgerEntry;
 use Seiger\sCommerce\Payment\PaymentFlow;
 
 /** Called inside a transaction with the order locked. Never changes provider transactions. */
@@ -35,17 +36,12 @@ final class OrderManualPayment
                 throw new \DomainException(__('sCommerce::global.bulk_paid_ineligible'));
             }
             if ($remaining > 0) {
-                $payment = new sOrderPayment([
-                    'order_id' => $order->id, 'sequence' => (int) $payments->max('sequence') + 1,
-                    'kind' => 'manual', 'status' => 'captured', 'amount' => $remaining,
-                    'currency' => $order->currency, 'provider' => 'manual', 'captured_at' => now(),
-                    'metadata' => ['source' => 'manager_bulk_paid', 'manager_user_id' => $managerId],
-                ]);
-                if (!$payment->save()) throw new \RuntimeException('Manual payment save canceled');
-                $paymentId = $payment->id;
+                $paymentId = $flow->record($order, new LedgerEntry('manual', 'captured', $remaining, (string) $order->currency, 'manual', null, null,
+                    ['source' => 'manager_bulk_paid', 'manager_user_id' => $managerId]))->payment->id;
+            } else {
+                $flow->syncOrderPaymentStatusFromLedger($order);
             }
-            $flow->syncOrderPaymentStatusFromLedger($order);
-            if ((int) $order->fresh()->payment_status !== sOrder::PAYMENT_STATUS_PAID) {
+            if ((int) $order->payment_status !== sOrder::PAYMENT_STATUS_PAID) {
                 throw new \DomainException(__('sCommerce::global.bulk_paid_ineligible'));
             }
         } elseif ((int) $order->payment_status === sOrder::PAYMENT_STATUS_PARTIALLY_PAID) {

@@ -230,6 +230,19 @@ EventScope::run('manager', 5, static function () use ($orderA, $orderB): void {
 $check($names() === ['sCommerce.OrderUpdated', 'sCommerce.OrderStatusChanged', 'sCommerce.OrderUpdated', 'sCommerce.OrderStatusChanged', 'sCommerce.OrderPaymentStatusChanged'], 'Aggregates in first-seen order, events by rank');
 $check($events[0][1]['orderId'] === $orderB->id && $events[2][1]['orderId'] === $orderA->id, 'Aggregates keep first-seen order');
 $reset();
+// Laravel runs after-commit callbacks of a nested transaction before earlier ones of the outer transaction.
+EventScope::run('manager', 5, static function () use ($orderA, $orderB): void {
+    DB::transaction(static function () use ($orderA, $orderB): void {
+        $orderA->status = 5;
+        $orderA->save();
+        DB::transaction(static function () use ($orderB): void {
+            $orderB->status = 5;
+            $orderB->save();
+        });
+    });
+});
+$check($events[0][1]['orderId'] === $orderA->id && $events[2][1]['orderId'] === $orderB->id, 'Recording order wins over nested commit callback order');
+$reset();
 
 // 8. Deletion.
 $order->delete();
@@ -325,8 +338,8 @@ $reset();
 
 // 11. Capability detection.
 $check(sCommerce::INTEGRATION_EVENTS_VERSION === 1, 'Integration contract version');
-$check(sCommerce::supportsIntegration('order-events') && !sCommerce::supportsIntegration('payment-ledger-api'), 'Feature detection');
-$check(sCommerce::integrationFeatures() === ['order-events'], 'Feature list');
+$check(sCommerce::supportsIntegration('order-events') && !sCommerce::supportsIntegration('unknown-feature'), 'Feature detection');
+$check(sCommerce::integrationFeatures()[0] === 'order-events', 'Feature list');
 
 // Scoped entry points and removed integration routes (source checks).
 $module = file_get_contents($package . '/module/sCommerceModule.php');

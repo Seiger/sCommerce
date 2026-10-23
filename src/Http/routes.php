@@ -76,3 +76,16 @@ Route::middleware('web')->match(['GET', 'POST'], 'payment-callback/{method?}', f
         return response('PAYMENT CALLBACK UNAVAILABLE', 503);
     }
 })->name('payment.callback');
+
+Route::middleware('web')->match(['GET', 'POST'], 'payment-callback/{method}/{identifier}', function (string $method, string $identifier) {
+    try {
+        $service = app(sCommerce::class);
+        if (!method_exists($service, 'handleIdentifiedPaymentCallback')) {
+            return response('PAYMENT CALLBACK DISABLED', 503);
+        }
+
+        return $service->handleIdentifiedPaymentCallback($method, $identifier);
+    } catch (\Throwable) {
+        return response('PAYMENT CALLBACK UNAVAILABLE', 503);
+    }
+})->name('payment.callback.identified');
