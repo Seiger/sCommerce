@@ -167,6 +167,7 @@ class CashPayment extends BasePaymentMethod
 <?php namespace YourNamespace\Payment;
 
 use Seiger\sCommerce\Payment\BasePaymentMethod;
+use Seiger\sCommerce\Payment\PaymentFlow;
 use Stripe\StripeClient;
 use Seiger\sCommerce\Models\sOrder;
 
@@ -312,8 +313,8 @@ class StripePayment extends BasePaymentMethod
 
         $publishableKey = $this->credentials['publishable_key'] ?? '';
         $orderId = $order->id ?? 0;
-        $amount = $order->total ?? 0;
-        $currency = $order->currency ?? 'usd';
+        $amount = $order->cost ?? 0;
+        $currency = $order->currency ?? '';
 
         // Return HTML with Stripe Elements integration
         return <<<HTML
@@ -374,7 +375,8 @@ HTML;
     {
         try {
             // Load order
-            $order = sOrder::find($data['order_id'] ?? 0);
+            // processOrder() passes the saved order as an array.
+            $order = sOrder::find($data['id'] ?? $data['order_id'] ?? 0);
             
             if (!$order) {
                 return [
@@ -385,25 +387,28 @@ HTML;
 
             // Create Payment Intent
             $paymentIntent = $this->stripe->paymentIntents->create([
-                'amount' => $this->convertToCents($order->total),
-                'currency' => strtolower($order->currency ?? 'usd'),
+                'amount' => $this->convertToCents((float) $order->cost),
+                'currency' => strtolower($order->currency),
                 'payment_method' => $data['payment_method_id'] ?? '',
                 'confirm' => true,
                 'metadata' => [
-                    'order_id' => $order->id,
-                    'customer_email' => $order->customer_email ?? '',
+                    'order_key' => $order->identifier,
+                    'customer_email' => $order->user_info['email'] ?? '',
                 ],
                 'statement_descriptor' => $this->getSettings()['statement_descriptor'] ?? null,
             ]);
 
             // Check payment status
             if ($paymentIntent->status === 'succeeded') {
-                // Update order status
-                $order->update([
-                    'status' => 'paid',
-                    'transaction_id' => $paymentIntent->id,
-                    'paid_at' => now(),
-                ]);
+                // Record the capture in the payment ledger; payment_status is derived from it.
+                (new PaymentFlow())->recordCaptured(
+                    $order,
+                    'final',
+                    $paymentIntent->amount_received / 100,
+                    strtoupper($paymentIntent->currency),
+                    'stripe-' . ($paymentIntent->livemode ? 'live' : 'test'),
+                    $paymentIntent->id
+                );
 
                 return [
                     'success' => true,
@@ -672,85 +677,251 @@ public function defineAvailableModes(): array
 ]
 ```
 
-## Webhook Handling
+## Запись платежей (ledger API)
 
-For payment gateways that use webhooks (Stripe, PayPal, etc.), you'll need to set up webhook endpoints.
-
-### Create Webhook Controller
+Каждый платёж заказа — это строка в журнале платежей (`s_order_payments`). `s_orders.payment_status` вычисляется из журнала: никогда не записывайте его напрямую. Записывайте результаты платежей через `Seiger\sCommerce\Payment\PaymentFlow`:
 
 ```php
-<?php namespace YourNamespace\Http\Controllers;
+use Seiger\sCommerce\Payment\LedgerEntry;
+use Seiger\sCommerce\Payment\PaymentFlow;
+
+$flow = new PaymentFlow();
+
+// Generic form: one call per money movement and status update.
+$result = $flow->record($order, new LedgerEntry(
+    kind: 'final',               // deposit | final | manual | refund
+    status: 'captured',          // see the status table below
+    amount: 49.90,               // positive; for refunds the amount returned
+    currency: 'EUR',             // must equal $order->currency
+    provider: 'mypsp-live',      // namespace of the PSP account and environment
+    providerRef: 'pay_123',      // PSP id of this payment, refund or charge
+    metadata: ['event_id' => 'evt_456'],
+));
+
+// Shortcuts.
+$flow->recordAuthorized($order, 'final', 49.90, 'EUR', 'mypsp-live', 'pay_123');
+$flow->recordCaptured($order, 'final', 49.90, 'EUR', 'mypsp-live', 'pay_123');
+$flow->recordFailed($order, 'final', 49.90, 'EUR', 'mypsp-live', 'pay_123');
+$flow->recordCanceled($order, 'mypsp-live', 'pay_123');
+$flow->recordRefunded($order, 10.00, 'EUR', 'mypsp-live', 're_789', 'pay_123');
+$flow->recordDisputed($order, 'mypsp-live', 'pay_123');
+
+$summary = $flow->summary($order); // totals in minor units, projected payment status
+```
+
+`record()` возвращает `LedgerResult` с полями `payment` (строка), `created`, `changed` и `previousStatus`. `recordCaptured()` сохраняет прежнюю сигнатуру и возвращает порядковый номер платежа.
+
+### Статусы
+
+| Статус | Значение |
+|---|---|
+| `pending` | Платёж начат, результата ещё нет |
+| `authorized` | Средства зарезервированы, но не списаны |
+| `captured` | Деньги получены |
+| `failed`, `rejected`, `expired`, `canceled` | Деньги не получены |
+| `refunded`, `partially_refunded` | Для строк `refund`: деньги возвращены. Для строки платежа: устаревшее изменение из менеджера |
+| `disputed` | Покупатель оспорил платёж |
+
+### Идемпотентность и переходы
+
+Строки идентифицируются парой `(provider, providerRef)`. Повторный вызов с той же парой безопасен:
+
+- тот же статус ничего не меняет и не вызывает событий;
+- разрешённое изменение статуса обновляет существующую строку;
+- неразрешённое изменение (например, запоздавший `failed` после `captured`) игнорируется и записывается в лог как предупреждение;
+- та же пара с другим заказом, видом (kind), суммой, валютой или родительским платежом возврата выбрасывает `LedgerConflictException`;
+- валюта, отличная от валюты заказа, выбрасывает `InvalidArgumentException`.
+
+| Из \ в | authorized | captured | failed, rejected, expired, canceled | refunded, partially_refunded | disputed |
+|---|---|---|---|---|---|
+| pending | да | да | да | только строки возвратов | нет |
+| authorized | – | да | да | нет | нет |
+| captured | нет | – | нет | только форма менеджера | да |
+| disputed | нет | да (спор выигран) | нет | да (спор проигран) | – |
+| failed, rejected, expired, canceled | нет | да (запоздавший успех) | – | нет | нет |
+
+Строки возвратов начинаются со статуса `pending` или `refunded` и никогда не становятся `authorized` или `captured`. `recordCanceled()` и `recordDisputed()` изменяют существующую строку; для неизвестной ссылки (reference) они выбрасывают `OutOfBoundsException`, поэтому верните провайдеру ошибку, после которой он повторит попытку.
+
+Без `providerRef` каждый вызов вставляет новую строку. Используйте это только для ручных записей.
+
+### Выбор `provider` и `providerRef`
+
+- `provider` — ключ в нижнем регистре длиной до 32 символов (`a-z`, `0-9`, `_ . : -`). Используйте отдельный ключ для каждого аккаунта PSP и окружения, например `mypsp-live` и `mypsp-test`, чтобы одинаковые id в тестовом и рабочем окружениях никогда не конфликтовали.
+- `providerRef` — id движения денег в PSP: id payment intent, charge или транзакции либо id возврата. Используйте его повторно для каждого обновления статуса этого платежа. Не используйте id события вебхука: один платёж получает несколько событий. При необходимости храните id событий в `metadata`.
+- Для возврата передайте `providerRef` исходного платежа как `parentProviderRef`. Он должен принадлежать тому же заказу, валюте и провайдеру.
+
+### Метаданные
+
+`metadata` хранится как JSON-объект размером не более 64 КБ. Ключ `_ledger` зарезервирован: sCommerce хранит в нём родительский платёж возврата, контекст области событий (source, actor, correlation, causation, integration actor) и историю статусов. Существующие ключи сохраняются при изменении статуса.
+
+### Статус оплаты заказа
+
+После каждого изменения sCommerce пересчитывает `payment_status` по строкам в валюте заказа и сохраняет заказ через модель, поэтому вызывается `sCommerce.OrderPaymentStatusChanged`:
+
+- полученные деньги учитывают строки платежей в статусах `captured`, `disputed`, `refunded` и `partially_refunded`;
+- возвращённые деньги учитывают строки `refund` и устаревшие строки платежей со статусом `refunded`;
+- любой оспоренный платёж делает заказ `disputed`;
+- строки в другой валюте игнорируются, и об этом один раз записывается в лог.
+
+Платёж, который менеджер отметил как частично возвращённый без записанной суммы возврата, показывает заказ как частично возвращённый, но не меняет итоги.
+
+Журнал вызывает `sCommerce.PaymentRecorded` и `sCommerce.PaymentStatusChanged` (см. [События](../events.md)).
+
+## Вебхуки
+
+### URL обратного вызова
+
+sCommerce принимает callbacks провайдеров на встроенном маршруте:
+
+```php
+route('payment.callback', ['method' => 'mypsp']);                                  // /payment-callback/mypsp
+route('payment.callback.identified', ['method' => 'mypsp', 'identifier' => 'eu']); // /payment-callback/mypsp/eu
+```
+
+Используйте URL с идентификатором, когда один и тот же класс оплаты настроен несколько раз с разными идентификаторами, например для двух аккаунтов. Такой URL попадает только в строку с этим идентификатором. Внутри метода `sCommerce::paymentCallbackUrl($this)` возвращает правильный URL, чтобы показать его в настройках или отправить провайдеру. У маршрутов нет проверки CSRF, поэтому метод должен самостоятельно аутентифицировать каждый запрос.
+
+Отключённые методы всё равно получают callbacks, потому что провайдеры продолжают присылать уведомления о возвратах и спорах по прошлым платежам.
+
+### Реализация `WebhookPaymentMethodInterface`
+
+Реализуйте `Seiger\sCommerce\Interfaces\WebhookPaymentMethodInterface`:
+
+- `matchesWebhook(Request $request): bool` используется, когда URL не указывает метод. Делайте его лёгким и без побочных эффектов.
+- `handleWebhook(Request $request): Response` проверяет запрос, записывает результат в журнал и возвращает ответ, который ожидает провайдер.
+
+Обработчик выполняется внутри области событий с source `payment_callback`. Этот полный пример обрабатывает провайдера, который подписывает JSON-тело с помощью HMAC-SHA256:
+
+```php
+<?php namespace EvolutionCMS\Main\Payment;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Seiger\sCommerce\Interfaces\WebhookPaymentMethodInterface;
 use Seiger\sCommerce\Models\sOrder;
+use Seiger\sCommerce\Payment\BasePaymentMethod;
+use Seiger\sCommerce\Payment\LedgerConflictException;
+use Seiger\sCommerce\Payment\PaymentFlow;
+use Symfony\Component\HttpFoundation\Response;
 
-class StripeWebhookController extends Controller
+class ExamplePspPayment extends BasePaymentMethod implements WebhookPaymentMethodInterface
 {
-    public function handle(Request $request)
+    public function getName(): string
     {
+        return 'examplepsp';
+    }
+
+    public function getType(): string
+    {
+        return '<b>Example PSP</b> (examplepsp)';
+    }
+
+    public function validatePayment(array $data): bool
+    {
+        return true;
+    }
+
+    public function processPayment(array $data): array|bool
+    {
+        // Create the payment at the provider here and pass $data['identifier'] as order_key metadata.
+        return ['success' => true];
+    }
+
+    public function payButton(int|string|array $data): string
+    {
+        return '';
+    }
+
+    public function defineCredentials(): array
+    {
+        return [
+            'keys' => [
+                'label' => 'Keys',
+                'fields' => [
+                    'webhook_secret' => [
+                        'type' => 'password',
+                        'label' => 'Webhook secret',
+                        'name' => 'webhook_secret',
+                        'value' => $this->credentials['webhook_secret'] ?? '',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public function defineSettings(): array
+    {
+        return [];
+    }
+
+    public function matchesWebhook(Request $request): bool
+    {
+        return $request->headers->has('X-Example-Signature');
+    }
+
+    public function handleWebhook(Request $request): Response
+    {
+        $secret = (string)($this->credentials['webhook_secret'] ?? '');
         $payload = $request->getContent();
-        $signature = $request->header('Stripe-Signature');
-        
-        // Verify webhook signature
+        $signature = (string)$request->header('X-Example-Signature', '');
+        if ($secret === '' || !hash_equals(hash_hmac('sha256', $payload, $secret), $signature)) {
+            return response('INVALID SIGNATURE', 400);
+        }
+
+        $event = json_decode($payload, true);
+        if (!is_array($event)) {
+            return response('INVALID PAYLOAD', 400);
+        }
+
+        // The order key is the random identifier sCommerce issues for payment providers.
+        $order = sOrder::query()->where('identifier', (string)($event['order_key'] ?? ''))->first();
+        if (!$order) {
+            return response('UNKNOWN ORDER', 200); // A retry cannot help.
+        }
+
+        $flow = new PaymentFlow();
+        $provider = $this->getName() . '-' . (!empty($event['livemode']) ? 'live' : 'test');
+        $amount = ((int)($event['amount'] ?? 0)) / 100;
+        $currency = strtoupper((string)($event['currency'] ?? ''));
+        $paymentId = (string)($event['payment_id'] ?? '');
+        $metadata = ['event_id' => (string)($event['id'] ?? '')];
+
         try {
-            $event = \Stripe\Webhook::constructEvent(
-                $payload,
-                $signature,
-                config('services.stripe.webhook_secret')
-            );
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Invalid signature'], 400);
+            match ($event['type'] ?? '') {
+                'payment.authorized' => $flow->recordAuthorized($order, 'final', $amount, $currency, $provider, $paymentId, $metadata),
+                'payment.succeeded' => $flow->recordCaptured($order, 'final', $amount, $currency, $provider, $paymentId, $metadata),
+                'payment.failed' => $flow->recordFailed($order, 'final', $amount, $currency, $provider, $paymentId, $metadata),
+                'payment.canceled' => $flow->recordCanceled($order, $provider, $paymentId, $metadata),
+                'refund.succeeded' => $flow->recordRefunded($order, $amount, $currency, $provider, (string)$event['refund_id'], $paymentId, $metadata),
+                'dispute.created' => $flow->recordDisputed($order, $provider, $paymentId, $metadata),
+                default => null,
+            };
+        } catch (LedgerConflictException|\InvalidArgumentException $e) {
+            // Permanent: log for manual review and stop the provider from retrying.
+            Log::channel('scommerce')->error('Example PSP webhook rejected', ['event_id' => $metadata['event_id'], 'error' => $e->getMessage()]);
+            return response('REJECTED', 200);
+        } catch (\OutOfBoundsException) {
+            // The payment is not recorded yet: ask the provider to retry later.
+            return response('RETRY', 503);
         }
 
-        // Handle the event
-        switch ($event->type) {
-            case 'payment_intent.succeeded':
-                $this->handlePaymentSuccess($event->data->object);
-                break;
-                
-            case 'payment_intent.payment_failed':
-                $this->handlePaymentFailure($event->data->object);
-                break;
-        }
-
-        return response()->json(['status' => 'success']);
-    }
-
-    private function handlePaymentSuccess($paymentIntent)
-    {
-        $orderId = $paymentIntent->metadata->order_id ?? null;
-        
-        if ($orderId) {
-            $order = sOrder::find($orderId);
-            $order->update([
-                'status' => 'paid',
-                'transaction_id' => $paymentIntent->id,
-                'paid_at' => now(),
-            ]);
-        }
-    }
-
-    private function handlePaymentFailure($paymentIntent)
-    {
-        $orderId = $paymentIntent->metadata->order_id ?? null;
-        
-        if ($orderId) {
-            $order = sOrder::find($orderId);
-            $order->update([
-                'status' => 'payment_failed',
-            ]);
-        }
+        return response('OK', 200);
     }
 }
 ```
 
-### Register Webhook Route
+### Идемпотентность и повторные попытки
 
-```php
-// routes/web.php
-Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])
-    ->name('webhooks.stripe');
-```
+Провайдеры повторяют callbacks и могут доставлять их не по порядку. Поскольку `record()` идемпотентен по `(provider, providerRef)`, повторный callback ничего не меняет. Возвращайте ответ 2xx для дубликатов и для запросов, которые повторная попытка не исправит. Возвращайте ответ 5xx только для временных проблем; диспетчер возвращает `500 CALLBACK ERROR`, когда обработчик выбрасывает исключение.
+
+Никогда не записывайте `s_orders.payment_status` или другие колонки заказа из вебхука: запишите платёж и позвольте sCommerce вычислить статус заказа.
+
+### Старые обработчики
+
+Классы, которые определяют `handleWebhook()` без параметров или методы сопоставления `canHandleWebhook()`, `matchWebhook()` или `webhookMatches()`, продолжают работать. sCommerce записывает в лог уведомление об устаревании один раз за запрос. Встроенное распознавание подписей Stripe, WayForPay и Portmone остаётся включённым, пока настройка `basic.legacy_webhook_signatures` равна `1` (значение по умолчанию в 1.x); оно будет удалено в 2.0.
+
+### Отслеживание результатов
+
+Используйте `sCommerce.PaymentRecorded`, `sCommerce.PaymentStatusChanged` и `sCommerce.OrderPaymentStatusChanged`, чтобы реагировать на платежи (см. [События](../events.md)).
 
 ## Testing Payment Methods
 

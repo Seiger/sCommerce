@@ -10,6 +10,7 @@
         "friendlyUrlSuffix" => "",
         "in_main_menu" => 1,
         "integrations_on" => 0,
+        "legacy_webhook_signatures" => 1,
         "main_currency" => "EUR",
         "main_menu_order" => 11,
         "orders_on" => 1,

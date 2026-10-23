@@ -14,6 +14,8 @@ use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sFilter;
+use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
+use Seiger\sCommerce\Interfaces\WebhookPaymentMethodInterface;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sOrder;
@@ -51,6 +53,9 @@ class sCommerce
     protected $categoryId;
     protected ?array $sort = null;
 
+    /** @var array<string, true> Deprecation notices already logged in this request. */
+    protected array $webhookNotices = [];
+
     /**
      * The current currency for the session.
      * Loaded lazily and stored statically to optimize retrieval across multiple calls.
@@ -75,7 +80,7 @@ class sCommerce
      */
     public static function integrationFeatures(): array
     {
-        return ['order-events'];
+        return ['order-events', 'payment-ledger-api', 'webhook-interface'];
     }
 
     /**
@@ -708,13 +713,61 @@ class sCommerce
      * Resolution order:
      * 1) URL/query method (payment-callback/{method} or ?method=...)
      * 2) Payment matcher rules from settings.webhook_match (DB)
-     * 3) Optional matcher method on payment class (canHandleWebhook/matchWebhook/webhookMatches)
-     * 4) Legacy signatures for known gateways (stripe/wayforpay/portmone)
+     * 3) WebhookPaymentMethodInterface::matchesWebhook()
+     * 4) Deprecated duck-typed matcher on payment class (canHandleWebhook/matchWebhook/webhookMatches)
+     * 5) Legacy signatures for known gateways (stripe/wayforpay/portmone) while basic.legacy_webhook_signatures is on
      */
     public function handlePaymentCallback(?string $method = null): HttpResponse
     {
-        $resolvedMethod = trim((string)($method ?? request()->input('method', '')));
-        $paymentMethod = $resolvedMethod !== '' ? $this->findPaymentMethodByName($resolvedMethod) : null;
+        return $this->dispatchPaymentCallback(trim((string)($method ?? request()->input('method', ''))), null);
+    }
+
+    /**
+     * Dispatch a callback addressed to one payment method row: `payment-callback/{method}/{identifier}`.
+     *
+     * Never falls back to another identifier, so callbacks cannot reach another account.
+     *
+     * @param string $method Payment method name.
+     * @param string $identifier Identifier of the payment method row.
+     * @return HttpResponse
+     * @since 1.5.0
+     */
+    public function handleIdentifiedPaymentCallback(string $method, string $identifier): HttpResponse
+    {
+        return $this->dispatchPaymentCallback(trim($method), trim($identifier));
+    }
+
+    /**
+     * Callback URL that a payment method shows in its settings or sends to its provider.
+     *
+     * @param PaymentMethodInterface $method Payment method instance.
+     * @return string The identified URL when the method has an identifier, otherwise the plain one.
+     * @since 1.5.0
+     */
+    public static function paymentCallbackUrl(PaymentMethodInterface $method): string
+    {
+        $name = $method->getName();
+        $identifier = (string)substr($method->getIdentifier(), strlen($name));
+
+        return $identifier !== ''
+            ? route('payment.callback.identified', ['method' => $name, 'identifier' => $identifier])
+            : route('payment.callback', ['method' => $name]);
+    }
+
+    /**
+     * Resolve the payment method row and run its webhook handler in a `payment_callback` event scope.
+     *
+     * @param string $method Method name from the URL or query, or empty.
+     * @param string|null $identifier Row identifier from the identified route, or null.
+     */
+    protected function dispatchPaymentCallback(string $method, ?string $identifier): HttpResponse
+    {
+        $resolvedMethod = $method;
+        $paymentMethod = $method !== '' ? $this->findPaymentMethod($method, $identifier) : null;
+
+        if (!$paymentMethod && $identifier !== null) {
+            return response('PAYMENT METHOD NOT FOUND', 404);
+        }
 
         if (!$paymentMethod) {
             $paymentMethod = $this->resolvePaymentMethodFromWebhookRequest();
@@ -741,12 +794,17 @@ class sCommerce
             return response('CALLBACK ERROR', 500);
         }
 
-        if (!method_exists($instance, 'handleWebhook')) {
+        if ($instance instanceof WebhookPaymentMethodInterface) {
+            $handler = fn () => $instance->handleWebhook(request());
+        } elseif (method_exists($instance, 'handleWebhook')) {
+            $this->webhookNotice($className, "Payment method $className uses deprecated handleWebhook() without arguments; implement WebhookPaymentMethodInterface");
+            $handler = fn () => $instance->handleWebhook();
+        } else {
             return response('WEBHOOK NOT IMPLEMENTED', 501);
         }
 
         try {
-            $response = EventScope::run('payment_callback', 0, fn () => $instance->handleWebhook());
+            $response = EventScope::run('payment_callback', 0, $handler);
             if ($response instanceof HttpResponse) {
                 return $response;
             }
@@ -761,6 +819,30 @@ class sCommerce
 
             return response('CALLBACK ERROR', 500);
         }
+    }
+
+    /**
+     * Find a payment method row by name and identifier.
+     *
+     * Without an identifier, the row with an empty identifier is preferred, then any row of
+     * that name. Inactive rows stay addressable: providers keep sending refund and dispute
+     * webhooks after a method is disabled.
+     *
+     * @param string $method Payment method name.
+     * @param string|null $identifier Exact identifier, or null.
+     * @since 1.5.0
+     */
+    protected function findPaymentMethod(string $method, ?string $identifier): ?sPaymentMethod
+    {
+        $row = sPaymentMethod::query()
+            ->where('name', $method)
+            ->where('identifier', $identifier ?? '')
+            ->orderByDesc('active')
+            ->orderBy('position')
+            ->orderBy('id')
+            ->first();
+
+        return $row ?? ($identifier === null ? $this->findPaymentMethodByName($method) : null);
     }
 
     protected function findPaymentMethodByName(string $method): ?sPaymentMethod
@@ -807,13 +889,29 @@ class sCommerce
                 continue;
             }
 
+            if ($instance instanceof WebhookPaymentMethodInterface) {
+                try {
+                    if ($instance->matchesWebhook(request())) {
+                        return $paymentMethod;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('payment-callback matcher failed', [
+                        'method' => (string)$paymentMethod->name,
+                        'class' => $className,
+                        'matcher' => 'matchesWebhook',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             foreach (['canHandleWebhook', 'matchWebhook', 'webhookMatches'] as $matcherMethod) {
-                if (!method_exists($instance, $matcherMethod)) {
+                if ($instance instanceof WebhookPaymentMethodInterface || !method_exists($instance, $matcherMethod)) {
                     continue;
                 }
 
                 try {
                     if ((bool)$instance->{$matcherMethod}(request())) {
+                        $this->webhookNotice($className, "Payment method $className uses deprecated duck-typed webhook matcher; implement WebhookPaymentMethodInterface");
                         return $paymentMethod;
                     }
                 } catch (\Throwable $e) {
@@ -826,7 +924,8 @@ class sCommerce
                 }
             }
 
-            if ($this->matchesLegacyWebhookSignature((string)$paymentMethod->name)) {
+            if ((int)static::config('basic.legacy_webhook_signatures', 1) === 1
+                && $this->matchesLegacyWebhookSignature((string)$paymentMethod->name)) {
                 return $paymentMethod;
             }
         }
@@ -910,6 +1009,21 @@ class sCommerce
         return array_values(array_unique($normalized));
     }
 
+    /**
+     * Log a webhook deprecation notice once per class and request.
+     */
+    protected function webhookNotice(string $className, string $message): void
+    {
+        if (isset($this->webhookNotices[$className . $message])) {
+            return;
+        }
+        $this->webhookNotices[$className . $message] = true;
+        Log::notice($message);
+    }
+
+    /**
+     * @deprecated 1.5.0 Built-in gateway signatures are removed in 2.0; implement WebhookPaymentMethodInterface.
+     */
     protected function matchesLegacyWebhookSignature(string $paymentName): bool
     {
         return match (strtolower(trim($paymentName))) {
