@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Controllers\TabOrderController;
 use Seiger\sCommerce\Controllers\TabProductController;
+use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
@@ -653,6 +654,7 @@ switch ($get) {
         $item = sOrder::find($requestId);
 
         if ($item) {
+            $scope = EventScope::begin('manager', (int)evo()->getLoginUserID('mgr'));
             $history = $item->history;
             if (!is_array($history)) {
                 $history = [];
@@ -849,16 +851,18 @@ switch ($get) {
 
             $item->history = $history;
             $item->update();
+
+            $_SESSION['itemaction'] = 'Saving a Order of #' . $item->id;
+            $_SESSION['itemname'] = __('sCommerce::global.title');
+            $scope->end();
+            evo()->invokeEvent('sCommerceAfterOrderSave', compact('item'));
         }
 
-        $_SESSION['itemaction'] = 'Saving a Order of #' . $item->id;
-        $_SESSION['itemname'] = __('sCommerce::global.title');
-        $back = str_replace('&i=0', '&i=' . $item->id, (request()->back ?? '&get=orders'));
-        evo()->invokeEvent('sCommerceAfterOrderSave', compact('item'));
+        $back = str_replace('&i=0', '&i=' . ($item->id ?? 0), (request()->back ?? '&get=orders'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "orderDelete":
         $requestId = request()->integer('i');
-        $result = (new TabOrderController)->delete($requestId);
+        $result = EventScope::run('manager', (int)evo()->getLoginUserID('mgr'), fn () => (new TabOrderController)->delete($requestId));
 
         if ($result['success']) {
             session()->flash('success', $result['message']);
@@ -2545,7 +2549,7 @@ switch ($get) {
                 $item->position = request()->integer('position');
                 $item->title = json_encode(request()->input('title', []), JSON_UNESCAPED_UNICODE);
                 $item->description = json_encode(request()->input('description', []), JSON_UNESCAPED_UNICODE);
-                $item->сredentials = $instance->prepareCredentials(request()->all());
+                $item->{sPaymentMethod::CREDENTIALS} = $instance->prepareCredentials(request()->all());
                 $item->settings = $instance->prepareSettings(request()->all());
                 $item->mode = request()->string('mode', '')->trim();
                 $item->update();

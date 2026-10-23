@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
@@ -431,6 +432,8 @@ class sCheckout
      */
     public function processOrder(): array
     {
+        // One scope: the order and its payment_info update produce a single OrderCreated.
+        $scope = EventScope::begin('storefront', (int)($this->orderData['user']['id'] ?? 0));
         try {
             if (empty($this->orderData['products'])) {
                 throw new \Exception("Invalid products in Order.");
@@ -547,6 +550,8 @@ class sCheckout
                 'message' => $e->getMessage(),
                 'error_code' => $e->getCode(),
             ];
+        } finally {
+            $scope->end();
         }
     }
 
@@ -693,9 +698,11 @@ class sCheckout
         $order->manager_notes = $adminNotes;
         $order->history = $history;
 
-        DB::transaction(function () use ($order): void {
-            $order->save();
-            self::assignBusinessReference($order);
+        EventScope::run('storefront_quick', (int)$userData['id'], static function () use ($order): void {
+            DB::transaction(function () use ($order): void {
+                $order->save();
+                self::assignBusinessReference($order);
+            });
         });
 
         if ($data['productId'] == 0) {
@@ -757,7 +764,7 @@ class sCheckout
         }
 
         if (method_exists($paymentMethod, 'processPayment')) {
-            return $paymentMethod->processPayment($data);
+            return EventScope::run('storefront_pay', (int)evo()->getLoginUserID('web'), fn () => $paymentMethod->processPayment($data));
         }
 
         return [

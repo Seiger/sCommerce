@@ -12,6 +12,8 @@ php tests/standalone/scommerce-new-order.php
 php tests/standalone/scommerce-review.php
 php tests/standalone/scommerce-review-migration.php
 php tests/standalone/scommerce-repeat.php
+php tests/standalone/scommerce-order-events.php
+php tests/standalone/scommerce-credentials-column.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs

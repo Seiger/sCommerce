@@ -4,6 +4,7 @@ use EvolutionCMS\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Seiger\sCommerce\Cart\sCart;
 use Seiger\sCommerce\Checkout\sCheckout;
+use Seiger\sCommerce\Events\DomainEventRecorder;
 use Seiger\sCommerce\Filter\sFilter;
 use Seiger\sCommerce\Services\sPriceResolver;
 use Seiger\sCommerce\Wishlist\sWishlist;
@@ -92,6 +93,9 @@ class sCommerceServiceProvider extends ServiceProvider
     {
         // Add plugins to Evo
         $this->loadPlugins();
+
+        // One recorder per request buffers committed order changes for sCommerce.* events
+        $this->app->singleton(DomainEventRecorder::class);
 
         // Only Manager
         if (IN_MANAGER_MODE) {

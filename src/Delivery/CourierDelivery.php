@@ -36,7 +36,7 @@ class CourierDelivery extends BaseDeliveryMethod
     public function getType(): string
     {
         $title = __('sCommerce::global.courier');
-        $title = str_contains($title, '::') ? 'Сourier' : $title;
+        $title = str_contains($title, '::') ? 'Courier' : $title;
         return "<b>" . $title . "</b> (courier)";
     }
 

@@ -66,5 +66,6 @@ foreach (['dashboardTab', 'orderTab', 'ordersTab', 'reviewTab', 'reviewsTab', 'o
     token_get_all($compiler->compileString(file_get_contents($package . '/views/' . $name . '.blade.php')), TOKEN_PARSE);
     $checks++;
 }
-$check(str_starts_with((new ReflectionClass(sReview::class))->getFileName(), $package . '/src/'), 'Model loads from original checkout');
+// realpath() normalizes separators, so the check also holds on Windows.
+$check(str_starts_with(realpath((new ReflectionClass(sReview::class))->getFileName()), realpath($package . '/src') . DIRECTORY_SEPARATOR), 'Model loads from original checkout');
 echo "$checks review/schema/Blade checks passed (isolated SQLite, no site database)\n";

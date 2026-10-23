@@ -5,6 +5,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Services\OrderStatusUpdater;
 
@@ -28,6 +29,18 @@ final class OrderBulkStatusController
             return new JsonResponse(['message' => __('sCommerce::global.bulk_status_session_expired')], 403);
         }
 
+        $managerId = (int) evo()->getLoginUserID('mgr');
+
+        return EventScope::run('manager_bulk_status', $managerId, fn () => $this->process($request, $managerId));
+    }
+
+    /**
+     * Validate the selection and update statuses inside the bulk-status event scope.
+     *
+     * @since 1.5.0
+     */
+    private function process(Request $request, int $managerId): JsonResponse
+    {
         $ids = $request->input('ids');
         $status = $request->input('status');
         if (!is_array($ids) || !$ids || count($ids) > self::MAX_ORDERS) {
@@ -43,7 +56,6 @@ final class OrderBulkStatusController
         }
 
         // Status 0 is deliberately excluded: deletion has its own soft-delete workflow.
-        $managerId = (int) evo()->getLoginUserID('mgr');
         try {
             $changed = DB::transaction(static function () use ($ids, $status, $managerId): array {
                 $orders = sOrder::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();

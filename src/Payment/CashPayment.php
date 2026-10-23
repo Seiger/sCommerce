@@ -34,7 +34,7 @@ class CashPayment extends BasePaymentMethod
     public function getType(): string
     {
         $title = __('sCommerce::global.cash');
-        $title = str_contains($title, '::') ? 'Сash' : $title;
+        $title = str_contains($title, '::') ? 'Cash' : $title;
         return "<b>" . $title . "</b> (cash)";
     }
 

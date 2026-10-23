@@ -257,6 +257,92 @@ Event::listen('evolution.sCommerceAfterAddToCart', function($params) {
 ],
 ```
 
+## Доменные события заказов
+
+Начиная с 1.5.0, sCommerce вызывает типизированные события заказов из модели `sOrder`. Они охватывают checkout на сайте, быстрые заказы, страницы оплаты и callbacks, форму заказа в менеджере, массовые действия, повторные заказы и любой другой код, который сохраняет заказы через Eloquent. В новом коде используйте их вместо `evolution.sCommerceAfterOrderSave`.
+
+Как и ценовые события, эти имена не имеют префикса `evolution.`. Каждый слушатель получает один ассоциативный массив.
+
+| Событие | Когда вызывается | Дополнительные ключи |
+|---|---|---|
+| `sCommerce.OrderCreated` | Заказ создан | нет |
+| `sCommerce.OrderUpdated` | Изменены колонки заказа | `changes` |
+| `sCommerce.OrderStatusChanged` | Изменён `status` | `oldStatus`, `newStatus`, `oldStatusKey`, `newStatusKey` |
+| `sCommerce.OrderPaymentStatusChanged` | Изменён `payment_status` | `oldPaymentStatus`, `newPaymentStatus`, `oldPaymentStatusKey`, `newPaymentStatusKey` |
+| `sCommerce.OrderCancelled` | `status` стал `ORDER_STATUS_CANCELED` | `previousStatus` |
+| `sCommerce.OrderDeleted` | Заказ мягко удалён (soft delete) или удалён окончательно (force delete) | `forced` (`false` для soft delete) |
+
+Каждый payload содержит:
+
+- `event`: объект события (`Seiger\sCommerce\Events\Order*`);
+- `order`: отсоединённая копия `sOrder` закоммиченной строки, сделанная в момент фиксации изменения. Используйте её только для чтения данных. Не сохраняйте её, а когда нужно текущее состояние заказа, перечитайте его;
+- `orderId`, `orderUuid`, `reference`, `status`, `paymentStatus`, `cost`, `currency`, `isQuick`, `siteKey` (`domain` заказа);
+- `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`: контекст изменения (см. ниже);
+- `eventId` (UUID v4) и `occurredAt` (UTC, например `2026-10-20T08:15:30.123Z`).
+
+`changes` сопоставляет каждую изменённую колонку с `['old' => ..., 'new' => ...]`; JSON-колонки декодируются. `updated_at` никогда не включается. Ключи статусов — это непереведённые машинные имена, полученные из констант, например `canceled`, `ready_for_shipment`, `paid` или `authorized`. Получить их можно через `sOrder::orderStatusKey()` и `sOrder::paymentStatusKey()`. Изменение статуса оплаты — это изменение проекции заказа, а не доказательство того, что деньги списаны.
+
+Новые заказы получают UUID в `s_orders.uuid`, если эта колонка существует. Для существующих заказов значения задним числом не заполняются, поэтому у них может остаться `NULL`. Локальный `id` заказа остаётся стабильным ключом для интеграций; `uuid` и `reference` — дополнительные идентификаторы.
+
+### Правила доставки событий
+
+- События вызываются только после коммита транзакции базы данных. Откаченные изменения никогда не порождают событий.
+- Внутри области событий (event scope) события буферизуются до завершения самой внешней области. Затем они объединяются для каждого заказа: `OrderCreated` поглощает последующие обновления и содержит итоговый снимок. Несколько событий `OrderUpdated`, `OrderStatusChanged` или `OrderPaymentStatusChanged` становятся одним событием — от первого старого значения до последнего нового. Значение, вернувшееся к исходному, отбрасывается. `OrderCancelled` и `OrderDeleted` никогда не объединяются.
+- Для каждого заказа события вызываются в таком порядке: создание, обновление, изменение статуса, изменение статуса оплаты, отмена, удаление. Заказы сохраняют порядок, в котором они были впервые изменены.
+- Исключение в слушателе записывается в лог-канал `scommerce` и не превращает успешный checkout или действие в менеджере в ошибку. Последующие события всё равно вызываются. Другие слушатели события, на котором произошло исключение, после него не вызываются.
+- Не возвращайте `false` из слушателя: Laravel прекращает вызов остальных слушателей этого события.
+- Прямые запросы `DB::table('s_orders')->update()` обходят события модели.
+- Вызов происходит в том же PHP-процессе и не является надёжным (durable) outbox. Если интеграция не должна терять изменения, ей нужно собственное надёжное хранилище и периодическая сверка.
+
+### Область событий
+
+`Seiger\sCommerce\Events\EventScope` сообщает слушателям, кто внёс изменение. sCommerce использует такие значения `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat` и `system` (значение по умолчанию, когда ни одна область не открыта).
+
+Код, который записывает заказы от имени интеграции, должен открывать собственную область. Тогда слушатели смогут игнорировать изменения, вызванные их собственными записями:
+
+```php
+use Seiger\sCommerce\Events\EventScope;
+
+EventScope::run('erp', 0, function () use ($order) {
+    $order->status = \Seiger\sCommerce\Models\sOrder::ORDER_STATUS_SHIPPED;
+    $order->save();
+}, correlationId: $flowId, causationId: $remoteEventId, integrationActor: 'erp-sync');
+```
+
+`correlationId` и `causationId` — непрозрачные строки длиной до 64 символов. Вложенные области наследуют actor, correlation, causation и integration actor, если они не указаны. `EventScope::run()` всегда закрывает область; если вы используете `EventScope::begin()`, вызывайте `end()` в блоке `finally`.
+
+### Пример слушателя
+
+Разместите слушатели в `core/custom/packages/main/plugins/sCommerceEvents.php`, если service provider пакета main загружает эту папку:
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.OrderStatusChanged', function (array $payload) {
+    if ($payload['integrationActor'] === 'erp-sync') {
+        return; // Ignore the echo of our own write.
+    }
+
+    if ($payload['newStatusKey'] === 'canceled') {
+        // Notify an external system about $payload['orderId'] / $payload['orderUuid'].
+    }
+});
+```
+
+### Определение поддержки
+
+Проверяйте наличие возможности, а не сравнивайте версии пакета:
+
+```php
+use Seiger\sCommerce\sCommerce;
+
+$supported = class_exists(sCommerce::class)
+    && defined(sCommerce::class . '::INTEGRATION_EVENTS_VERSION')
+    && sCommerce::supportsIntegration('order-events');
+```
+
+`sCommerce::INTEGRATION_EVENTS_VERSION` (сейчас `1`) меняется только тогда, когда payload изменяется несовместимо. `sCommerce::integrationFeatures()` возвращает список доступных ключей возможностей.
+
 ## Дополнительные события менеджера и frontend
 
 События менеджера используют префикс evolution. События цен имеют точные имена sCommerce.* без префикса. Структура данных frontend callbacks зависит от операции.
@@ -264,7 +350,7 @@ Event::listen('evolution.sCommerceAfterAddToCart', function($params) {
 - `evolution.sCommerceManagerTabsEvent`
 - `evolution.sCommerceManagerSettingsSaveEvent`
 - `evolution.sCommerceAfterProductContentSave`
-- `evolution.sCommerceAfterOrderSave`
+- `evolution.sCommerceAfterOrderSave`: устаревшее событие, только для менеджера. Вызывается после успешного сохранения в форме заказа менеджера, массового изменения статуса, массового «отметить как оплаченный» и повторных заказов; сохранённый заказ передаётся как `item`. Для заказов с сайта не вызывается; используйте доменные события заказов выше.
 
 ```javascript
 sCommerce.onAddedToCart = (data) => console.log(data);

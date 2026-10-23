@@ -4,6 +4,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Services\OrderManualPayment;
 
@@ -24,6 +25,18 @@ final class OrderBulkMenuController
         if (!is_string($token) || !is_string($sessionToken) || $sessionToken === '' || !hash_equals($sessionToken, $token)) {
             return $this->error('bulk_status_session_expired', 403);
         }
+        $managerId = (int) evo()->getLoginUserID('mgr');
+
+        return EventScope::run('manager_bulk_menu', $managerId, fn () => $this->process($request, $managerId));
+    }
+
+    /**
+     * Validate the selection and run the menu action inside the bulk-menu event scope.
+     *
+     * @since 1.5.0
+     */
+    private function process(Request $request, int $managerId): JsonResponse
+    {
         $action = $request->input('action');
         $ids = $request->input('ids');
         if (!in_array($action, ['paid', 'print', 'delete'], true) || !is_array($ids) || !$ids || count($ids) > self::MAX_ORDERS) {
@@ -32,7 +45,6 @@ final class OrderBulkMenuController
         $ids = array_map(static fn ($id) => (is_int($id) || is_string($id))
             ? filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : false, $ids);
         if (in_array(false, $ids, true) || count(array_unique($ids)) !== count($ids)) return $this->error('bulk_menu_invalid', 422);
-        $managerId = (int) evo()->getLoginUserID('mgr');
         try {
             if ($action === 'print') {
                 $orders = sOrder::query()->whereIn('id', $ids)->get()->keyBy('id');

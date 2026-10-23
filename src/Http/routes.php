@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Route;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sWishlist;
-use Seiger\sCommerce\Integration\IntegrationActionController;
 use Seiger\sCommerce\sCommerce;
 
 Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(function () {
@@ -77,11 +76,3 @@ Route::middleware('web')->match(['GET', 'POST'], 'payment-callback/{method?}', f
         return response('PAYMENT CALLBACK UNAVAILABLE', 503);
     }
 })->name('payment.callback');
-
-Route::middleware('mgr')->prefix('scommerce/integrations')->name('sCommerce.integrations.')->group(function () {
-    Route::get('servlimits', [IntegrationActionController::class, 'serverLimits'])->name('serverLimits');
-    Route::post('{key}/tasks/{action}', [IntegrationActionController::class, 'start'])->whereAlpha('action')->name('task.start');
-    Route::post('{key}/upload', [IntegrationActionController::class, 'upload'])->name('upload');
-    Route::get('tasks/{id}/progress', [IntegrationActionController::class, 'progress'])->name('progress');
-    Route::get('tasks/{id}/download', [IntegrationActionController::class, 'download'])->name('download');
-});

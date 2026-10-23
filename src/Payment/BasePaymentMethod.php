@@ -154,8 +154,8 @@ abstract class BasePaymentMethod implements PaymentMethodInterface
                 }
 
                 if (count($fields) > 0) {
-                    $credentials = json_decode($this->method->сredentials ?? '', true);
-                    unset($this->method->сredentials);
+                    $credentials = json_decode($this->method->{sPaymentMethod::CREDENTIALS} ?? '', true);
+                    unset($this->method->{sPaymentMethod::CREDENTIALS});
 
                     foreach ($fields as $key) {
                         $this->credentials[$key] = isset($credentials[$key]) ? $credentials[$key] : null;

@@ -568,6 +568,10 @@ public function defineCredentials(): array
 }
 ```
 
+When the manager saves the method, sCommerce calls `prepareCredentials(array $data): string` and stores the returned JSON. `BasePaymentMethod` already implements it and keeps only the fields declared in `defineCredentials()`. A class that does not extend `BasePaymentMethod` must provide this method too, although `PaymentMethodInterface` does not declare it in 1.x.
+
+Credentials are stored in `s_payment_methods.credentials`. Since 1.5.0 the migration `2026_10_20_000001_rename_payment_method_credentials_column` renames the legacy column whose first letter was Cyrillic U+0441. Read and write credentials through the model with `sPaymentMethod::CREDENTIALS`; the model maps both spellings to the existing column before and after the migration. Deploy the updated code before running the migration. Direct SQL and old code that bypass the model must use the new column name after migration. If both columns already exist, the migration copies values only into empty `credentials` fields. When the two columns hold different values, it keeps the legacy column and logs the affected payment method ids so that you can resolve them manually.
+
 #### `defineSettings(): array`
 
 Defines settings fields for admin configuration.

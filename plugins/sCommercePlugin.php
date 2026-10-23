@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Facades\sFilter;
-use Seiger\sCommerce\Integration\IntegrationActionController;
 
 /**
  * Catch the Product by alias
