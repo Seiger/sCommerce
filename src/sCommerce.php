@@ -47,6 +47,9 @@ class sCommerce
      * @var Collection
      */
     protected $currencies;
+    /** @var array<string, array{source: mixed, format: array}> Normalized display parameters by currency. */
+    protected array $currencyFormats = [];
+
     protected $controller;
     protected $categoryId;
     protected ?array $sort = null;
@@ -359,6 +362,34 @@ class sCommerce
         }
 
         return $currencies ?? collect([]);
+    }
+
+    /**
+     * Reuse normalized display parameters while preserving mutable currency definitions.
+     *
+     * The current row is checked on each call so replacing or editing the returned
+     * currency collection takes effect immediately. Exchange rates remain unchanged.
+     *
+     * @param string $currency Target currency code; unknown codes retain default formatting.
+     * @return array{exp: mixed, decimals: mixed, thousands: string, show: mixed, symbol: string, position: mixed}
+     * @since 1.4.0
+     */
+    public function getCurrencyFormat(string $currency): array
+    {
+        $curr = $this->getCurrencies([$currency])->first() ?? [];
+        if (isset($this->currencyFormats[$currency]) && $this->currencyFormats[$currency]['source'] === $curr) {
+            return $this->currencyFormats[$currency]['format'];
+        }
+        $format = [
+            'exp' => $curr['exp'] ?? 2,
+            'decimals' => $curr['decimals'] ?? '.',
+            'thousands' => str_replace('&nbsp;', ' ', trim($curr['thousands'] ?? '&nbsp;')),
+            'show' => $curr['show'] ?? 1,
+            'symbol' => str_replace('&nbsp;', ' ', trim($curr['symbol'] ?? '&nbsp;')),
+            'position' => $curr['position'] ?? 'before',
+        ];
+        $this->currencyFormats[$currency] = ['source' => $curr, 'format' => $format];
+        return $format;
     }
 
     /**
