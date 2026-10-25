@@ -1,0 +1,21 @@
+    protected function formatPriceValue(float $price, ?string $currency = null): string
+    {
+        $currency = $currency ?? sCommerce::currentCurrency();
+        $curr = sCommerce::getCurrencies([$currency])->first() ?? [];
+
+        $formatted = number_format(
+            $price,
+            ($curr['exp'] ?? 2),
+            ($curr['decimals'] ?? '.'),
+            str_replace('&nbsp;', ' ', trim($curr['thousands'] ?? '&nbsp;'))
+        );
+
+        if ($curr['show'] ?? 1) {
+            $symbol = str_replace('&nbsp;', ' ', trim($curr['symbol'] ?? '&nbsp;'));
+            $formatted = ($curr['position'] ?? 'before') === 'after'
+                ? $formatted . $symbol
+                : $symbol . $formatted;
+        }
+
+        return $formatted;
+    }

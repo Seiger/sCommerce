@@ -1,0 +1,17 @@
+    public function listSubCategories(object &$category, int $dept): object
+    {
+        $this->applyCategoryTranslation($category);
+
+        if ($category->hasChildren() && $dept--) {
+            $children = $category->children()->active()->orderBy('menuindex')->get();
+            $this->applyCategoriesTranslations($children);
+            $children->map(function ($item) use ($dept) {
+                return $this->listSubCategories($item, $dept);
+            });
+            $category->subcategories = $children;
+        } else {
+            $category->subcategories = sCategory::whereId(0)->get();
+        }
+
+        return $category;
+    }

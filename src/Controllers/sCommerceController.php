@@ -419,22 +419,27 @@ class sCommerceController
     /**
      * Retrieves and assigns the subcategories of a given category recursively.
      *
+     * Load active children once per visited level; leaves and depth boundaries
+     * use an empty model collection without a sentinel ID query. Translation
+     * hooks and menuindex ordering remain in their original traversal order.
+     *
      * @param object $category A reference to the category object.
+     * @param int $dept Remaining depth; zero stops traversal, negative values retain legacy recursion.
      * @return object The modified category object with the "subcategories" property assigned.
      */
     public function listSubCategories(object &$category, int $dept): object
     {
         $this->applyCategoryTranslation($category);
 
-        if ($category->hasChildren() && $dept--) {
+        if ($dept !== 0) {
             $children = $category->children()->active()->orderBy('menuindex')->get();
             $this->applyCategoriesTranslations($children);
             $children->map(function ($item) use ($dept) {
-                return $this->listSubCategories($item, $dept);
+                return $this->listSubCategories($item, $dept - 1);
             });
             $category->subcategories = $children;
         } else {
-            $category->subcategories = sCategory::whereId(0)->get();
+            $category->subcategories = new \Illuminate\Database\Eloquent\Collection();
         }
 
         return $category;
@@ -1050,17 +1055,25 @@ class sCommerceController
     /**
      * Retrieves the IDs of the parent categories for the specified category.
      *
+     * Reuse each resolved parent on the next iteration instead of loading it again.
+     * A zero parent terminates the chain without a lookup, while the returned IDs
+     * retain the legacy terminal zero and catalog-root stopping behavior.
+     *
      * @param int $categoryId The ID of the category for which to retrieve parent IDs.
      * @return array An array containing the IDs of the parent categories.
      */
     protected function getParentsIds(int $categoryId): array
     {
-        if ($categoryId > 0 && $categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
+        $root = evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1));
+        if ($categoryId > 0 && $categoryId != $root) {
             $category = sCategory::find($categoryId);
-            $parent = $category->getParent();
-            $this->categories = array_merge($this->categories, [$parent->id ?? 0]);
-            if (($parent->id ?? 0) && $categoryId != evo()->getConfig('catalog_root', evo()->getConfig('site_start', 1))) {
-                $this->categories = $this->getParentsIds($parent->id);
+            while (true) {
+                $parent = (int)$category->parent === 0 ? null : $category->getParent();
+                $this->categories[] = $parent->id ?? 0;
+                if (!$parent || $parent->id <= 0 || $parent->id == $root) {
+                    break;
+                }
+                $category = $parent;
             }
         }
         return $this->categories;

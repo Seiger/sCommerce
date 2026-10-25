@@ -1018,24 +1018,24 @@ class sProduct extends Model
     }
 
     /**
-     * Format an already converted numeric price for display in the target currency.
+     * Format an already converted price with reusable, mutation-aware currency parameters.
      *
      * @since 1.0.12
      */
     protected function formatPriceValue(float $price, ?string $currency = null): string
     {
         $currency = $currency ?? sCommerce::currentCurrency();
-        $curr = sCommerce::getCurrencies([$currency])->first() ?? [];
+        $curr = sCommerce::getCurrencyFormat($currency);
 
         $formatted = number_format(
             $price,
             ($curr['exp'] ?? 2),
             ($curr['decimals'] ?? '.'),
-            str_replace('&nbsp;', ' ', trim($curr['thousands'] ?? '&nbsp;'))
+            $curr['thousands']
         );
 
         if ($curr['show'] ?? 1) {
-            $symbol = str_replace('&nbsp;', ' ', trim($curr['symbol'] ?? '&nbsp;'));
+            $symbol = $curr['symbol'];
             $formatted = ($curr['position'] ?? 'before') === 'after'
                 ? $formatted . $symbol
                 : $symbol . $formatted;
