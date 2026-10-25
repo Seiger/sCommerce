@@ -343,6 +343,24 @@ $supported = class_exists(sCommerce::class)
 
 `sCommerce::INTEGRATION_EVENTS_VERSION` (сейчас `1`) меняется только тогда, когда payload изменяется несовместимо. `sCommerce::integrationFeatures()` возвращает список доступных ключей возможностей.
 
+## События журнала платежей
+
+Начиная с 1.5.0, каждая запись в журнал платежей (`s_order_payments`) вызывает событие, независимо от того, какой код её выполнил. Эти события подчиняются тем же правилам доставки, что и события заказов: только после коммита, никогда для откаченных записей и с тем же контекстом области событий. События платежей никогда не объединяются.
+
+| Событие | Когда вызывается | Дополнительные ключи |
+|---|---|---|
+| `sCommerce.PaymentRecorded` | Создана строка журнала | нет |
+| `sCommerce.PaymentStatusChanged` | Изменён `status` строки журнала | `oldStatus`, `newStatus` |
+
+Каждый payload содержит:
+
+- `event` и `payment` (отсоединённая копия `sOrderPayment` только для чтения);
+- `paymentId`, `orderId`, `orderUuid`, `sequence`, `kind`, `status`, `provider`, `providerRef`, `parentProviderRef`, `metadata`;
+- `amount` и `amountMinor` (целое число в минорных единицах, например в центах), а также `currency`;
+- ключи контекста `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` и `occurredAt`.
+
+Если изменение статуса также меняет статус оплаты заказа, после него вызывается `sCommerce.OrderPaymentStatusChanged`. `sCommerce::supportsIntegration('payment-ledger-api')` сообщает о поддержке. API, который записывает журнал, описан в разделе [Запись платежей](payments/index.md#запись-платежей-ledger-api).
+
 ## Дополнительные события менеджера и frontend
 
 События менеджера используют префикс evolution. События цен имеют точные имена sCommerce.* без префикса. Структура данных frontend callbacks зависит от операции.

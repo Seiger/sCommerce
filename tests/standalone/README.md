@@ -14,11 +14,17 @@ php tests/standalone/scommerce-review-migration.php
 php tests/standalone/scommerce-repeat.php
 php tests/standalone/scommerce-order-events.php
 php tests/standalone/scommerce-credentials-column.php
+php tests/standalone/scommerce-payment-ledger.php
+php tests/standalone/scommerce-webhook-dispatch.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs
 node tests/standalone/scommerce-repeat.mjs
 ```
+
+`scommerce-payment-ledger.php` also runs against a disposable MySQL/MariaDB or PostgreSQL database when
+`SCOMMERCE_TEST_DB_DRIVER` (`mysql` or `pgsql`) and `SCOMMERCE_TEST_DB_HOST`, `_PORT`, `_DATABASE`,
+`_USERNAME`, `_PASSWORD` are set; it drops and recreates its tables there.
 
 Package classes, Blade templates and translations are loaded from this checkout,
 not the installed consumer copy. These checks do not replace browser QA.

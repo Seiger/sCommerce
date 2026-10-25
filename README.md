@@ -113,6 +113,9 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [x] sCommerce.OrderPaymentStatusChanged.
     - [x] sCommerce.OrderCancelled.
     - [x] sCommerce.OrderDeleted.
+- [x] Payment Ledger Events (Laravel Event Dispatcher, after commit).
+    - [x] sCommerce.PaymentRecorded.
+    - [x] sCommerce.PaymentStatusChanged.
 - [x] JavaScript Callbacks.
     - [x] sCommerce.onAddedToCart.
     - [x] sCommerce.onRemovedFromCart.
