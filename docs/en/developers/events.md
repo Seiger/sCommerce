@@ -521,6 +521,38 @@ The payload contains:
 
 The shipment event is dispatched before the order events it causes, for example `sCommerce.OrderStatusChanged` to *Shipped*. See [Shipments and tracking](deliveries.md#shipments-and-tracking-api--events) for the API. `sCommerce::supportsIntegration('shipments')` reports support.
 
+## Stock events
+
+### sCommerce.ResolveProductStock
+
+Since 1.5.0, the cart asks `Seiger\sCommerce\Services\StockResolver::available()` how many units of a product it may add. The first integer returned by a `sCommerce.ResolveProductStock` listener wins; `null` lets the next listener answer. The payload contains `product`, `modificationId` (always `0`: a cart option id is not a modification), `quantity` (the local `s_products.inventory`) and `context` (`optionId` and the requested `quantity`). A bound stock provider is asked before the listeners, and the local inventory is used when nobody answers.
+
+```php
+Event::listen('sCommerce.ResolveProductStock', function (array $payload) {
+    return $payload['product']->sku === 'GIFT-CARD' ? 1000 : null;
+});
+```
+
+### Stock provider
+
+A package can make an external system, for example an ERP, the stock source by binding `Seiger\sCommerce\Interfaces\StockProviderInterface` in its service provider: `app()->bind(StockProviderInterface::class, ErpStock::class)`. At most one provider is used.
+
+- `available(sProduct $product, int $modificationId = 0, array $context = []): ?int` returns the quantity, or `null` to use the listeners and then the local inventory.
+- `commit(sOrder $order): bool` and `release(sOrder $order): bool` are called when stock reduction on orders is enabled (see [Configuration](../configuration.md#stock)). Return `true` when the provider handled the order; sCommerce then changes no local stock. An order is released by whoever committed it: an order that sCommerce decremented locally is restored locally without asking the provider.
+- Both methods may run again after a failure or a crash, so they must be idempotent per order, for example keyed by the order UUID.
+
+### Writing stock
+
+`Seiger\sCommerce\Services\StockWriter::set($productOrId, $quantity, 0, 'erp', $availability)` sets the inventory and, when given, the availability (`0` not available, `1` in stock, `2` on order) of one product. A GROUP variant is its own product row: pass the variant product. A non-zero `modificationId` is rejected, because `s_product_modifications` rows have no identity of their own. A write that changes nothing records no event. Nothing in core caches stock values, so no cache is cleared; listeners of `sCommerce.ProductStockChanged` can clear their own caches.
+
+### sCommerce.ProductStockChanged
+
+Since 1.5.0, a change of `s_products.inventory` or `s_products.availability` dispatches `sCommerce.ProductStockChanged`, whoever wrote it: the product form, the CSV import, `StockWriter` or a stock reduction of an order. It follows the delivery rules of the order events: after commit only, with the event scope context. Changes of one product in one event scope are merged from the first old to the last new values, and a merge that changes nothing is dropped.
+
+The payload contains `event`, `productId`, `modificationId` (always `0`), `sku`, `oldQuantity`, `newQuantity`, `oldAvailability`, `newAvailability`, `stockSource` (the writer: `manager`, `import`, `order`, the source passed to `StockWriter`, or the event scope source for other model saves) and the context keys `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` and `occurredAt`. Stock reductions and returns of orders run in the event scope source `inventory`.
+
+`sCommerce::supportsIntegration('stock-provider')` reports support.
+
 ## Additional manager and frontend events
 
 Manager events use the evolution. prefix with Laravel Event listeners. Pricing events use their literal sCommerce.* names without that prefix. Frontend callbacks use the names below; do not infer that every callback has the same response fields.

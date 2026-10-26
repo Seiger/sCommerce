@@ -18,6 +18,7 @@ use Seiger\sCommerce\Events\OrderUpdated;
 use Seiger\sCommerce\Payment\PaymentFlow;
 use Seiger\sCommerce\Services\OfflineSettlement;
 use Seiger\sCommerce\Services\OrderReferenceFormatter;
+use Seiger\sCommerce\Services\StockCommitter;
 
 /**
  * Class sOrder
@@ -83,14 +84,15 @@ class sOrder extends Model
         'totals' => 'array',
         'meta' => 'array',
         'do_not_call' => 'boolean',
+        'inventory_committed_at' => 'datetime',
     ];
 
     /** @var array<string, true> `connection.table.column` keys of optional columns known to exist. */
     private static array $knownColumns = [];
 
     /**
-     * Fill the public UUID, keep the checkout context immutable, record domain events after commit
-     * and schedule offline settlement on status changes.
+     * Fill the public UUID, keep the checkout context immutable, record domain events after commit,
+     * schedule offline settlement on status changes and stock commitment or release.
      *
      * @since 1.5.0
      */
@@ -100,23 +102,17 @@ class sOrder extends Model
             if (empty($order->uuid) && $order->hasOptionalColumn('uuid')) {
                 $order->uuid = (string)Str::uuid();
             }
+            StockCommitter::creating($order);
         });
         static::updating(function (sOrder $order) {
-            if (!$order->isDirty('meta')) {
-                return;
+            if ($order->isDirty('meta')) {
+                self::keepCheckoutContext($order);
             }
-            // `meta.integration` is written once at creation; later writes keep the original binding.
-            $original = $order->getOriginal('meta');
-            $meta = is_array($order->meta) ? $order->meta : [];
-            if (is_array($original) && array_key_exists(CheckoutContext::META_KEY, $original)) {
-                $meta[CheckoutContext::META_KEY] = $original[CheckoutContext::META_KEY];
-            } else {
-                unset($meta[CheckoutContext::META_KEY]);
-            }
-            $order->meta = $meta ?: null;
+            StockCommitter::updating($order);
         });
         static::created(function (sOrder $order) {
             DomainEventRecorder::instance()->record(OrderCreated::from($order), $order->getConnection());
+            StockCommitter::saved($order);
         });
         static::updated(function (sOrder $order) {
             $changes = OrderUpdated::diff($order);
@@ -141,10 +137,28 @@ class sOrder extends Model
             if (isset($changes['cost'])) {
                 PaymentFlow::resyncAfterCostChange($order);
             }
+            StockCommitter::saved($order);
         });
+        static::deleting(fn (sOrder $order) => StockCommitter::deleting($order));
         static::deleted(function (sOrder $order) {
             DomainEventRecorder::instance()->record(OrderDeleted::from($order, $order->isForceDeleting()), $order->getConnection());
+            StockCommitter::deleted($order);
         });
+    }
+
+    /**
+     * `meta.integration` is written once at creation; later writes keep the original binding.
+     */
+    private static function keepCheckoutContext(sOrder $order): void
+    {
+        $original = $order->getOriginal('meta');
+        $meta = is_array($order->meta) ? $order->meta : [];
+        if (is_array($original) && array_key_exists(CheckoutContext::META_KEY, $original)) {
+            $meta[CheckoutContext::META_KEY] = $original[CheckoutContext::META_KEY];
+        } else {
+            unset($meta[CheckoutContext::META_KEY]);
+        }
+        $order->meta = $meta ?: null;
     }
 
     /**

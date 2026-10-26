@@ -616,6 +616,38 @@ Payload содержит:
 
 Событие отправления вызывается перед событиями заказа, которые оно порождает, например `sCommerce.OrderStatusChanged` в *Отправлено*. API описан в разделе [Отправления и отслеживание](deliveries.md#отправления-и-отслеживание-api--события). `sCommerce::supportsIntegration('shipments')` сообщает о поддержке.
 
+## События остатков
+
+### sCommerce.ResolveProductStock
+
+Начиная с 1.5.0, корзина спрашивает у `Seiger\sCommerce\Services\StockResolver::available()`, сколько единиц товара она может добавить. Побеждает первое целое число, возвращённое слушателем `sCommerce.ResolveProductStock`; `null` передаёт ответ следующему слушателю. Payload содержит `product`, `modificationId` (всегда `0`: id опции корзины не является модификацией), `quantity` (локальный `s_products.inventory`) и `context` (`optionId` и запрошенное `quantity`). Привязанный провайдер остатков опрашивается до слушателей, а если никто не ответил, используется локальный остаток.
+
+```php
+Event::listen('sCommerce.ResolveProductStock', function (array $payload) {
+    return $payload['product']->sku === 'GIFT-CARD' ? 1000 : null;
+});
+```
+
+### Провайдер остатков
+
+Пакет может сделать источником остатков внешнюю систему, например ERP, привязав `Seiger\sCommerce\Interfaces\StockProviderInterface` в своём сервис-провайдере: `app()->bind(StockProviderInterface::class, ErpStock::class)`. Используется не более одного провайдера.
+
+- `available(sProduct $product, int $modificationId = 0, array $context = []): ?int` возвращает количество или `null`, чтобы использовать слушателей, а затем локальный остаток.
+- `commit(sOrder $order): bool` и `release(sOrder $order): bool` вызываются, когда включено списание остатка по заказам (см. [Настройка](../configuration.md#остатки)). Верните `true`, если провайдер обработал заказ; тогда sCommerce не меняет локальные остатки. Остаток заказа возвращает тот, кто его списал: заказ, остаток которого sCommerce списал локально, восстанавливается локально без обращения к провайдеру.
+- Оба метода могут выполниться повторно после ошибки или сбоя, поэтому они должны быть идемпотентными в пределах заказа, например с ключом по UUID заказа.
+
+### Запись остатков
+
+`Seiger\sCommerce\Services\StockWriter::set($productOrId, $quantity, 0, 'erp', $availability)` задаёт остаток и, если передана, доступность (`0` нет в наличии, `1` в наличии, `2` под заказ) одного товара. Вариант GROUP — это отдельная строка товара: передавайте товар варианта. Ненулевой `modificationId` отклоняется, потому что у строк `s_product_modifications` нет собственной идентичности. Запись, которая ничего не меняет, не создаёт события. Ядро не кеширует значения остатков, поэтому никакой кеш не очищается; слушатели `sCommerce.ProductStockChanged` могут очищать собственные кеши.
+
+### sCommerce.ProductStockChanged
+
+Начиная с 1.5.0, изменение `s_products.inventory` или `s_products.availability` вызывает `sCommerce.ProductStockChanged`, кто бы его ни записал: форма товара, CSV-импорт, `StockWriter` или списание остатка по заказу. Событие подчиняется правилам доставки событий заказов: только после коммита, с контекстом области событий. Изменения одного товара в одной области событий объединяются от первого старого до последнего нового значения, а объединение, которое ничего не меняет, отбрасывается.
+
+Payload содержит `event`, `productId`, `modificationId` (всегда `0`), `sku`, `oldQuantity`, `newQuantity`, `oldAvailability`, `newAvailability`, `stockSource` (кто записал: `manager`, `import`, `order`, источник, переданный в `StockWriter`, или источник области событий для других сохранений модели) и ключи контекста `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` и `occurredAt`. Списания и возвраты остатков по заказам выполняются в области событий с источником `inventory`.
+
+`sCommerce::supportsIntegration('stock-provider')` сообщает о поддержке.
+
 ## Дополнительные события менеджера и frontend
 
 События менеджера используют префикс evolution. События цен имеют точные имена sCommerce.* без префикса. Структура данных frontend callbacks зависит от операции.

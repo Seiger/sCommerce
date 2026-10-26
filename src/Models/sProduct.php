@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use ReflectionClass;
 use Seiger\sCommerce\Controllers\sCommerceController;
+use Seiger\sCommerce\Events\DomainEventRecorder;
+use Seiger\sCommerce\Events\EventScope;
+use Seiger\sCommerce\Events\ProductStockChanged;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sGallery\sGallery;
@@ -106,6 +109,14 @@ class sProduct extends Model
     ];
 
     protected $fillable = ['uuid'];
+
+    /**
+     * Writer reported by the next `sCommerce.ProductStockChanged` of this instance, e.g. `manager`
+     * or `import`; the event scope source when null. Not persisted.
+     *
+     * @since 1.5.0
+     */
+    public ?string $stockSource = null;
 
     /** New products start unrated, including on databases with the old default. */
     protected $attributes = ['rating' => 0];
@@ -218,6 +229,7 @@ class sProduct extends Model
      * The join condition is on the product id and the lang column is filtered based on the current locale and 'base'.
      * The lang column is ordered based on the current locale and 'base' to prioritize the current locale.
      * Only one result is selected.
+     * Inventory and availability changes record `sCommerce.ProductStockChanged` after commit.
      *
      * @return void
      */
@@ -228,6 +240,17 @@ class sProduct extends Model
                 $model->uuid = (string)Str::uuid();
             }
         });*/
+
+        static::updated(function (sProduct $product) {
+            if (!$product->wasChanged(['inventory', 'availability'])) {
+                return;
+            }
+            $attributes = $product->getAttributes();
+            DomainEventRecorder::instance()->record(ProductStockChanged::from((int)$product->getKey(), (string)($attributes['sku'] ?? ''),
+                (int)$product->getRawOriginal('inventory'), (int)($attributes['inventory'] ?? 0),
+                (int)$product->getRawOriginal('availability'), (int)($attributes['availability'] ?? 0),
+                $product->stockSource ?? EventScope::current()['source']), $product->getConnection());
+        });
 
         static::addGlobalScope('translate', function (Builder $builder) {
             if (!isset($builder->getQuery()->columns)) {

@@ -28,6 +28,7 @@ php tests/standalone/scommerce-order-taxes.php
 php tests/standalone/scommerce-vat-display.php
 php tests/standalone/scommerce-container-deposit.php
 php tests/standalone/scommerce-shipments.php
+php tests/standalone/scommerce-stock.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs
