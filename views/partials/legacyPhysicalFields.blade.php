@@ -16,8 +16,9 @@
                     <div class="col-auto col-title">
                         <label for="{{$field}}">@lang('sCommerce::global.' . $field)</label>
                     </div>
-                    <div class="col">
+                    <div class="col input-group">
                         <input id="{{$field}}" class="form-control" name="{{$field}}" value="{{round($value, 4)}}" onblur="documentDirty=true;">
+                        <div class="input-group-append"><span class="input-group-text">{{\Seiger\sCommerce\Models\sProduct::physicalUnit($field)}}</span></div>
                     </div>
                 </div>
             </div>

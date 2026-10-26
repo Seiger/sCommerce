@@ -123,7 +123,10 @@
                 <div class="split my-3"></div>
             </div>
         </div>
-        @if($item->exists && (count($paymentPanel['rows'] ?? []) || count($paymentPanel['operations'] ?? []) || count($paymentPanel['orderActions'] ?? []) || \Seiger\sCommerce\Payment\PaymentSchedule::of($item)))
+        @if($item->exists && !empty($shipmentPanel))
+            @include('sCommerce::partials.orderShipments', ['panel' => $shipmentPanel])
+        @endif
+        @if($item->exists && (count($paymentPanel['rows'] ?? [])|| count($paymentPanel['operations'] ?? []) || count($paymentPanel['orderActions'] ?? []) || \Seiger\sCommerce\Payment\PaymentSchedule::of($item)))
             @include('sCommerce::partials.orderPayments', ['panel' => $paymentPanel ?? ['rows' => [], 'operations' => []]])
         @endif
         <div class="row">

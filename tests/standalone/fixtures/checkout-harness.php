@@ -51,11 +51,11 @@ final class FakeProduct
      * Supply attribute-backed measurements to real cart and quick-order payload builders.
      *
      * @since 1.4.0
-     * @return array<string, string> Synthetic delivery values; no site data is read.
+     * @return array<string, int> Synthetic delivery values; no site data is read.
      */
-    public function physicalValues(): array
+    public function physicalPayload(): array
     {
-        return ['weight' => '0.0125', 'width' => '0.0000', 'height' => '0.0000', 'length' => '0.0000', 'volume' => '0.0000'];
+        return ['weight' => 125, 'width' => 0, 'height' => 0, 'length' => 0, 'volume' => 0];
     }
     public function attribute(string $alias) { return null; }
     public function toArray(): array { return get_object_vars($this); }

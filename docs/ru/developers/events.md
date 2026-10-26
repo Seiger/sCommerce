@@ -383,7 +383,7 @@ Event::listen('evolution.sCommerceAfterAddToCart', function($params) {
 
 ### Область событий
 
-`Seiger\sCommerce\Events\EventScope` сообщает слушателям, кто внёс изменение. sCommerce использует такие значения `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `manager_container_return`, `offline_settlement` и `system` (значение по умолчанию, когда ни одна область не открыта).
+`Seiger\sCommerce\Events\EventScope` сообщает слушателям, кто внёс изменение. sCommerce использует такие значения `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `manager_container_return`, `manager_shipment`, `offline_settlement` и `system` (значение по умолчанию, когда ни одна область не открыта).
 
 Код, который записывает заказы от имени интеграции, должен открывать собственную область. Тогда слушатели смогут игнорировать изменения, вызванные их собственными записями:
 
@@ -597,6 +597,24 @@ Event::listen('sCommerce.ResolveCheckoutContext', function (array $payload) {
 - Запись журнала, у которой `metadata.environment` отличается от окружения заказа, отклоняется (см. [Запись платежей](payments/index.md#метаданные)).
 
 Тестовым контекстам нужна колонка `s_orders.meta`; выполните миграции sCommerce. Без неё тестовые checkout отклоняются, а рабочие продолжают работать. `sCommerce::supportsIntegration('checkout-context')` сообщает о поддержке.
+
+## События отправлений
+
+### sCommerce.ShipmentUpdated
+
+Начиная с 1.5.0, отправление, которое создано или у которого изменились статус, трек-номер или ссылка, перевозчик, услуга, позиции или даты, вызывает `sCommerce.ShipmentUpdated`. Событие подчиняется правилам доставки событий заказов: только после коммита, с контекстом области событий и никогда не объединяется. Повторная запись тех же данных ничего не вызывает.
+
+Payload содержит:
+
+- `event` и `shipment` (отсоединённая копия `sOrderShipment` только для чтения);
+- `shipmentId`, `shipmentUuid`, `sequence`, `orderId`, `orderUuid`, `environment` (`live` или `test`, из заказа);
+- `created` (bool), `oldStatus` (`null` при создании) и `newStatus`;
+- `carrier`, `service`, `trackingNumber`, `trackingUrl`, `items`, `shippedAt`, `deliveredAt` (UTC, например `2026-10-21T08:00:00Z`), `metadata`;
+- `fullyShipped` и `fullyDelivered`: покрыты ли в этот момент все товары заказа, требующие доставки, отправленными или доставленными посылками;
+- `shipmentSource` и `externalRef`: система, записавшая отправление, и его идентификатор в ней;
+- ключи контекста `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` и `occurredAt`. `source` — это область событий, как и для всех остальных событий; это не `shipmentSource` отправления.
+
+Событие отправления вызывается перед событиями заказа, которые оно порождает, например `sCommerce.OrderStatusChanged` в *Отправлено*. API описан в разделе [Отправления и отслеживание](deliveries.md#отправления-и-отслеживание-api--события). `sCommerce::supportsIntegration('shipments')` сообщает о поддержке.
 
 ## Дополнительные события менеджера и frontend
 

@@ -1,13 +1,17 @@
 <?php namespace Seiger\sCommerce\Models\Concerns;
 
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Seiger\sCommerce\Models\sAttribute;
+use Throwable;
 
 /**
  * Store physical measurements as attributes and consume retained legacy columns on save.
  *
- * Existing columns remain in upgraded schemas only. Positive legacy values migrate on save
- * and are zeroed in the same transaction. Reads use explicit attribute methods.
+ * Measurements are whole numbers: weight in grams, width, height and length in millimetres,
+ * volume in millilitres. Existing columns remain in upgraded schemas only. Positive whole
+ * legacy values migrate on save and are zeroed in the same transaction. Reads use explicit
+ * attribute methods.
  *
  * @since 1.4.0
  */
@@ -15,14 +19,25 @@ trait HasPhysicalAttributes
 {
     public const PHYSICAL_ATTRIBUTES = ['weight', 'width', 'height', 'length', 'volume'];
 
-    /** @var array<string, string> Values assigned before a product has its database ID. */
+    /** Display units per measurement, largest first: [symbol, base units per symbol]. */
+    private const PHYSICAL_UNITS = [
+        'weight' => [['kg', 1000], ['g', 1]],
+        'width' => [['m', 1000], ['cm', 10], ['mm', 1]],
+        'height' => [['m', 1000], ['cm', 10], ['mm', 1]],
+        'length' => [['m', 1000], ['cm', 10], ['mm', 1]],
+        'volume' => [['l', 1000], ['ml', 1]],
+    ];
+
+    /** @var array<string, int> Values assigned before a product has its database ID. */
     protected array $pendingPhysicalAttributes = [];
 
     /**
      * Persist explicit physical attributes and drain positive legacy columns atomically.
      *
-     * A positive legacy column is consumed once and wins over the existing attribute.
-     * Zero columns do not overwrite attributes. Ordinary saves and quiet saves use this path.
+     * A positive whole legacy column is consumed once and wins over the existing attribute.
+     * A fractional legacy column has no known unit; it stays for manual entry in the product
+     * form unless an explicit value for the same measurement replaces it. Zero columns do not
+     * overwrite attributes. Ordinary saves and quiet saves use this path.
      *
      * @since 1.4.0
      * @param array<string, mixed> $options Eloquent save options.
@@ -30,15 +45,22 @@ trait HasPhysicalAttributes
      */
     public function save(array $options = [])
     {
+        $values = $this->pendingPhysicalAttributes;
         $legacy = [];
         foreach (self::PHYSICAL_ATTRIBUTES as $alias) {
-            if (array_key_exists($alias, $this->attributes) && (float) $this->attributes[$alias] > 0) {
-                $legacy[$alias] = $this->attributes[$alias];
+            if (!array_key_exists($alias, $this->attributes) || (float) $this->attributes[$alias] <= 0) {
+                continue;
             }
-        }
-        $values = $this->pendingPhysicalAttributes;
-        foreach ($legacy as $alias => $value) {
-            $values[$alias] = self::normalizePhysicalValue($value);
+            try {
+                $value = self::normalizePhysicalValue($this->attributes[$alias]);
+            } catch (InvalidArgumentException) {
+                if (!array_key_exists($alias, $values)) {
+                    continue;
+                }
+                $value = $values[$alias];
+            }
+            $legacy[$alias] = $this->attributes[$alias];
+            $values[$alias] = $value;
         }
         if ($values === []) {
             return parent::save($options);
@@ -84,11 +106,11 @@ trait HasPhysicalAttributes
     }
 
     /**
-     * Queue an explicit numeric attribute write for the next product save.
+     * Queue an explicit attribute write for the next product save.
      *
      * @since 1.4.0
      * @param string $alias One of the five physical attribute aliases.
-     * @param mixed $value Non-negative measurement in the store's existing units.
+     * @param mixed $value Non-negative whole number of grams, millimetres or millilitres.
      * @return static
      */
     public function setPhysicalValue(string $alias, mixed $value): static
@@ -104,105 +126,172 @@ trait HasPhysicalAttributes
      * Read physical measurements exclusively from attributes, without legacy fallbacks.
      *
      * Missing attributes resolve to zero. Saving a legacy product first consumes its columns.
-     * These scalar values are suitable for cart and delivery payloads.
      *
      * @since 1.4.0
-     * @return array<string, string> Five measurements with four decimal places.
+     * @return array<string, int> Five measurements in grams, millimetres and millilitres.
+     * @throws InvalidArgumentException When a stored value is not a whole number.
      */
     public function physicalValues(): array
     {
-        $attributes = $this->exists ? $this->getRelationValue('attrValues')->keyBy('alias') : collect();
+        $attributes = $this->physicalAttributeRows();
         $values = [];
         foreach (self::PHYSICAL_ATTRIBUTES as $alias) {
-            $attribute = $attributes->get($alias);
-            $raw = $attribute?->pivot->value ?? 0;
-            if ($attribute && (int) $attribute->type === sAttribute::TYPE_ATTR_SELECT) {
-                $option = $attribute->values()->where('avid', $attribute->pivot->valueid)->first();
-                if (!$option) {
-                    throw new InvalidArgumentException("Missing physical option for {$alias}.");
-                }
-                $raw = $this->physicalOptionNumber($option);
-            } elseif ($attribute && (int) $attribute->type !== sAttribute::TYPE_ATTR_NUMBER) {
-                throw new InvalidArgumentException("Unsupported physical attribute type for {$alias}.");
-            }
-            $values[$alias] = $this->pendingPhysicalAttributes[$alias] ?? self::normalizePhysicalValue($raw);
+            $values[$alias] = $this->readPhysicalValue($alias, $attributes);
         }
         return $values;
     }
 
     /**
-     * Resolve a numeric select option without changing the merchant's attribute type.
+     * Physical measurements for cart and order lines.
+     *
+     * Unlike physicalValues(), an unreadable measurement is left out and logged instead of
+     * failing the purchase, so delivery integrations never receive an invented number.
+     *
+     * @since 1.4.0
+     * @return array<string, int> Readable measurements in grams, millimetres and millilitres.
+     */
+    public function physicalPayload(): array
+    {
+        $attributes = $this->physicalAttributeRows();
+        $values = [];
+        foreach (self::PHYSICAL_ATTRIBUTES as $alias) {
+            try {
+                $values[$alias] = $this->readPhysicalValue($alias, $attributes);
+            } catch (InvalidArgumentException $exception) {
+                try {
+                    Log::channel('scommerce')->warning('sCommerce physical attribute is unreadable', [
+                        'product_id' => $this->getKey(), 'attribute' => $alias, 'error' => $exception->getMessage(),
+                    ]);
+                } catch (Throwable) {
+                    // Logging must not break a cart or checkout.
+                }
+            }
+        }
+        return $values;
+    }
+
+    /**
+     * Human-readable measurement in the largest unit that keeps a value of at least one.
+     *
+     * @since 1.4.0
+     * @param string $alias One of the five physical attribute aliases.
+     * @param int $value Measurement in grams, millimetres or millilitres.
+     * @return string Label such as `1kg`, `250g`, `25.5cm` or `500ml`.
+     */
+    public static function physicalLabel(string $alias, int $value): string
+    {
+        foreach (self::PHYSICAL_UNITS[$alias] ?? [['', 1]] as [$unit, $factor]) {
+            if ($value >= $factor || $factor === 1) {
+                return rtrim(rtrim(number_format($value / $factor, 3, '.', ''), '0'), '.') . $unit;
+            }
+        }
+        return (string) $value;
+    }
+
+    /**
+     * Unit symbol in which a measurement is stored and entered.
+     *
+     * @since 1.4.0
+     * @param string $alias One of the five physical attribute aliases.
+     * @return string `g`, `mm` or `ml`; empty for other aliases.
+     */
+    public static function physicalUnit(string $alias): string
+    {
+        return isset(self::PHYSICAL_UNITS[$alias]) ? array_slice(self::PHYSICAL_UNITS[$alias], -1)[0][0] : '';
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection Attribute rows with pivots, keyed by alias.
+     */
+    private function physicalAttributeRows()
+    {
+        return $this->exists ? $this->getRelationValue('attrValues')->keyBy('alias') : collect();
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection $attributes Attribute rows keyed by alias.
+     * @throws InvalidArgumentException When the stored value is not a whole number.
+     */
+    private function readPhysicalValue(string $alias, $attributes): int
+    {
+        if (array_key_exists($alias, $this->pendingPhysicalAttributes)) {
+            return $this->pendingPhysicalAttributes[$alias];
+        }
+        $attribute = $attributes->get($alias);
+        if (!$attribute) {
+            return 0;
+        }
+        if ((int) $attribute->type === sAttribute::TYPE_ATTR_SELECT) {
+            $option = $attribute->values()->where('avid', $attribute->pivot->valueid)->first();
+            if (!$option) {
+                throw new InvalidArgumentException("Missing physical option for {$alias}.");
+            }
+            return $this->physicalOptionNumber($option);
+        }
+        if ((int) $attribute->type !== sAttribute::TYPE_ATTR_NUMBER) {
+            throw new InvalidArgumentException("Unsupported physical attribute type for {$alias}.");
+        }
+        return self::normalizePhysicalValue($attribute->pivot->value ?? 0);
+    }
+
+    /**
+     * Find or create the select option of a measurement: alias is the number, base the label.
      *
      * @since 1.4.0
      * @param sAttribute $attribute Existing select definition.
-     * @param string $value Normalized measurement being written.
-     * @return int Existing matching option ID or the newly created numeric option ID.
+     * @param int $value Measurement being written.
+     * @return int Existing matching option ID or the newly created option ID.
      */
-    private function physicalOptionId(sAttribute $attribute, string $value): int
+    private function physicalOptionId(sAttribute $attribute, int $value): int
     {
-        $matches = [];
-        foreach ($attribute->values()->lockForUpdate()->get() as $option) {
-            try {
-                if ($this->physicalOptionNumber($option) === $value) {
-                    $matches[] = (int) $option->avid;
-                }
-            } catch (InvalidArgumentException) {
-                // Non-numeric choices remain untouched and are not candidates for this measurement.
-            }
+        $existing = $attribute->values()->where('alias', (string) $value)->lockForUpdate()->first();
+        if ($existing) {
+            return (int) $existing->avid;
         }
-        if (count($matches) > 1) {
-            throw new InvalidArgumentException("Ambiguous numeric options for physical attribute {$attribute->alias}.");
-        }
-        if ($matches !== []) {
-            return $matches[0];
-        }
-        $connection = $this->getConnection();
-        if ($connection->table('s_attribute_values')->where('attribute', $attribute->id)->where('alias', $value)->exists()) {
-            throw new InvalidArgumentException("Conflicting physical option alias for {$attribute->alias}.");
-        }
-        return (int) $connection->table('s_attribute_values')->insertGetId([
-            'attribute' => $attribute->id, 'alias' => $value, 'base' => $value, 'code' => '',
+        return (int) $this->getConnection()->table('s_attribute_values')->insertGetId([
+            'attribute' => $attribute->id, 'alias' => (string) $value,
+            'base' => self::physicalLabel((string) $attribute->alias, $value), 'code' => '',
             'position' => (int) $attribute->values()->max('position') + 1,
             'created_at' => now(), 'updated_at' => now(),
         ], 'avid');
     }
 
     /**
-     * Read the option label as a measurement; never interpret its database ID or slug.
+     * Read the option alias as a measurement; the label is display text such as `1kg`.
      *
      * @since 1.4.0
-     * @param object $option Stored select option with base label and alias.
-     * @return string Four-decimal measurement.
+     * @param object $option Stored select option.
+     * @return int Measurement in grams, millimetres or millilitres.
      */
-    private function physicalOptionNumber(object $option): string
+    private function physicalOptionNumber(object $option): int
     {
-        $label = trim((string) ($option->base ?? ''));
-        $label = $label !== '' ? $label : trim((string) $option->alias);
-        if (!preg_match('/^\+?\d+(?:[.,]\d+)?$/D', $label)) {
-            throw new InvalidArgumentException("Physical option {$option->avid} must have a plain numeric label.");
+        $alias = trim((string) ($option->alias ?? ''));
+        if (!preg_match('/^\d+$/D', $alias)) {
+            throw new InvalidArgumentException("Physical option {$option->avid} must have a whole-number alias.");
         }
-        return self::normalizePhysicalValue($label);
+        return self::normalizePhysicalValue($alias);
     }
 
     /**
-     * Validate physical values without truncating fractional weights or dimensions.
+     * Validate a measurement as a non-negative whole number.
      *
-     * No unit conversion is performed: migration preserves the store's existing units.
+     * Decimal notation is accepted only without a fraction (`1000.0000` from a decimal column).
      *
      * @since 1.4.0
-     * @param mixed $value Non-negative decimal, empty value or null.
-     * @return string Value with the legacy four-decimal precision.
-     * @throws InvalidArgumentException When the supplied value is invalid or negative.
+     * @param mixed $value Non-negative whole number, empty value or null.
+     * @return int Grams, millimetres or millilitres.
+     * @throws InvalidArgumentException When the value is negative, fractional or not a number.
      */
-    public static function normalizePhysicalValue(mixed $value): string
+    public static function normalizePhysicalValue(mixed $value): int
     {
         $value = str_replace(',', '.', trim((string) ($value ?? '')));
         if ($value === '') {
-            $value = '0';
+            return 0;
         }
-        if (!is_numeric($value) || !is_finite((float) $value) || (float) $value < 0) {
-            throw new InvalidArgumentException('Physical attributes require a non-negative decimal value.');
+        if (!preg_match('/^\+?(\d+)(?:\.0*)?$/D', $value, $match)
+            || ($number = filter_var(ltrim($match[1], '0') ?: '0', FILTER_VALIDATE_INT)) === false) {
+            throw new InvalidArgumentException('Physical attributes require a non-negative whole number of grams, millimetres or millilitres.');
         }
-        return number_format((float) $value, 4, '.', '');
+        return $number;
     }
 }

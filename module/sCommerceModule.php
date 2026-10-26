@@ -639,6 +639,14 @@ switch ($get) {
                 Log::warning('sCommerce order view: payment ledger is unavailable', ['order_id' => $item->id, 'error' => $e->getMessage()]);
             }
         }
+        $data['shipmentPanel'] = null;
+        if ($item->exists && !isset($data['repeatSourceId']) && \Seiger\sCommerce\Services\OrderShipments::available()) {
+            $data['shipmentPanel'] = [
+                'rows' => $item->shipments()->get(),
+                'nonce' => evo()->hasPermission('exec_module')
+                    ? \Seiger\sCommerce\Services\OrderPaymentAction::issueNonce((int)$item->id, 0, \Seiger\sCommerce\Controllers\OrderShipmentController::NONCE_ACTION) : null,
+            ];
+        }
         $_SESSION['itemaction'] = $item->exists ? 'Editing a Order of #' . $item->id : 'Creating an Order';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
@@ -663,6 +671,9 @@ switch ($get) {
         exit;
     case "orderPaymentAction":
         (new \Seiger\sCommerce\Controllers\OrderPaymentActionController())->handle(request())->send();
+        exit;
+    case "orderShipmentSave":
+        (new \Seiger\sCommerce\Controllers\OrderShipmentController())->handle(request())->send();
         exit;
     case "orderRepeatSave":
         (new \Seiger\sCommerce\Controllers\OrderRepeatController())->handle(request())->send();

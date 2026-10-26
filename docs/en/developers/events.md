@@ -288,7 +288,7 @@ New orders receive a UUID in `s_orders.uuid` when the column exists. Existing or
 
 ### Event scope
 
-`Seiger\sCommerce\Events\EventScope` tells listeners who made the change. sCommerce uses these `source` values: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `manager_container_return`, `offline_settlement` and `system` (the default when no scope is open).
+`Seiger\sCommerce\Events\EventScope` tells listeners who made the change. sCommerce uses these `source` values: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `manager_container_return`, `manager_shipment`, `offline_settlement` and `system` (the default when no scope is open).
 
 Code that writes orders on behalf of an integration should open its own scope. Listeners can then ignore changes caused by their own writes:
 
@@ -502,6 +502,24 @@ The resolved context is stored once in `s_orders.meta.integration` and never cha
 - A ledger entry whose `metadata.environment` differs from the order's environment is rejected (see [Recording payments](payments/index.md#metadata)).
 
 Test contexts need the `s_orders.meta` column; run the sCommerce migrations. Without it, test checkouts are refused and live checkouts continue. `sCommerce::supportsIntegration('checkout-context')` reports support.
+
+## Shipment events
+
+### sCommerce.ShipmentUpdated
+
+Since 1.5.0, a shipment that is created, or whose status, tracking number or URL, carrier, service, items or dates change, dispatches `sCommerce.ShipmentUpdated`. It follows the delivery rules of the order events: after commit only, with the event scope context, and never merged. A repeated write with the same data dispatches nothing.
+
+The payload contains:
+
+- `event` and `shipment` (a detached `sOrderShipment` copy for reading only);
+- `shipmentId`, `shipmentUuid`, `sequence`, `orderId`, `orderUuid`, `environment` (`live` or `test`, from the order);
+- `created` (bool), `oldStatus` (`null` when created) and `newStatus`;
+- `carrier`, `service`, `trackingNumber`, `trackingUrl`, `items`, `shippedAt`, `deliveredAt` (UTC, for example `2026-10-21T08:00:00Z`), `metadata`;
+- `fullyShipped` and `fullyDelivered`: whether all shipped products of the order are covered by sent or delivered parcels at this moment;
+- `shipmentSource` and `externalRef`: the system that wrote the shipment and its id there;
+- the context keys `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` and `occurredAt`. `source` is the event scope, as for every other event; it is not the shipment's `shipmentSource`.
+
+The shipment event is dispatched before the order events it causes, for example `sCommerce.OrderStatusChanged` to *Shipped*. See [Shipments and tracking](deliveries.md#shipments-and-tracking-api--events) for the API. `sCommerce::supportsIntegration('shipments')` reports support.
 
 ## Additional manager and frontend events
 

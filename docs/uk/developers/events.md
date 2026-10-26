@@ -383,7 +383,7 @@ Event::listen('evolution.sCommerceAfterAddToCart', function($params) {
 
 ### Область подій
 
-`Seiger\sCommerce\Events\EventScope` повідомляє слухачам, хто вніс зміну. sCommerce використовує такі значення `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `manager_container_return`, `offline_settlement` і `system` (типове значення, коли жодну область не відкрито).
+`Seiger\sCommerce\Events\EventScope` повідомляє слухачам, хто вніс зміну. sCommerce використовує такі значення `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `manager_container_return`, `manager_shipment`, `offline_settlement` і `system` (типове значення, коли жодну область не відкрито).
 
 Код, який записує замовлення від імені інтеграції, має відкривати власну область. Тоді слухачі зможуть ігнорувати зміни, спричинені їхніми власними записами:
 
@@ -597,6 +597,24 @@ Event::listen('sCommerce.ResolveCheckoutContext', function (array $payload) {
 - Запис журналу, у якого `metadata.environment` відрізняється від оточення замовлення, відхиляється (див. [Запис платежів](payments/index.md#метадані)).
 
 Тестовим контекстам потрібна колонка `s_orders.meta`; виконайте міграції sCommerce. Без неї тестові checkout відхиляються, а робочі продовжують працювати. `sCommerce::supportsIntegration('checkout-context')` повідомляє про підтримку.
+
+## Події відправлень
+
+### sCommerce.ShipmentUpdated
+
+Починаючи з 1.5.0, відправлення, яке створено або в якого змінилися статус, номер відстеження чи посилання, перевізник, послуга, позиції або дати, викликає `sCommerce.ShipmentUpdated`. Подія підпорядковується правилам доставки подій замовлень: лише після коміту, з контекстом області подій і ніколи не об’єднується. Повторний запис тих самих даних нічого не викликає.
+
+Payload містить:
+
+- `event` і `shipment` (від’єднана копія `sOrderShipment` лише для читання);
+- `shipmentId`, `shipmentUuid`, `sequence`, `orderId`, `orderUuid`, `environment` (`live` або `test`, із замовлення);
+- `created` (bool), `oldStatus` (`null` під час створення) і `newStatus`;
+- `carrier`, `service`, `trackingNumber`, `trackingUrl`, `items`, `shippedAt`, `deliveredAt` (UTC, наприклад `2026-10-21T08:00:00Z`), `metadata`;
+- `fullyShipped` і `fullyDelivered`: чи покриті в цей момент усі товари замовлення, що потребують доставки, надісланими або доставленими посилками;
+- `shipmentSource` і `externalRef`: система, що записала відправлення, та його ідентифікатор у ній;
+- ключі контексту `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` і `occurredAt`. `source` — це область подій, як і для всіх інших подій; це не `shipmentSource` відправлення.
+
+Подія відправлення викликається перед подіями замовлення, які вона спричиняє, наприклад `sCommerce.OrderStatusChanged` до *Відправлено*. API описано в розділі [Відправлення та відстеження](deliveries.md#відправлення-та-відстеження-api--події). `sCommerce::supportsIntegration('shipments')` повідомляє про підтримку.
 
 ## Додаткові події менеджера та frontend
 

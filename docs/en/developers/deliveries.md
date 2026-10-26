@@ -297,6 +297,91 @@ If you have existing hardcoded delivery forms in `checkout.blade.php`:
 5. Test checkout process thoroughly
 6. Remove old hardcoded form from checkout.blade.php
 
+## Shipments and tracking (API + events)
+
+Since 1.5.0, an order can have shipments: parcels or deliveries with a carrier, a tracking number and the shipped quantities. Managers add them on the order screen (**Shipments** block, **Add tracking**). ERPs and carrier integrations write them through `Seiger\sCommerce\Services\OrderShipments` and never write `s_orders` directly. Run the sCommerce migrations to create the `s_order_shipments` table.
+
+### Writing shipments
+
+```php
+use Seiger\sCommerce\Events\EventScope;
+use Seiger\sCommerce\Services\OrderShipments;
+use Seiger\sCommerce\Shipping\ShipmentData;
+
+$shipments = new OrderShipments();
+
+EventScope::run('erp', 0, fn () => $shipments->upsert($order, new ShipmentData(
+    status: 'shipped',
+    carrier: 'packeta',
+    service: 'pickup_point',
+    trackingNumber: 'Z123456789',
+    trackingUrl: 'https://tracking.packeta.com/Z123456789',
+    items: [['line' => 0, 'quantity' => 2], ['line_key' => '7:0', 'quantity' => 1]],
+    source: 'erp',
+    externalRef: 'SH-2026-0042',
+)), integrationActor: 'erp-sync');
+
+// Later updates from the same system:
+$shipment = $shipments->findByExternalRef('erp', 'SH-2026-0042');
+$shipments->setStatus($shipment, 'delivered', new DateTimeImmutable('2026-10-21 10:15', new DateTimeZone('UTC')));
+```
+
+| Method | Purpose |
+|---|---|
+| `upsert(sOrder $order, ShipmentData $data)` | Creates a shipment, or updates the one with the same `(source, externalRef)`. Idempotent: repeating the same data changes nothing. Without `externalRef` every call creates a shipment |
+| `update(sOrderShipment $shipment, ShipmentData $data)` | Applies data to a known shipment with the same rules |
+| `setStatus(sOrderShipment $shipment, string $status, ?DateTimeImmutable $at = null, array $metadata = [])` | Moves a shipment to another status |
+| `findByExternalRef(string $source, string $externalRef)` | Finds the shipment written by a source system |
+| `OrderShipments::coverage(sOrder $order)` | `fullyShipped`, `fullyDelivered` and `anySent` of the order |
+| `project(int $orderId)` | Rebuilds `delivery_info.tracking` and the order status from the stored shipments, for example in a reconciliation job |
+
+`ShipmentData` fields: `status`, `carrier`, `service`, `trackingNumber`, `trackingUrl`, `items`, `source`, `externalRef`, `metadata`, `shippedAt`, `deliveredAt`. When a shipment already exists, `null` keeps the stored carrier, service, tracking, items and dates, and `metadata` is merged.
+
+Rules:
+
+- **Statuses** move forward along `pending → ready → shipped → in_transit → delivered`. `failed`, `returned` and `canceled` end any unfinished shipment. A move back or a change of a finished shipment is ignored and logged as a warning to the `scommerce` channel.
+- Reaching `shipped`, `in_transit` or `delivered` without a date sets `shipped_at` to now; `delivered` also sets `delivered_at`.
+- **Items** refer to order lines by `line` (the index in `s_orders.products`) and/or `line_key`. `product_id` and `sku` are optional and checked against the line. Quantities are positive integers; the same line listed twice is summed. Lines with `requires_shipping = false` (services) cannot be shipped. `items = null` ships the whole order and cannot be combined with other active shipments of the order.
+- The shipped quantities of active shipments (all except `failed`, `returned` and `canceled`) cannot exceed the ordered quantities.
+- Canceling a sent parcel is a correction: its quantities are released, `metadata.voided_after` records the previous status, a warning is logged, and the order status is not moved back.
+- Errors: `InvalidArgumentException` for invalid data, `Seiger\sCommerce\Shipping\ShipmentConflictException` when the reference belongs to another order or the quantities exceed or overlap the order.
+- Writes lock the order row. A concurrent insert of the same reference is detected and applied to the existing shipment.
+
+Open an [event scope](events.md#event-scope) with your own `source` and `integrationActor` so that your listeners can ignore the echo of your own writes.
+
+### Tracking in templates
+
+After every change, the order's `delivery_info['tracking']` holds a list of shipments with a tracking number or URL (canceled shipments are left out):
+
+```php
+[
+    ['carrier' => 'packeta', 'number' => 'Z123456789', 'url' => 'https://tracking.packeta.com/Z123456789', 'status' => 'shipped', 'updated_at' => '2026-10-20 14:03:11'],
+]
+```
+
+Order templates and notification e-mails can show it without new code. Other `delivery_info` keys are kept.
+
+```blade
+@foreach($order->delivery_info['tracking'] ?? [] as $parcel)
+    <a href="{{$parcel['url']}}">{{$parcel['number']}}</a> ({{$parcel['status']}})
+@endforeach
+```
+
+### Order status from shipments
+
+Off by default. Turn on **Order status from shipments** in *Settings → Orders* (`shipping.sync_order_status = 1`) when sCommerce should set the order status:
+
+- **Delivered** when all shipped products are covered by delivered parcels; otherwise **Shipped** when they are covered by sent parcels (`shipped`, `in_transit` or `delivered`).
+- Only lines that require shipping count. An order of services only is never shipped or delivered by shipments.
+- **Partial shipments** (`shipping.partial_policy`): `on_complete` (default) waits for all parcels; `on_first` sets **Shipped** with the first sent parcel. **Delivered** always needs all quantities, so one delivered parcel never settles a cash-on-delivery order early.
+- The status never moves back and is never changed from **Completed** or a later status (canceled, on hold, returns, failed). The change is recorded in the order history by the system user and dispatches the usual order events, so offline settlement on **Delivered** works as for a manual status change.
+
+Leave it off when an ERP or another integration sets the order status; exactly one component should set it.
+
+### Events
+
+Every change dispatches `sCommerce.ShipmentUpdated` after commit. See [Events](events.md#shipment-events).
+
 ## See Also
 
 - [Payment Methods](payments/methods.md)
