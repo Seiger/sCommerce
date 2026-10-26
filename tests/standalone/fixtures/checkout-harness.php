@@ -46,6 +46,17 @@ final class FakeProduct
     }
 
     public function only(array $keys): array { return array_intersect_key(get_object_vars($this), array_flip($keys)); }
+
+    /**
+     * Supply attribute-backed measurements to real cart and quick-order payload builders.
+     *
+     * @since 1.4.0
+     * @return array<string, string> Synthetic delivery values; no site data is read.
+     */
+    public function physicalValues(): array
+    {
+        return ['weight' => '0.0125', 'width' => '0.0000', 'height' => '0.0000', 'length' => '0.0000', 'volume' => '0.0000'];
+    }
     public function attribute(string $alias) { return null; }
     public function toArray(): array { return get_object_vars($this); }
     public function fulfilment(int $optionId = 0): array

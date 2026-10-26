@@ -11,6 +11,8 @@ php tests/standalone/scommerce-bulk-export.php
 php tests/standalone/scommerce-new-order.php
 php tests/standalone/scommerce-review.php
 php tests/standalone/scommerce-review-migration.php
+php tests/standalone/scommerce-physical-attributes.php
+php tests/standalone/scommerce-physical-select-migration.php
 php tests/standalone/scommerce-repeat.php
 php tests/standalone/scommerce-order-events.php
 php tests/standalone/scommerce-credentials-column.php
@@ -39,3 +41,6 @@ node tests/standalone/scommerce-payment-actions.mjs
 Package classes, Blade templates and translations are loaded from this checkout,
 not the installed consumer copy. These checks do not replace browser QA.
 The new-order checks cover draft initialization and rendering, not order creation.
+
+Physical attribute checks run the actual fresh installation and additive upgrade migration,
+verify positive legacy values are consumed and zeroed atomically on save, and exercise decimal attribute, copy and delivery flows.

@@ -77,11 +77,6 @@ return new class extends Migration
             $table->decimal('price_special', 12, 5)->unsigned()->default(0)->comment('The special price of the product');
             $table->decimal('price_opt_regular', 12, 5)->unsigned()->default(0)->comment('The wholesale price of the product');
             $table->decimal('price_opt_special', 12, 5)->unsigned()->default(0)->comment('The special wholesale price of the product');
-            $table->decimal('weight', 11, 4)->unsigned()->default(0)->comment('The weight of production is indicated if necessary for technical purposes');
-            $table->decimal('width', 11, 4)->unsigned()->default(0)->comment('The width of production is indicated if necessary for technical purposes');
-            $table->decimal('height', 11, 4)->unsigned()->default(0)->comment('The height of production is indicated if necessary for technical needs');
-            $table->decimal('length', 11, 4)->unsigned()->default(0)->comment('The length of production is indicated if necessary for technical needs');
-            $table->decimal('volume', 11, 4)->unsigned()->default(0)->comment('The volume of production is indicated if necessary for technical needs');
             $table->integer('inventory')->default(0)->comment('Quantity products in stock');
             $table->char('currency', 3)->default('USD')->comment('Currency price this product');
             $table->string('cover', 512)->default('')->comment('Cover image file link');

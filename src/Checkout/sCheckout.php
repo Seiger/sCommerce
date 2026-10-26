@@ -731,6 +731,7 @@ class sCheckout
             $productData = array_merge($productData, ContainerDeposit::lineFields(ContainerDeposit::unit($product, $optionId), $quantity, max(0, (int)($data['exchange'] ?? 0))));
             $cost += (float)($productData['deposit_amount'] ?? 0);
 
+            $productData = array_merge($productData, $product->physicalValues());
             $productsData = [$productData];
         }
 
