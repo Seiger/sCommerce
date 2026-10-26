@@ -284,3 +284,36 @@ class SCommerceProductController extends BaseController
     </a>
 </div>
 ```
+
+## Знімок рядка замовлення
+
+Починаючи з 1.5.0, кожен новий рядок замовлення (кошик на сайті, швидке замовлення, редактор у менеджері та повторні замовлення) зберігає свою ідентичність у JSON `products` замовлення поруч з наявними ключами (`id`, `title`, `price`, `quantity` та іншими):
+
+| Ключ | Тип | Значення |
+|---|---|---|
+| `line_key` | string | `"{productId}:{optionId}"`, наприклад `"5:3"` |
+| `product_id` | int | id товару (збігається з `id`) |
+| `option_id` | int | id опції кошика; `0` — опції немає |
+| `sku` | string | фактичний SKU; дорівнює `product_sku`, якщо слухач `sCommerce.ResolveLineIdentity` не задав SKU варіанта |
+| `product_sku` | string | власний SKU товару |
+| `gtin` | string або null | GTIN товару |
+| `unit_price_net`, `tax_rate` | float або null | заготовки для податків, заповнюються лише слухачами `sCommerce.ResolveOrderTaxes` |
+| `requires_shipping` | bool | рядок доставляється |
+| `tracks_inventory` | bool | рядок враховується в залишках |
+| `retail_excise_rate`, `retail_excise_amount` | float | лише в рядках із роздрібним акцизом: його ставка та сума, включена в суму рядка, для чека |
+| `deposit_unit`, `exchange_quantity`, `deposit_quantity`, `deposit_amount`, `deposit_returnable`, `deposit_terms`, `deposit_returned_quantity` | mixed | лише в рядках із заставною вартістю зворотної тари, див. [Заставна вартість зворотної тари](payments/index.md#заставна-вартість-зворотної-тари) |
+
+Податкові слухачі також можуть додавати `tax_code`, `unit_price_gross`, `tax_amount` і `prices_include_tax`. Див. [Події](events.md#рядки-замовлення-виконання-та-податки).
+
+Два рядки кошика з одним товаром і різними опціями тепер розрізняються за `option_id` і `line_key`. Значення id опції визначає проєкт, наприклад його цінові слухачі; воно не вказує на рядок `s_product_modifications`.
+
+Замовлення, створені до 1.5.0, не містять цих ключів. Споживачі мають використовувати резервні значення:
+
+- `id` для `product_id`;
+- `0` для `option_id`;
+- `sku` для `sku` і `product_sku`;
+- `true` для `requires_shipping` і `tracks_inventory`.
+
+`line_key` унікальний у межах замовлення, створеного з кошика. Менеджер може додати той самий товар двічі, тому споживачам слід також використовувати індекс рядка. Рядки, додані в менеджері, отримують ідентичність на сервері під час збереження замовлення; рядки, що вже мають `line_key`, зберігають його.
+
+`sCommerce::supportsIntegration('line-identity')` повідомляє про підтримку.

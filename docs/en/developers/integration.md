@@ -285,3 +285,36 @@ class SCommerceProductController extends BaseController
     </a>
 </div>
 ```
+
+## Order line snapshot
+
+Since 1.5.0, every new order line (storefront cart, quick order, manager editor and repeat orders) stores its identity in the order `products` JSON next to the existing keys (`id`, `title`, `price`, `quantity` and others):
+
+| Key | Type | Meaning |
+|---|---|---|
+| `line_key` | string | `"{productId}:{optionId}"`, for example `"5:3"` |
+| `product_id` | int | product id (same as `id`) |
+| `option_id` | int | cart option id; `0` = none |
+| `sku` | string | effective SKU; equals `product_sku` unless a `sCommerce.ResolveLineIdentity` listener sets a variant SKU |
+| `product_sku` | string | the product's own SKU |
+| `gtin` | string or null | product GTIN |
+| `unit_price_net`, `tax_rate` | float or null | tax placeholders, filled only by `sCommerce.ResolveOrderTaxes` listeners |
+| `requires_shipping` | bool | the line is shipped |
+| `tracks_inventory` | bool | the line counts against inventory |
+| `retail_excise_rate`, `retail_excise_amount` | float | only on lines with a retail excise: its rate and the amount included in the line total, for the receipt |
+| `deposit_unit`, `exchange_quantity`, `deposit_quantity`, `deposit_amount`, `deposit_returnable`, `deposit_terms`, `deposit_returned_quantity` | mixed | only on lines with a returnable container deposit, see [Returnable container deposits](payments/index.md#returnable-container-deposits) |
+
+Tax listeners may also add `tax_code`, `unit_price_gross`, `tax_amount` and `prices_include_tax`. See [Events](events.md#order-lines-fulfilment-and-taxes).
+
+Two cart lines of the same product with different options are now distinguishable by `option_id` and `line_key`. The meaning of an option id is defined by the project, for example by its price listeners; it does not identify a row of `s_product_modifications`.
+
+Orders created before 1.5.0 do not have these keys. Consumers must fall back to:
+
+- `id` for `product_id`;
+- `0` for `option_id`;
+- `sku` for both `sku` and `product_sku`;
+- `true` for `requires_shipping` and `tracks_inventory`.
+
+`line_key` is unique within an order created from the cart. A manager can add the same product twice, so consumers should also use the line index. Lines added in the manager receive their identity on the server when the order is saved; lines that already have a `line_key` keep it.
+
+`sCommerce::supportsIntegration('line-identity')` reports support.

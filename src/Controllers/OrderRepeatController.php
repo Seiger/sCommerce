@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Log;
 use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sOrder;
+use Seiger\sCommerce\Services\ContainerDeposit;
+use Seiger\sCommerce\Services\OrderLineIdentity;
+use Seiger\sCommerce\Services\OrderTaxes;
 use Seiger\sCommerce\Services\OrderRepeater;
 
 /**
@@ -20,6 +23,7 @@ final class OrderRepeatController
      * Validate edits, persist once and return the new order URL to the form.
      *
      * Order/payment statuses and operational metadata are never accepted from POST.
+     * Lines without a `line_key` receive their identity from the current product.
      *
      * @param Request $request Manager form with current CSRF and draft token.
      * @return JsonResponse Success redirect or a non-mutating validation/error response.
@@ -101,6 +105,11 @@ final class OrderRepeatController
             }
             unset($product);
             if (!is_finite($cost) || $cost > 9999999) return $this->error('repeat_invalid', 422);
+            // Lines added in the draft get their identity on the server; copied lines keep theirs.
+            // A repeat order has no returned containers yet; it charges the deposits of its lines.
+            $products = array_map(static fn ($line) => is_array($line) ? array_diff_key($line, ['deposit_returned_quantity' => 0]) : $line, $products);
+            $products = ContainerDeposit::applyToLines(OrderTaxes::applyRetailExcise(app(OrderLineIdentity::class)->fillMissing($products, (string)$source->currency)));
+            $cost += ContainerDeposit::total($products);
             $user = $request->input('user_info', []);
             $note = $request->input('note', '');
             if (!is_array($user) || !is_string($note) || strlen($note) > 10000) return $this->error('repeat_invalid', 422);

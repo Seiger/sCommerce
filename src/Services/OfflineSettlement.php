@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Seiger\sCommerce\Checkout\CheckoutContext;
 use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Interfaces\OfflineSettlementPaymentMethodInterface;
 use Seiger\sCommerce\Interfaces\PaymentMethodInterface;
@@ -23,7 +24,7 @@ use Throwable;
  * reconciliation worker retries missed ones, so correctness does not depend on public
  * event listeners. The ledger reference `settle/{orderId}/{status}` makes it idempotent.
  * Enable it only when no other owner (an ERP receipt import or a financial package) settles
- * the same method.
+ * the same method. Test orders are never settled.
  *
  * @since 1.5.0
  */
@@ -89,7 +90,7 @@ final class OfflineSettlement
         }
         $order = sOrder::query()->find($orderId);
         $method = $order ? PaymentMethodResolver::forOrder($order) : null;
-        if (!$method || !in_array((int)$order->status, self::statusesOf($method), true)) {
+        if (!$method || !in_array((int)$order->status, self::statusesOf($method), true) || !CheckoutContext::isLive($order)) {
             return null;
         }
 
@@ -138,7 +139,7 @@ final class OfflineSettlement
         }
 
         $settled = 0;
-        sOrder::query()->whereIn('status', array_unique($statuses))->whereIn('payment_status', self::OPEN_PAYMENT_STATUSES)
+        sOrder::query()->live()->whereIn('status', array_unique($statuses))->whereIn('payment_status', self::OPEN_PAYMENT_STATUSES)
             ->select('id')->chunkById(200, function ($orders) use (&$settled): void {
                 foreach ($orders as $order) {
                     $settled += $this->settleSafely((int)$order->id) ? 1 : 0;

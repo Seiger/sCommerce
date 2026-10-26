@@ -9,6 +9,21 @@
 
     $userFullName = preg_replace('/\s+/u', ' ', trim(html_entity_decode(implode(' ', [$userInfo['first_name'] ?? '', $userInfo['middle_name'] ?? '', $userInfo['last_name'] ?? '']), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
     $userId = (int)($item?->user_id ?? 0);
+    // Read-only `meta` as dotted key/value pairs, e.g. booking.date or integration.environment.
+    $metaRows = [];
+    $flattenMeta = static function (array $values, string $prefix) use (&$flattenMeta, &$metaRows): void {
+        foreach ($values as $key => $value) {
+            $path = $prefix === '' ? (string)$key : $prefix . '.' . $key;
+            if (is_array($value) && $value !== [] && !array_is_list($value)) {
+                $flattenMeta($value, $path);
+            } else {
+                $metaRows[$path] = is_array($value) ? implode(', ', array_map(static fn ($v) => is_scalar($v) ? (string)$v : json_encode($v), $value))
+                    : (is_bool($value) ? ($value ? 'true' : 'false') : (string)($value ?? ''));
+            }
+        }
+    };
+    $flattenMeta(is_array($item->meta ?? null) ? $item->meta : [], '');
+    $isTestOrder = $item->exists && $item->isTest();
 @endphp
 <form id="form" name="form" method="post" enctype="multipart/form-data" action="{{sCommerce::moduleUrl()}}&get={{isset($repeatSourceId) ? 'orderRepeatSave' : 'orderSave'}}" onsubmit="documentDirty=false;">
     @csrf
@@ -27,6 +42,7 @@
                 <h3>
                     <b>@if($item->exists)#{{$item->order_number ?? $item->id}}@else @lang('sCommerce::global.order') @endif</b>
                     @if($item->is_quick) <span class="badge bg-super bg-seigerit"><i class="fas fa-clock"></i> @lang('sCommerce::global.one_click')</span>@endif
+                    @if($isTestOrder) <span class="badge bg-warning text-dark" data-order-environment="test">@lang('sCommerce::global.test_badge')</span>@endif
                     <b>{{$userFullName}} {{$userInfo['phone'] ?? ''}}</b>
                 </h3>
                 @if(isset($domains[$item->domain]))
@@ -56,6 +72,14 @@
                         <p><strong>{{sCommerce::marketingFields()[$tagKey] ?? $tagKey}}:</strong> {{$tagValue}}</p>
                     @endforeach
                 @endif
+                @if($metaRows)
+                    <div data-order-meta>
+                        <p class="mb-1"><strong>@lang('sCommerce::global.order_meta'):</strong></p>
+                        @foreach($metaRows as $metaKey => $metaValue)
+                            <p class="mb-1"><code>{{$metaKey}}</code>: {{$metaValue}}</p>
+                        @endforeach
+                    </div>
+                @endif
                 <p>
                     <strong>@lang('sCommerce::global.order_status'):</strong>
                     <select name="status" @disabled(isset($repeatSourceId)) @style(['display:inline-block', 'width:auto', 'margin-left:10px', 'padding:5px'])>
@@ -84,7 +108,7 @@
             </div>
             <div class="col-md">
                 <h3>@lang('sCommerce::global.shipping_information')</h3>
-                <p><strong>@lang('sCommerce::global.delivery_name'):</strong>@if(!$delivery) @lang('sCommerce::global.not_selected_or_unknown') @else {{$delivery['title']}}@endif</p>
+                <p><strong>@lang('sCommerce::global.delivery_name'):</strong>@if(!$delivery) @if(($item->delivery_info['required'] ?? true) === false) @lang('sCommerce::global.delivery_not_required') @else @lang('sCommerce::global.not_selected_or_unknown') @endif @else {{$delivery['title']}}@endif</p>
                 @if($delivery)
                     <p><strong>@lang('sCommerce::global.shipping_cost'):</strong> {{sCommerce::convertPrice(floatval($item->delivery_info['cost'] ?? 0), $item->currency)}}</p>
                     @if(isset($item->delivery_info[$item->delivery_info['method']]) && is_array($item->delivery_info[$item->delivery_info['method']]))
@@ -180,6 +204,13 @@
                     <img src="{{$product['coverSrc']}}" class="product-thumbnail">
                     <a @if(trim($product['link'])) href="{{$product['link']}}" @endif target="_blank"><b>{{$product['title']}}</b></a>
                     @if(trim($info)){!!$info!!}@endif
+                    @if((float)($product['deposit_unit'] ?? 0) > 0)
+                        <div class="small" data-product-deposit>
+                            @lang('sCommerce::global.container_deposit'): {{(int)($product['deposit_quantity'] ?? 0)}} × {{sCommerce::convertPrice((float)$product['deposit_unit'], $item->currency)}} = {{sCommerce::convertPrice((float)($product['deposit_amount'] ?? 0), $item->currency)}}
+                            · <label>@lang('sCommerce::global.container_exchange'): <input type="number" min="0" max="{{(int)($product['quantity'] ?? 0)}}" step="1" class="form-control d-inline-block product-exchange" value="{{(int)($product['exchange_quantity'] ?? 0)}}" style="width: 70px;"></label>
+                            @if((int)($product['deposit_returned_quantity'] ?? 0) > 0) · @lang('sCommerce::global.container_returned'): {{(int)$product['deposit_returned_quantity']}}@endif
+                        </div>
+                    @endif
                 </td>
                 @if (sCommerce::config('product.show_field_sku', 1))<td>{{$product['sku']}}</td>@endif
                 <td>{{sCommerce::convertPrice($product['price'])}}</td>
@@ -201,6 +232,26 @@
             <td><strong id="order-total">{{sCommerce::convertPrice($item->cost, $item->currency)}}</strong></td>
             <td></td>
         </tr>
+        @php
+            $depositTotal = \Seiger\sCommerce\Services\ContainerDeposit::total(is_array($item->products) ? $item->products : []);
+        @endphp
+        @if($depositTotal > 0)
+        <tr data-order-deposit>
+            <td colspan="3" class="text-end">@lang('sCommerce::global.container_deposit_included'):</td>
+            <td>{{sCommerce::convertPrice($depositTotal, $item->currency)}}</td>
+            <td></td>
+        </tr>
+        @endif
+        @php
+            $retailExcise = array_sum(array_map(static fn ($line) => is_array($line) && is_numeric($line['retail_excise_amount'] ?? null) ? (float)$line['retail_excise_amount'] : 0.0, is_array($item->products) ? $item->products : []));
+        @endphp
+        @if($retailExcise > 0)
+        <tr data-order-retail-excise>
+            <td colspan="3" class="text-end">@lang('sCommerce::global.retail_excise_included'):</td>
+            <td>{{sCommerce::convertPrice($retailExcise, $item->currency)}}</td>
+            <td></td>
+        </tr>
+        @endif
         </tfoot>
     </table>
     <div class="split my-3"></div>
@@ -558,6 +609,16 @@
                 updateProductSum(index);
                 updateProductsData();
                 recalculateTotal();
+            });
+
+            // Empty containers exchanged on a deposit line; the server recalculates the deposit and total.
+            $(document).on('change', '.product-exchange', function() {
+                const index = parseInt($(this).closest('tr').data('product-index'));
+                const quantity = parseInt(orderProducts[index].quantity) || 0;
+                const exchange = Math.max(0, Math.min(parseInt($(this).val()) || 0, quantity));
+                $(this).val(exchange);
+                orderProducts[index].exchange_quantity = exchange;
+                updateProductsData();
             });
 
             // Remove product from order

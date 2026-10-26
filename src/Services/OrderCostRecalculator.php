@@ -27,7 +27,8 @@ final class OrderCostRecalculator
     }
 
     /**
-     * Sum of price × quantity, using `priceNumber` when present, else the formatted `price`.
+     * Sum of price × quantity, using `priceNumber` when present, else the formatted `price`,
+     * plus the returnable container deposits of the lines.
      *
      * @param array<int, mixed> $products
      * @since 1.5.0
@@ -45,6 +46,6 @@ final class OrderCostRecalculator
             $total += $price * intval($product['quantity'] ?? 1);
         }
 
-        return round($total, 2);
+        return round($total + ContainerDeposit::total($products), 2);
     }
 }

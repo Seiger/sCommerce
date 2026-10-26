@@ -85,7 +85,8 @@ class sCommerce
      */
     public static function integrationFeatures(): array
     {
-        return ['order-events', 'payment-ledger-api', 'webhook-interface', 'payment-capabilities', 'payment-schedule', 'offline-settlement'];
+        return ['order-events', 'payment-ledger-api', 'webhook-interface', 'payment-capabilities', 'payment-schedule', 'offline-settlement',
+            'line-identity', 'fulfilment-modes', 'line-tax-data', 'checkout-context', 'vat-display', 'retail-excise', 'container-deposit'];
     }
 
     /**

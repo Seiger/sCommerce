@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Log;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sProduct;
+use Seiger\sCommerce\Services\ContainerDeposit;
+use Seiger\sCommerce\Services\OrderLineIdentity;
+use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sCommerce\Services\sPriceResolver;
 
 class sCart
@@ -62,6 +65,37 @@ class sCart
     }
 
     /**
+     * Show prices with (`gross`) or without (`net`) VAT to the current visitor.
+     * Display only: the charged price does not change.
+     *
+     * @since 1.5.0
+     */
+    public function setVatDisplay(string $mode): void
+    {
+        VatDisplay::setMode($mode);
+    }
+
+    /**
+     * VAT display mode of the current visitor: `gross` or `net`.
+     *
+     * @since 1.5.0
+     */
+    public function getVatDisplay(): string
+    {
+        return VatDisplay::mode();
+    }
+
+    /**
+     * Return the visitor to the shop's default VAT display.
+     *
+     * @since 1.5.0
+     */
+    public function clearVatDisplay(): void
+    {
+        VatDisplay::clearMode();
+    }
+
+    /**
      * Add a product to the cart.
      *
      * @param int $productId The ID of the product to add.
@@ -95,9 +129,10 @@ class sCart
             ];
         }
 
-        $this->cartData[$productId][$optionId] = $quantity;
+        $this->storeQuantity($productId, $optionId, $quantity);
 
-        if (sCommerce::config('product.inventory_on', 0)) {
+        // Virtual and service lines are not counted against inventory.
+        if (sCommerce::config('product.inventory_on', 0) && $this->tracksInventory($product, $optionId)) {
             if ($product->inventory < 0) {
                 $message = __('sCommerce::global.product_title_is_out_of_stock', ['title' => $product->title]);
                 Log::channel('scommerce')->alert('sCart - ' . $message);
@@ -112,7 +147,7 @@ class sCart
             }
         }
 
-        $this->cartData[$productId][$optionId] = $quantity;
+        $this->storeQuantity($productId, $optionId, $quantity);
         $this->saveCartData();
 
         switch ($trigger) {
@@ -128,7 +163,8 @@ class sCart
             'success' => true,
             'trigger' => $trigger,
             'message' => $message,
-            'product' => array_merge($this->getProductFields($product, $this->resolveProductPricing($product, $optionId)), compact('quantity')),
+            'product' => array_merge($this->getProductFields($product, $pricing = $this->resolveProductPricing($product, $optionId)),
+                $this->vatPricing($product, $pricing, $optionId), compact('quantity')),
             'miniCart' => $this->getMiniCart(),
         ];
     }
@@ -170,16 +206,57 @@ class sCart
     }
 
     /**
+     * Set how many empty returnable containers the customer exchanges for a cart line.
+     *
+     * Exchanged units carry no new deposit. The count is the customer's declaration, capped at
+     * the line quantity; the courier or manager corrects the order when it differs.
+     *
+     * @param int $productId Product id; read from the request when 0.
+     * @param int $optionId Cart option id; read from the request when not given.
+     * @param int|null $exchange Number of containers; read from the request (`quantity`) when null.
+     * @return array{success: bool, message: string, miniCart?: array}
+     * @since 1.5.0
+     */
+    public function setContainerExchange(int $productId = 0, ?int $optionId = null, ?int $exchange = null): array
+    {
+        $productId = $productId ?: request()->integer('productId');
+        $optionId ??= request()->integer('optionId');
+        $exchange ??= request()->integer('quantity');
+        $item = $this->cartData[$productId][$optionId] ?? null;
+        if ($item === null) {
+            return ['success' => false, 'message' => __('sCommerce::global.product_with_id', ['id' => $productId]) . __('sCommerce::global.not_found') . '.'];
+        }
+
+        $quantity = $this->getCartItemQuantity($item);
+        $this->cartData[$productId][$optionId] = ['quantity' => $quantity, 'exchange' => max(0, min($exchange, $quantity))];
+        $this->saveCartData();
+
+        return ['success' => true, 'message' => '', 'miniCart' => $this->getMiniCart()];
+    }
+
+    /**
      * Get the cart items and totals in the current currency.
      *
      * Each item includes the numeric `sumAsFloat` and formatted `sum`
-     * calculated from its effective price and quantity.
+     * calculated from its effective price and quantity, the line identity
+     * (`line_key`, `product_id`, `option_id`, `sku`, `product_sku`, `gtin`)
+     * and the fulfilment flags `requires_shipping` and `tracks_inventory`.
+     * Display keys add the prices and sums without VAT (`priceNet`, `sumNet`, `totalSumNet`)
+     * and in the visitor's VAT display mode (`displayPrice`, `displaySum`, `totalSumDisplay`), and the
+     * retail excise included in the prices (`retailExciseAmount`, `sumRetailExcise`, `totalRetailExcise`).
+     * Lines with a returnable container deposit carry the deposit keys of {@see ContainerDeposit};
+     * `totalSum` is what the customer pays: `totalGoods` plus `totalDeposit`.
      *
-     * @return array{totalSum: float, totalSumFormatted: string, items: array<int, array<string, mixed>>}
+     * @return array{totalSum: float, totalSumFormatted: string, totalSumNet: float, totalSumNetFormatted: string, totalSumDisplay: float, totalSumDisplayFormatted: string, totalRetailExcise: float, totalRetailExciseFormatted: string, vatDisplay: string, items: array<int, array<string, mixed>>}
      */
     public function getMiniCart(): array
     {
         $totalSum = 0;
+        $totalNet = 0.0;
+        $totalExcise = 0.0;
+        $totalDeposit = 0.0;
+        $currency = sCommerce::currentCurrency();
+        $vatDisplay = VatDisplay::mode();
         $items = [];
         $productIds = array_keys($this->cartData);
         $products = sCommerce::getProducts($productIds);
@@ -187,21 +264,51 @@ class sCart
         foreach ($products as $product) {
             foreach ($this->cartData[$product->id] as $optionId => $cartItem) {
                 $quantity = $this->getCartItemQuantity($cartItem);
+                $deposit = ContainerDeposit::lineFields(ContainerDeposit::unit($product, (int)$optionId, $currency), $quantity,
+                    is_array($cartItem) ? (int)($cartItem['exchange'] ?? 0) : 0);
                 $pricing = $this->resolveProductPricing($product, (int)$optionId);
                 $price = (float)$pricing['priceAsFloat'];
                 $lineSum = $price * $quantity;
                 $sumAsFloat = round($lineSum, 3);
                 $sum = sCommerce::convertPrice($sumAsFloat);
+                $vat = $this->vatPricing($product, $pricing, (int)$optionId);
+                $sumNetAsFloat = VatDisplay::net($sumAsFloat, (float)$vat['vatRate'], (float)$vat['retailExciseRate']);
+                $sumExciseAsFloat = VatDisplay::excise($sumAsFloat, (float)$vat['retailExciseRate']);
+                $displaySumAsFloat = $vatDisplay === VatDisplay::NET ? $sumNetAsFloat : $sumAsFloat;
                 $items[] = array_merge(
                     $this->getProductFields($product, $pricing),
-                    compact('quantity', 'sumAsFloat', 'sum')
+                    app(OrderLineIdentity::class)->snapshot($product, (int)$optionId),
+                    $vat,
+                    $deposit,
+                    compact('quantity', 'sumAsFloat', 'sum'),
+                    ['sumNetAsFloat' => $sumNetAsFloat, 'sumNet' => sCommerce::convertPrice($sumNetAsFloat),
+                        'displaySumAsFloat' => $displaySumAsFloat, 'displaySum' => sCommerce::convertPrice($displaySumAsFloat),
+                        'sumRetailExciseAsFloat' => $sumExciseAsFloat, 'sumRetailExcise' => $sumExciseAsFloat > 0 ? sCommerce::convertPrice($sumExciseAsFloat) : '']
                 );
                 $totalSum += $lineSum;
+                $totalNet += $sumNetAsFloat;
+                $totalExcise += $sumExciseAsFloat;
+                $totalDeposit += (float)($deposit['deposit_amount'] ?? 0);
             }
         }
+        $totalDeposit = round($totalDeposit, 2);
 
+        $cart['totalGoods'] = round($totalSum, 3);
+        $cart['totalGoodsFormatted'] = sCommerce::convertPrice($totalSum);
+        $cart['totalDeposit'] = $totalDeposit;
+        $cart['totalDepositFormatted'] = $totalDeposit > 0 ? sCommerce::convertPrice($totalDeposit) : '';
+        // Deposits are paid with the order and are outside VAT.
+        $totalSum += $totalDeposit;
+        $totalNet += $totalDeposit;
         $cart['totalSum'] = round($totalSum, 3);
         $cart['totalSumFormatted'] = sCommerce::convertPrice($totalSum);
+        $cart['totalSumNet'] = round($totalNet, 2);
+        $cart['totalSumNetFormatted'] = sCommerce::convertPrice($cart['totalSumNet']);
+        $cart['totalSumDisplay'] = $vatDisplay === VatDisplay::NET ? $cart['totalSumNet'] : $cart['totalSum'];
+        $cart['totalSumDisplayFormatted'] = sCommerce::convertPrice($cart['totalSumDisplay']);
+        $cart['totalRetailExcise'] = round($totalExcise, 2);
+        $cart['totalRetailExciseFormatted'] = $totalExcise > 0 ? sCommerce::convertPrice($cart['totalRetailExcise']) : '';
+        $cart['vatDisplay'] = $vatDisplay;
         $cart['items'] = $items;
 
         return $cart;
@@ -259,6 +366,30 @@ class sCart
     {
         $priceMode = $this->resolveProductPriceMode($product, $optionId);
         return app(sPriceResolver::class)->resolve($product, sCommerce::currentCurrency(), $priceMode, $optionId);
+    }
+
+    /**
+     * Display keys of a resolved price with and without VAT.
+     */
+    private function vatPricing(object $product, array $pricing, int $optionId): array
+    {
+        return VatDisplay::pricing($product, (float)$pricing['priceAsFloat'], (float)($pricing['oldPriceAsFloat'] ?? 0), sCommerce::currentCurrency(), $optionId);
+    }
+
+    private function tracksInventory(object $product, int $optionId): bool
+    {
+        return !method_exists($product, 'fulfilment') || (bool)($product->fulfilment($optionId)['inventory'] ?? true);
+    }
+
+    /**
+     * Store a line quantity, keeping the declared container exchange within it.
+     */
+    private function storeQuantity(int $productId, int $optionId, int $quantity): void
+    {
+        $item = $this->cartData[$productId][$optionId] ?? null;
+        $this->cartData[$productId][$optionId] = is_array($item) && (int)($item['exchange'] ?? 0) > 0
+            ? ['quantity' => $quantity, 'exchange' => min((int)$item['exchange'], $quantity)]
+            : $quantity;
     }
 
     private function getCartItemQuantity(mixed $cartItem): int

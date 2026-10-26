@@ -106,6 +106,10 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] Pricing Extension Events (Laravel Event Dispatcher).
     - [x] sCommerce.ResolveProductPrice.
     - [x] sCommerce.ResolveProductPriceMode.
+    - [x] sCommerce.ResolveProductVatRate.
+    - [x] sCommerce.ResolveVatDisplay.
+    - [x] sCommerce.ResolveProductRetailExciseRate.
+    - [x] sCommerce.ResolveProductDeposit.
 - [x] Order Domain Events (Laravel Event Dispatcher, after commit).
     - [x] sCommerce.OrderCreated.
     - [x] sCommerce.OrderUpdated.
@@ -118,6 +122,13 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [x] sCommerce.PaymentStatusChanged.
 - [x] Payment Schedule Event (Laravel Event Dispatcher).
     - [x] sCommerce.ResolvePaymentSchedule.
+- [x] Order Line, Fulfilment and Tax Events (Laravel Event Dispatcher).
+    - [x] sCommerce.ResolveLineIdentity.
+    - [x] sCommerce.ResolveProductFulfilment.
+    - [x] sCommerce.ResolveOrderTaxes.
+    - [x] sCommerce.BeforeOrderCreate.
+- [x] Trusted Checkout Context Event (Laravel Event Dispatcher).
+    - [x] sCommerce.ResolveCheckoutContext.
 - [x] JavaScript Callbacks.
     - [x] sCommerce.onAddedToCart.
     - [x] sCommerce.onRemovedFromCart.

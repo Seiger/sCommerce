@@ -48,6 +48,8 @@
         ],
     ],
     "product" => [
+        "container_deposit_on" => 0,
+        "container_terms" => "",
         "available_modes" => [
             0 => 0,
             1 => 1,
@@ -55,6 +57,8 @@
         "inventory_on" => 2,
         "link_rule" => "category",
         "rating_on" => 1,
+        "retail_excise_on" => 0,
+        "retail_excise_rate" => 0,
         "show_field_availability" => 1,
         "show_field_categories" => 1,
         "show_field_height" => 1,
@@ -68,6 +72,9 @@
         "show_field_volume" => 1,
         "show_field_weight" => 1,
         "show_field_width" => 1,
+        "vat_display" => "gross",
+        "vat_display_on" => 0,
+        "vat_rate" => 0,
         "views_on" => 1,
         "visual_editor_introtext" => 0,
     ],

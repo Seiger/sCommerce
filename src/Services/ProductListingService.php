@@ -88,6 +88,7 @@ final class ProductListingService
                     'category' => $categoryId,
                     'price' => (string)($pricing['price'] ?? ''),
                     'oldPrice' => (string)($pricing['oldPrice'] ?? ''),
+                ] + VatDisplay::pricing($product, (float)$pricing['priceAsFloat'], (float)$pricing['oldPriceAsFloat'], sCommerce::currentCurrency()) + [
                     'price_regular' => (float)$row->price_regular,
                     'price_special' => (float)$row->price_special,
                     'currency' => (string)$row->currency,

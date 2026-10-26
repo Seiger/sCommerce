@@ -44,6 +44,9 @@ final class OrderPaymentAction
     /** @var list<string> Order-level actions of offline methods: record received or returned money. */
     public const OFFLINE_ACTIONS = ['receive', 'return'];
 
+    /** Order-level action: return containers of the order and settle their deposit, see {@see ContainerDeposit}. */
+    public const CONTAINER_ACTION = 'containers';
+
     /** Manager permission per action, in addition to `exec_module`. */
     public const PERMISSIONS = [
         'capture' => 'scommerce_payment_capture',
@@ -51,6 +54,8 @@ final class OrderPaymentAction
         'cancel' => 'scommerce_payment_cancel',
         'receive' => 'scommerce_payment_record',
         'return' => 'scommerce_payment_record',
+        'containers' => 'scommerce_payment_record',
+        'container_return' => 'scommerce_payment_record',
     ];
 
     /** Session key of issued form nonces. */
@@ -105,6 +110,7 @@ final class OrderPaymentAction
      *
      * Issues a form nonce per offered action. `capturable` is the suggested capture amount
      * (the authorization capped at the balance due); `partialCapture` whether it may be lowered.
+     * `containerLines` lists the lines whose container deposit can be returned (index => label).
      *
      * @return array{rows: list<array{payment: sOrderPayment, parentProviderRef: ?string, refundable: ?string, capturable: ?string, actions: array<string, string>}>,
      *               operations: list<sPaymentOperation>, orderActions: array<string, string>, partialCapture: bool,
@@ -113,7 +119,7 @@ final class OrderPaymentAction
      */
     public function panel(sOrder $order): array
     {
-        $empty = ['rows' => [], 'operations' => [], 'orderActions' => [], 'partialCapture' => false, 'totals' => null];
+        $empty = ['rows' => [], 'operations' => [], 'orderActions' => [], 'partialCapture' => false, 'totals' => null, 'containerLines' => []];
         if (!$order->exists || !$this->flow->ledgerAvailable()) {
             return $empty;
         }
@@ -128,6 +134,15 @@ final class OrderPaymentAction
                 && $this->offlineLimitMinor($action, $method, $summary, $payments) > 0) {
                 $orderActions[$action] = self::issueNonce((int)$order->id, 0, $action);
             }
+        }
+        $containerLines = [];
+        foreach (is_array($order->products) ? $order->products : [] as $index => $line) {
+            if (is_array($line) && ($returnable = ContainerDeposit::returnable($line)) > 0) {
+                $containerLines[$index] = trim((string)($line['title'] ?? '')) . ' (' . $returnable . ' × ' . number_format((float)$line['deposit_unit'], 2, '.', '') . ')';
+            }
+        }
+        if ($containerLines !== [] && $payments->isNotEmpty() && self::permitted(self::CONTAINER_ACTION)) {
+            $orderActions[self::CONTAINER_ACTION] = self::issueNonce((int)$order->id, 0, self::CONTAINER_ACTION);
         }
         if ($payments->isEmpty() && $orderActions === []) {
             return $empty;
@@ -158,6 +173,7 @@ final class OrderPaymentAction
             'operations' => $operations->filter(static fn (sPaymentOperation $operation) => in_array($operation->state, sPaymentOperation::ACTIVE_STATES, true))->values()->all(),
             'orderActions' => $orderActions,
             'partialCapture' => $method !== null && self::partialCapture($method),
+            'containerLines' => isset($orderActions[self::CONTAINER_ACTION]) ? $containerLines : [],
             'totals' => [
                 'total' => PaymentSummary::decimal($summary->totalMinor),
                 'paid' => PaymentSummary::decimal($summary->netMinor()),

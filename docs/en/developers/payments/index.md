@@ -528,6 +528,8 @@ public function validatePayment(array $data): bool
 
 Processes the payment. Return `true`/`false` or an array with details.
 
+Since 1.5.0, `$data['checkout_context']` carries the order's trusted checkout context, from checkout and from pay links that send `order`. Use sandbox credentials when its `environment` is `test` and live credentials otherwise; never decide from the current user or from request data. See [Trusted checkout context](../events.md#trusted-checkout-context).
+
 ```php
 public function processPayment(array $data): array|bool
 {
@@ -767,6 +769,8 @@ Without `providerRef`, every call inserts a new row. Use that only for manual en
 ### Metadata
 
 `metadata` is stored as a JSON object of at most 64 KB. The `_ledger` key is reserved: sCommerce stores the refund parent, the event scope context (source, actor, correlation, causation, integration actor) and the status history there. Existing keys are kept when a status changes.
+
+Set `environment` (`live` or `test`) to the environment of the PSP event. When it is present and differs from the order's [checkout environment](../events.md#trusted-checkout-context), `record()` throws `InvalidArgumentException`, so a test payment never marks a live order paid.
 
 ### Order payment status
 
@@ -1094,9 +1098,56 @@ When an order with that payment method reaches a selected status, sCommerce reco
 - nothing is recorded when money was refunded, a payment operation is unfinished, or the order is fully paid;
 - partial payments recorded with **Record payment** are respected the same way.
 
-Settlement runs after the status change is committed, once per business operation. The **Payment reconciliation** worker retries settlements that were missed, for example after an error or a status written with a direct database query. Enable the setting only when no other system (an ERP receipt import or a financial integration) records the same payments.
+Test orders are never settled. Settlement runs after the status change is committed, once per business operation. The **Payment reconciliation** worker retries settlements that were missed, for example after an error or a status written with a direct database query. Enable the setting only when no other system (an ERP receipt import or a financial integration) records the same payments.
 
 Third-party offline methods opt in by implementing the marker `OfflineSettlementPaymentMethodInterface` and a `settle_on_statuses` setting; the `OfflineSettlementSettings` trait provides the settings field. `sCommerce::supportsIntegration('offline-settlement')` reports support.
+
+## Returnable container deposits
+
+Since 1.5.0, a product can carry a returnable container deposit, for example a water bottle. The deposit is not a discount and not part of the goods price: it is charged on top of the price and is outside VAT. When the customer hands over empty containers in exchange, the exchanged units carry no new deposit; the price of the goods does not change.
+
+| Operation | Amount |
+|---|---|
+| Water 18.9 l, VAT included | 120 |
+| Bottle deposit | 250 |
+| To pay on the first purchase | 370 |
+| To pay on the next purchase with a bottle exchange | 120 |
+| Refund when the bottle is returned for good | 250 |
+
+### Setting up
+
+- Switch on **Returnable container deposits** in **Settings → Product** (`product.container_deposit_on`, off by default). While it is off, products have no deposit field, the **Containers** tab and the returnable container terms are hidden, no deposit is charged and `scommerce/container-exchange` answers `404`. Returns of deposits already on orders stay possible from the order.
+- Enter **Container deposit** on the product (`s_products.deposit`, in the product currency). A `sCommerce.ResolveProductDeposit` listener can return another amount; see [Events](../events.md#scommerceresolveproductdeposit).
+- Enter **Returnable container terms** in **Settings → Product**: the contract wording that defines the containers as returnable, for example the clause of your public offer. In Ukraine this wording supports excluding the deposit from the VAT base under art. 189.2 of the Tax Code. It is copied to every deposit line and every container return, so later changes of the setting do not alter existing records.
+
+### Checkout and exchange
+
+The customer declares how many empty containers they hand over. Post `productId`, `optionId` and `quantity` to `scommerce/container-exchange` (route `sCommerce.containerExchange`) or call `sCart::setContainerExchange($productId, $optionId, $count)`; quick orders accept `exchange`. The count is capped at the line quantity. sCommerce keeps no balance of containers per customer: when the courier finds a different number, the manager changes **Exchanged containers** on the order line, and the deposit and the order cost are recalculated.
+
+Cart lines and order lines with a deposit store:
+
+| Key | Meaning |
+|---|---|
+| `deposit_unit` | deposit per unit |
+| `exchange_quantity` | units exchanged for empty containers |
+| `deposit_quantity` | units with a new deposit |
+| `deposit_amount` | `deposit_unit × deposit_quantity` |
+| `deposit_returnable` | always `true`: the container is returnable |
+| `deposit_terms` | the returnable container terms at the time of the order |
+| `deposit_returned_quantity` | containers returned from this line later |
+
+The mini-cart has `totalGoods`, `totalDeposit` and `totalSum` (goods plus deposits, what the customer pays). The order `cost` includes the deposits. The manager order page and the print document show them as **Including container deposit**, and the print document adds the returnable container terms.
+
+### Returning containers
+
+Every return is a row in `s_container_returns` (`sContainerReturn`): product, quantity, deposit per unit, amount, currency, settlement, the orders involved, the customer, the manager and the returnable container terms. A resubmitted form records once.
+
+- **From an order:** the order's **Payments** panel offers **Return containers** for lines whose deposit was paid. The order's deposit and cost are lowered, and the money leaves its ledger as a `refund` row with the provider `container_deposit`, so the order stays paid for its goods.
+- **Without an order:** the **Containers** tab of the module records a return for a customer (name, phone or account id) and a product with a deposit, or any deposit amount.
+- **Cash refund:** the money is paid out. For a return without an order, the `s_container_returns` row is the only record; the order payments ledger needs an order.
+- **Credit toward an order:** enter the order id. The amount is recorded there as a `manual` payment with the provider `container_deposit`, up to the order's balance due and in its currency. A return from another order moves the money: a `refund` on the source order and a payment on the target order.
+
+Returns need the `scommerce_payment_record` permission. `sCommerce::supportsIntegration('container-deposit')` reports support.
 
 ## Testing Payment Methods
 

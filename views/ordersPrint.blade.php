@@ -78,6 +78,12 @@ p { margin:0; overflow-wrap:anywhere; }
             if ($tracking !== '') break;
         }
         $products = array_values(array_filter(is_array($order->products) ? $order->products : [], 'is_array'));
+        $depositTotal = \Seiger\sCommerce\Services\ContainerDeposit::total($products);
+        $depositTerms = '';
+        foreach ($products as $line) {
+            if ($depositTerms === '' && (float)($line['deposit_unit'] ?? 0) > 0) $depositTerms = $text($line['deposit_terms'] ?? '');
+        }
+        $retailExcise = array_sum(array_map(static fn ($line) => is_numeric($line['retail_excise_amount'] ?? null) ? (float)$line['retail_excise_amount'] : 0.0, $products));
         $client = trim(implode(' ', array_filter(array_map(static fn($key) => $text($user[$key] ?? ''), ['first_name', 'middle_name', 'last_name']))));
     @endphp
     <article>
@@ -102,6 +108,7 @@ p { margin:0; overflow-wrap:anywhere; }
                     @foreach($product as $option)
                         @if(is_array($option) && isset($option['title']))<p class="option">{{$text($option['title'])}}: {{$text($option['label'] ?? '')}}</p>@endif
                     @endforeach
+                    @if((float)($product['deposit_unit'] ?? 0) > 0 && (int)($product['deposit_quantity'] ?? 0) > 0)<p class="option deposit">@lang('sCommerce::global.container_deposit'): {{(int)$product['deposit_quantity']}} × {{$money((float)$product['deposit_unit'], $order->currency)}}</p>@endif
                 </td><td class="quantity">{{$quantity}}</td><td class="amount">{{$money($price, $order->currency)}}</td><td class="amount">{{$money($price * $quantity, $order->currency)}}</td></tr>
             @endforeach
             </tbody>
@@ -110,8 +117,11 @@ p { margin:0; overflow-wrap:anywhere; }
             <table class="totals"><tbody>
                 @if(is_numeric($delivery['cost'] ?? null) && (float)$delivery['cost'] > 0)<tr><th>@lang('sCommerce::global.shipping_cost'):</th><td>{{$money($delivery['cost'], $order->currency)}}</td></tr>@endif
                 <tr class="grand-total"><th>@lang('sCommerce::global.total'):</th><td>{{$money($order->cost, $order->currency)}}</td></tr>
+                @if($depositTotal > 0)<tr class="deposit"><th>@lang('sCommerce::global.container_deposit_included'):</th><td>{{$money($depositTotal, $order->currency)}}</td></tr>@endif
+                @if($retailExcise > 0)<tr class="retail-excise"><th>@lang('sCommerce::global.retail_excise_included'):</th><td>{{$money($retailExcise, $order->currency)}}</td></tr>@endif
             </tbody></table>
             <p class="positions">{{__('sCommerce::global.print_positions', ['count' => count($products)])}}</p>
+            @if($depositTotal > 0 && $depositTerms !== '')<p class="deposit-terms">{{$depositTerms}}</p>@endif
             @if($deliveryName !== '' || $address || $tracking !== '' || $text($order->comment) !== '')
                 <div class="fulfilment">
                     @if($deliveryName !== '')<p><strong>@lang('sCommerce::global.delivery'):</strong> {{$deliveryName}}</p>@endif

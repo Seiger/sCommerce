@@ -19,6 +19,12 @@ php tests/standalone/scommerce-webhook-dispatch.php
 php tests/standalone/scommerce-payment-actions.php
 php tests/standalone/scommerce-payment-schedule.php
 php tests/standalone/scommerce-offline-settlement.php
+php tests/standalone/scommerce-line-identity.php
+php tests/standalone/scommerce-fulfilment.php
+php tests/standalone/scommerce-checkout-context.php
+php tests/standalone/scommerce-order-taxes.php
+php tests/standalone/scommerce-vat-display.php
+php tests/standalone/scommerce-container-deposit.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use ReflectionClass;
+use Seiger\sCommerce\Checkout\CheckoutContext;
 use Seiger\sCommerce\Events\DomainEventRecorder;
 use Seiger\sCommerce\Events\OrderCancelled;
 use Seiger\sCommerce\Events\OrderCreated;
@@ -78,23 +79,40 @@ class sOrder extends Model
         'manager_notes' => 'array',
         'history' => 'array',
         'marketing' => 'array',
+        'totals' => 'array',
+        'meta' => 'array',
         'do_not_call' => 'boolean',
     ];
 
-    /** @var array<string, true> Tables known to have the `uuid` column. */
-    private static array $uuidColumns = [];
+    /** @var array<string, true> `connection.table.column` keys of optional columns known to exist. */
+    private static array $knownColumns = [];
 
     /**
-     * Fill the public UUID, record domain events after commit and schedule offline settlement on status changes.
+     * Fill the public UUID, keep the checkout context immutable, record domain events after commit
+     * and schedule offline settlement on status changes.
      *
      * @since 1.5.0
      */
     protected static function booted(): void
     {
         static::creating(function (sOrder $order) {
-            if (empty($order->uuid) && $order->hasUuidColumn()) {
+            if (empty($order->uuid) && $order->hasOptionalColumn('uuid')) {
                 $order->uuid = (string)Str::uuid();
             }
+        });
+        static::updating(function (sOrder $order) {
+            if (!$order->isDirty('meta')) {
+                return;
+            }
+            // `meta.integration` is written once at creation; later writes keep the original binding.
+            $original = $order->getOriginal('meta');
+            $meta = is_array($order->meta) ? $order->meta : [];
+            if (is_array($original) && array_key_exists(CheckoutContext::META_KEY, $original)) {
+                $meta[CheckoutContext::META_KEY] = $original[CheckoutContext::META_KEY];
+            } else {
+                unset($meta[CheckoutContext::META_KEY]);
+            }
+            $order->meta = $meta ?: null;
         });
         static::created(function (sOrder $order) {
             DomainEventRecorder::instance()->record(OrderCreated::from($order), $order->getConnection());
@@ -218,6 +236,46 @@ class sOrder extends Model
     }
 
     /**
+     * Orders of the live environment: everything except trusted test checkouts.
+     *
+     * @since 1.5.0
+     */
+    public function scopeLive(Builder $query): Builder
+    {
+        if (!$this->hasOptionalColumn('meta')) {
+            return $query;
+        }
+        $path = 'meta->' . CheckoutContext::META_KEY . '->environment';
+
+        return $query->where(static fn (Builder $q) => $q->whereNull('meta')->orWhereNull($path)->orWhere($path, CheckoutContext::LIVE));
+    }
+
+    /**
+     * Orders created by trusted test checkouts.
+     *
+     * @since 1.5.0
+     */
+    public function scopeTest(Builder $query): Builder
+    {
+        if (!$this->hasOptionalColumn('meta')) {
+            return $query->whereRaw('1 = 0');
+        }
+        $path = 'meta->' . CheckoutContext::META_KEY . '->environment';
+
+        return $query->whereNotNull($path)->where($path, '!=', CheckoutContext::LIVE);
+    }
+
+    /**
+     * Whether the order was created by a trusted test checkout.
+     *
+     * @since 1.5.0
+     */
+    public function isTest(): bool
+    {
+        return !CheckoutContext::isLive($this);
+    }
+
+    /**
      * Apply search filters to the query
      *
      * @param \Illuminate\Database\Eloquent\Builder $query The query builder object
@@ -317,15 +375,17 @@ class sOrder extends Model
     }
 
     /**
-     * Whether the `uuid` column exists; only positive results are cached.
+     * Whether a column added by a later migration exists; only positive results are cached.
+     *
+     * @since 1.5.0
      */
-    private function hasUuidColumn(): bool
+    public function hasOptionalColumn(string $column): bool
     {
-        $key = $this->getConnectionName() . '.' . $this->getTable();
-        if (!isset(self::$uuidColumns[$key]) && $this->getConnection()->getSchemaBuilder()->hasColumn($this->getTable(), 'uuid')) {
-            self::$uuidColumns[$key] = true;
+        $key = $this->getConnectionName() . '.' . $this->getTable() . '.' . $column;
+        if (!isset(self::$knownColumns[$key]) && $this->getConnection()->getSchemaBuilder()->hasColumn($this->getTable(), $column)) {
+            self::$knownColumns[$key] = true;
         }
 
-        return isset(self::$uuidColumns[$key]);
+        return isset(self::$knownColumns[$key]);
     }
 }

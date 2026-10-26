@@ -106,6 +106,22 @@
                         <button type="button" class="btn btn-sm btn-success" data-payment-action="receive" data-nonce="{{$orderActions['receive']}}">@lang('sCommerce::global.payment_record')</button>
                     </span>
                 @endisset
+                @isset($orderActions['containers'])
+                    <span class="text-nowrap" data-payment-form="containers">
+                        <select data-payment-field="line" aria-label="@lang('sCommerce::global.container_return_line')">
+                            @foreach($panel['containerLines'] ?? [] as $lineIndex => $lineLabel)
+                                <option value="{{$lineIndex}}">{{$lineLabel}}</option>
+                            @endforeach
+                        </select>
+                        <input type="number" min="1" step="1" style="width:5em" value="1" data-payment-field="count" aria-label="@lang('sCommerce::global.container_return_count')" title="@lang('sCommerce::global.container_return_count')">
+                        <select data-payment-field="settlement" aria-label="@lang('sCommerce::global.container_return_settlement')">
+                            <option value="cash">@lang('sCommerce::global.container_return_cash')</option>
+                            <option value="credit">@lang('sCommerce::global.container_return_credit')</option>
+                        </select>
+                        <input type="number" min="1" step="1" style="width:7em" data-payment-field="credit_order" placeholder="@lang('sCommerce::global.container_return_credit_order')" aria-label="@lang('sCommerce::global.container_return_credit_order')">
+                        <button type="button" class="btn btn-sm btn-info" data-payment-action="containers" data-nonce="{{$orderActions['containers']}}">@lang('sCommerce::global.container_return')</button>
+                    </span>
+                @endisset
                 @isset($orderActions['return'])
                     <span class="text-nowrap" data-payment-form="return">
                         <input type="text" inputmode="decimal" size="8" data-payment-amount value="{{($totals['overpaid'] ?? '0.00') !== '0.00' ? $totals['overpaid'] : ''}}" aria-label="@lang('sCommerce::global.payment_return_amount')" title="@lang('sCommerce::global.payment_returnable'): {{$totals['returnable'] ?? ''}}">
