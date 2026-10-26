@@ -97,6 +97,32 @@
 </div>
 <div class="row form-row">
     <div class="col-auto">
+        <label for="product__inventory_commit" class="warning">@lang('sCommerce::global.inventory_commit')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.inventory_commit_help')"></i>
+    </div>
+    <div class="col col-4 col-md-3 col-lg-2">
+        <select id="product__inventory_commit" class="form-control" name="product__inventory_commit" onchange="documentDirty=true;">
+            @foreach(\Seiger\sCommerce\Services\StockCommitter::MODES as $mode)
+                <option value="{{$mode}}" @selected(\Seiger\sCommerce\Services\StockCommitter::mode() === $mode)>@lang('sCommerce::global.inventory_commit_' . $mode)</option>
+            @endforeach
+        </select>
+    </div>
+</div>
+<div class="row form-row">
+    <div class="col-auto">
+        <label for="product__inventory_release_on_cancel" class="warning">@lang('sCommerce::global.inventory_release_on_cancel')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.inventory_release_on_cancel_help')"></i>
+    </div>
+    <div class="col">
+        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__inventory_release_on_cancel);" @if(sCommerce::config('product.inventory_release_on_cancel', 1) == 1) checked @endif>
+        <input type="hidden" id="product__inventory_release_on_cancel" name="product__inventory_release_on_cancel" value="{{sCommerce::config('product.inventory_release_on_cancel', 1)}}" onchange="documentDirty=true;">
+    </div>
+</div>
+@foreach(\Seiger\sCommerce\Services\StockCommitter::configurationWarnings() as $warning)
+    <div class="row form-row"><div class="col"><span class="text-danger">{{$warning}}</span></div></div>
+@endforeach
+<div class="row form-row">
+    <div class="col-auto">
         <label for="product__show_field_sku" class="warning">@lang('sCommerce::global.sku')</label>
         <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.sku')"></i>
     </div>

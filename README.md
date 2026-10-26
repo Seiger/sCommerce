@@ -131,6 +131,9 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [x] sCommerce.ResolveCheckoutContext.
 - [x] Shipments and Tracking (ERP/carrier API, partial parcels, optional order status from shipments).
     - [x] sCommerce.ShipmentUpdated.
+- [x] Stock Integration (external stock provider, stock write API, optional stock reduction on orders).
+    - [x] sCommerce.ResolveProductStock.
+    - [x] sCommerce.ProductStockChanged.
 - [x] JavaScript Callbacks.
     - [x] sCommerce.onAddedToCart.
     - [x] sCommerce.onRemovedFromCart.

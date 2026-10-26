@@ -8,6 +8,7 @@ use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Services\ContainerDeposit;
 use Seiger\sCommerce\Services\OrderLineIdentity;
+use Seiger\sCommerce\Services\StockResolver;
 use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sCommerce\Services\sPriceResolver;
 
@@ -137,7 +138,8 @@ class sCart
 
         // Virtual and service lines are not counted against inventory.
         if (sCommerce::config('product.inventory_on', 0) && $this->tracksInventory($product, $optionId)) {
-            if ($product->inventory < 0) {
+            $available = app(StockResolver::class)->available($product, 0, ['optionId' => $optionId, 'quantity' => $quantity]);
+            if ($available < 0) {
                 $message = __('sCommerce::global.product_title_is_out_of_stock', ['title' => $product->title]);
                 Log::channel('scommerce')->alert('sCart - ' . $message);
 
@@ -147,7 +149,7 @@ class sCart
                     'message' =>  $message,
                 ];
             } else {
-                $quantity = min($quantity, $product->inventory);
+                $quantity = min($quantity, $available);
             }
         }
 

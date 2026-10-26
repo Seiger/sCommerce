@@ -1298,6 +1298,7 @@ class ImportExportCSV extends BaseWorker
         if (isset($data['relevants'])) $product->relevants = json_encode(($data['relevants'] ?? []), JSON_UNESCAPED_UNICODE);
         if (isset($data['similar'])) $product->similar = json_encode(($data['similar'] ?? []), JSON_UNESCAPED_UNICODE);
         if (isset($data['tmplvars'])) $product->tmplvars = json_encode(($data['tmplvars'] ?? []), JSON_UNESCAPED_UNICODE);
+        $product->stockSource = 'import';
         $product->save();
 
         // Process text fields (pagetitle, longtitle, introtext, content) incl. multilang

@@ -1252,7 +1252,8 @@ switch ($get) {
         $product->tmplvars = json_encode(request()->input('tmplvars', []), JSON_UNESCAPED_UNICODE);
         $product->votes = json_encode($votes, JSON_UNESCAPED_UNICODE);
         $product->mode = request()->integer('mode');
-        $product->save();
+        $product->stockSource = 'manager';
+        EventScope::run('manager', (int)evo()->getLoginUserID('mgr'), fn () => $product->save());
 
         $inputCats = (array)request()->input('categories', []);
         $categories = [];

@@ -616,6 +616,38 @@ Payload містить:
 
 Подія відправлення викликається перед подіями замовлення, які вона спричиняє, наприклад `sCommerce.OrderStatusChanged` до *Відправлено*. API описано в розділі [Відправлення та відстеження](deliveries.md#відправлення-та-відстеження-api--події). `sCommerce::supportsIntegration('shipments')` повідомляє про підтримку.
 
+## Події залишків
+
+### sCommerce.ResolveProductStock
+
+Починаючи з 1.5.0, кошик запитує в `Seiger\sCommerce\Services\StockResolver::available()`, скільки одиниць товару він може додати. Перемагає перше ціле число, повернене слухачем `sCommerce.ResolveProductStock`; `null` передає відповідь наступному слухачеві. Payload містить `product`, `modificationId` (завжди `0`: id опції кошика не є модифікацією), `quantity` (локальний `s_products.inventory`) і `context` (`optionId` та запитане `quantity`). Прив’язаний провайдер залишків опитується до слухачів, а якщо ніхто не відповів, використовується локальний залишок.
+
+```php
+Event::listen('sCommerce.ResolveProductStock', function (array $payload) {
+    return $payload['product']->sku === 'GIFT-CARD' ? 1000 : null;
+});
+```
+
+### Провайдер залишків
+
+Пакет може зробити джерелом залишків зовнішню систему, наприклад ERP, прив’язавши `Seiger\sCommerce\Interfaces\StockProviderInterface` у своєму сервіс-провайдері: `app()->bind(StockProviderInterface::class, ErpStock::class)`. Використовується не більше одного провайдера.
+
+- `available(sProduct $product, int $modificationId = 0, array $context = []): ?int` повертає кількість або `null`, щоб використати слухачів, а потім локальний залишок.
+- `commit(sOrder $order): bool` і `release(sOrder $order): bool` викликаються, коли ввімкнено списання залишку за замовленнями (див. [Налаштування](../configuration.md#залишки)). Поверніть `true`, якщо провайдер обробив замовлення; тоді sCommerce не змінює локальні залишки. Залишок замовлення повертає той, хто його списав: замовлення, залишок якого sCommerce списав локально, відновлюється локально без звернення до провайдера.
+- Обидва методи можуть виконатися повторно після помилки або збою, тому вони мають бути ідемпотентними в межах замовлення, наприклад із ключем за UUID замовлення.
+
+### Запис залишків
+
+`Seiger\sCommerce\Services\StockWriter::set($productOrId, $quantity, 0, 'erp', $availability)` встановлює залишок і, якщо передано, доступність (`0` немає в наявності, `1` в наявності, `2` під замовлення) одного товару. Варіант GROUP — це окремий рядок товару: передавайте товар варіанта. Ненульовий `modificationId` відхиляється, бо рядки `s_product_modifications` не мають власної ідентичності. Запис, який нічого не змінює, не створює події. Ядро не кешує значення залишків, тому жоден кеш не очищується; слухачі `sCommerce.ProductStockChanged` можуть очищати власні кеші.
+
+### sCommerce.ProductStockChanged
+
+Починаючи з 1.5.0, зміна `s_products.inventory` або `s_products.availability` викликає `sCommerce.ProductStockChanged`, хоч би хто її записав: форма товару, CSV-імпорт, `StockWriter` або списання залишку за замовленням. Подія підпорядковується правилам доставки подій замовлень: лише після коміту, з контекстом області подій. Зміни одного товару в одній області подій об’єднуються від першого старого до останнього нового значення, а об’єднання, яке нічого не змінює, відкидається.
+
+Payload містить `event`, `productId`, `modificationId` (завжди `0`), `sku`, `oldQuantity`, `newQuantity`, `oldAvailability`, `newAvailability`, `stockSource` (хто записав: `manager`, `import`, `order`, джерело, передане в `StockWriter`, або джерело області подій для інших збережень моделі) і ключі контексту `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` і `occurredAt`. Списання та повернення залишків за замовленнями виконуються в області подій із джерелом `inventory`.
+
+`sCommerce::supportsIntegration('stock-provider')` повідомляє про підтримку.
+
 ## Додаткові події менеджера та frontend
 
 Події менеджера слухають із префіксом evolution. Події ціноутворення мають точні імена sCommerce.* без цього префікса. Для frontend використовуйте наведені callbacks; структура відповіді залежить від операції.
