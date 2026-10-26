@@ -162,27 +162,36 @@ Event::listen('sCommerce.ResolveProductDeposit', function (array $payload) {
 
 ### sCommerce.CheckoutValidationRules
 
-Dispatched by `sCheckout::getValidationRules(array $data)` after base rules and selected delivery-method rules have been merged.
+`getValidationRules(array $data, string $context = 'default')` is the single source
+of standard, delivery and plugin rules. Normal checkout uses user, delivery
+and payment fields; quick checkout uses quantity, phone and email fields.
+Disabled delivery/payment features do not require their corresponding method.
+Both sets include product array and integer quantity rules.
 
-- `data`: the input data passed to `getValidationRules()`.
-- `rules`: the final rules array, passed by reference. Add or replace keys, or use `unset()` to remove a rule.
-
-Place the listener in `core/custom/packages/main/plugins/sCommerceEvents.php` when the main service provider loads that directory. Modify `rules` directly; returned arrays are not applied. Listeners see changes made by earlier listeners, so a later listener can overwrite them.
+The Laravel Event payload contains `data`, `rules` passed by reference, and
+`context` (`default` by default, `quick` for quick orders). Modify `rules` in place; return values are
+ignored. Later listeners see earlier changes. A switch selects the base rules;
+other contexts start with normal checkout rules and remain available to plugins.
 
 ```php
 use Illuminate\Support\Facades\Event;
 
-Event::listen('sCommerce.CheckoutValidationRules', function (array $params) {
-    $rules = &$params['rules'];
-    $data = $params['data'];
-
-    $rules['user.email'] = 'nullable|email|max:255';
-    $rules['user.first_name'] = ['required', 'string', 'max:100'];
-    unset($rules['user.middle_name']);
+Event::listen('sCommerce.CheckoutValidationRules', function (array $params): void {
+    if ($params['context'] === 'default') $params['rules']['user.email'] = 'nullable|email';
+    $params['rules']['products'][] = function ($field, $items, $fail) {
+        // Project checks; call $fail('Message') to reject.
+    };
 });
 ```
 
-`setOrderData()` subsequently filters the rules to keys present in the submitted data. Adding `required` here does not make an omitted field mandatory in that partial update. Removing a rule also removes that field from this validation path; it does not automatically persist arbitrary fields. Use [`sCommerce.BeforeOrderCreate`](#scommercebeforeordercreate) to store project fields in the order `meta`. When no cart line requires shipping, `delivery.method` is already removed before this event. Quick-order validation uses its own rules and does not call this hook.
+`setOrderData()` keeps its partial-update behavior: only rules for submitted
+fields are applied. `processOrder()` validates prepared server order data
+against the full same rule set before persistence and payment, including when
+called directly. Quick checkout invokes the validator and this event once, after preparing
+server product lines. Submitted quantities stay uncast in both input and lines;
+integer conversion, single-product totals and deposits follow successful validation. Request-supplied `products` are ignored and replaced with
+the actual product or cart lines; partial forms without products skip that rule.
+The package contains no project-specific minimum attribute or policy class.
 
 These three events use the exact names documented on this page, without the `evolution.` prefix. The previous price-event names `evolution.sCommerceResolveProductPriceMode` and `evolution.sCommerceResolveProductPrice` are no longer dispatched; update project listeners and sPricing together with sCommerce.
 

@@ -64,6 +64,7 @@ php artisan migrate
 - [Початок роботи](./getting-started.md)
 - [Керування магазином](./admin/index.md)
 - [Розробнику](./developers/index.md)
+- [Події валідації оформлення](developers/events.md#scommercecheckoutvalidationrules)
 - [API / sApi](./developers/api.md)
 - [CSV-імпорт та експорт](./admin/import-export.md)
 
