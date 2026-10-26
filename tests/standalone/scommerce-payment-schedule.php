@@ -70,6 +70,7 @@ $package = dirname(__DIR__, 2);
 $loader = new ArrayLoader();
 $loader->addMessages('en', 'global', require $package . '/lang/en/global.php', 'sCommerce');
 $app->instance('translator', new Translator($loader, 'en'));
+$app->instance('validator', new Illuminate\Validation\Factory($app['translator'], $app));
 $app->instance('sCommerce', new class {
     public function config($key, $default = null) { return match ($key) { 'basic.deliveries_on' => 0, 'basic.payments_on' => 1, default => str_starts_with($key, 'notifications.') ? 0 : $default }; }
 });
@@ -146,7 +147,7 @@ $checkout = static function (string $method = 'instpsp', float $cost = 100): sCh
             'products' => [['id' => 1, 'title' => 'Service', 'quantity' => 1, 'price' => $cost]],
             'cost' => $cost,
             'currency' => 'EUR',
-            'user' => ['id' => 0, 'email' => ''],
+            'user' => ['id' => 0, 'first_name' => 'Customer', 'email' => 'customer@shop.test'],
             'payment' => ['method' => $method],
         ];
     }, $checkout, sCheckout::class)();
