@@ -87,4 +87,8 @@
         "show_field_views" => 1,
         "show_field_visibility" => 1,
     ],
+    "shipping" => [
+        "partial_policy" => "on_complete",
+        "sync_order_status" => 0,
+    ],
 ];

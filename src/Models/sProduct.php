@@ -489,7 +489,7 @@ class sProduct extends Model
 
     /**
      * Get the localized attribute associated with the product by alias.
-     * Numeric values retain fractions; physical measurements use four decimal places.
+     * Numeric values retain fractions; physical measurements are whole numbers labelled with units.
      *
      * @param $alias
      * @return mixed
@@ -509,11 +509,17 @@ class sProduct extends Model
 
             switch ($attribute->type) {
                 case sAttribute::TYPE_ATTR_NUMBER:
-                    $value = in_array($alias, self::PHYSICAL_ATTRIBUTES, true)
-                        ? self::normalizePhysicalValue($attribute->pivot->value ?? 0)
-                        : (new sCommerceController())->validateNumber($attribute->pivot->value ?? 0);
+                    $value = (new sCommerceController())->validateNumber($attribute->pivot->value ?? 0);
                     $attribute->value = $value;
                     $attribute->label = $value;
+                    if (in_array($alias, self::PHYSICAL_ATTRIBUTES, true)) {
+                        try {
+                            $attribute->value = self::normalizePhysicalValue($attribute->pivot->value ?? 0);
+                            $attribute->label = self::physicalLabel($alias, $attribute->value);
+                        } catch (\InvalidArgumentException) {
+                            // A fractional value stored before measurements became whole numbers is shown as is.
+                        }
+                    }
                     break;
                 case sAttribute::TYPE_ATTR_CHECKBOX:
                     $value = intval($attribute->pivot->value ?? 0);

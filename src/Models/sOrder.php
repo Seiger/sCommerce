@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -144,6 +145,16 @@ class sOrder extends Model
         static::deleted(function (sOrder $order) {
             DomainEventRecorder::instance()->record(OrderDeleted::from($order, $order->isForceDeleting()), $order->getConnection());
         });
+    }
+
+    /**
+     * Shipments of the order, in creation order.
+     *
+     * @since 1.5.0
+     */
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(sOrderShipment::class, 'order_id')->orderBy('sequence')->orderBy('id');
     }
 
     /**

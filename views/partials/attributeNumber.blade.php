@@ -1,3 +1,4 @@
+@php($physicalUnit = \Seiger\sCommerce\Models\sProduct::physicalUnit($attribute->alias ?? ''))
 <div class="row-col col-12">
     <div class="row form-row">
         <div class="col-auto col-title">
@@ -6,7 +7,8 @@
         </div>
         <div class="input-group mb-3 col">
             <div class="input-group-prepend"><span class="input-group-text"><small>@lang('sCommerce::global.type_attr_number')</small></span></div>
-            <input type="number" step="any" @if(in_array($attribute->alias ?? '', \Seiger\sCommerce\Models\sProduct::PHYSICAL_ATTRIBUTES, true)) min="0" @endif id="{{$prefix}}{{$attribute->id}}" name="{{$prefix}}{{$attribute->id}}" class="form-control" value="{{$attribute->value ?? 0}}" onchange="documentDirty=true;">
+            <input type="number" @if($physicalUnit !== '') step="1" min="0" @else step="any" @endif id="{{$prefix}}{{$attribute->id}}" name="{{$prefix}}{{$attribute->id}}" class="form-control" value="{{$attribute->value ?? 0}}" onchange="documentDirty=true;">
+            @if($physicalUnit !== '')<div class="input-group-append"><span class="input-group-text">{{$physicalUnit}}</span></div>@endif
         </div>
     </div>
 </div>

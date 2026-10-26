@@ -129,6 +129,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [x] sCommerce.BeforeOrderCreate.
 - [x] Trusted Checkout Context Event (Laravel Event Dispatcher).
     - [x] sCommerce.ResolveCheckoutContext.
+- [x] Shipments and Tracking (ERP/carrier API, partial parcels, optional order status from shipments).
+    - [x] sCommerce.ShipmentUpdated.
 - [x] JavaScript Callbacks.
     - [x] sCommerce.onAddedToCart.
     - [x] sCommerce.onRemovedFromCart.
