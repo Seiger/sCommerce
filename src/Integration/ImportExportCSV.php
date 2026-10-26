@@ -1289,11 +1289,11 @@ class ImportExportCSV extends BaseWorker
         if (isset($data['price_special'])) $product->price_special = $sCommerceController->validatePrice($data['price_special'] ?? 0);
         if (isset($data['price_opt_regular'])) $product->price_opt_regular = $sCommerceController->validatePrice($data['price_opt_regular'] ?? 0);
         if (isset($data['price_opt_special'])) $product->price_opt_special = $sCommerceController->validatePrice($data['price_opt_special'] ?? 0);
-        if (isset($data['weight'])) $product->weight = intval($data['weight'] ?? 0);
-        if (isset($data['width'])) $product->width = intval($data['width'] ?? 0);
-        if (isset($data['height'])) $product->height = intval($data['height'] ?? 0);
-        if (isset($data['length'])) $product->length = intval($data['length'] ?? 0);
-        if (isset($data['volume'])) $product->volume = intval($data['volume'] ?? 0);
+        if (isset($data['weight'])) $product->setPhysicalValue('weight', $data['weight']);
+        if (isset($data['width'])) $product->setPhysicalValue('width', $data['width']);
+        if (isset($data['height'])) $product->setPhysicalValue('height', $data['height']);
+        if (isset($data['length'])) $product->setPhysicalValue('length', $data['length']);
+        if (isset($data['volume'])) $product->setPhysicalValue('volume', $data['volume']);
         if (isset($data['cover'])) $product->cover = trim($data['cover'] ?? '/assets/site/noimage.png');
         if (isset($data['relevants'])) $product->relevants = json_encode(($data['relevants'] ?? []), JSON_UNESCAPED_UNICODE);
         if (isset($data['similar'])) $product->similar = json_encode(($data['similar'] ?? []), JSON_UNESCAPED_UNICODE);
@@ -1416,7 +1416,7 @@ class ImportExportCSV extends BaseWorker
         foreach ($data as $key => $value) {
             if (str_starts_with($key, 'attribute:')) {
                 $attributeAlias = substr($key, 10); // Remove 'attribute:' prefix
-                if (!empty($value)) {
+                if (!empty($value) || in_array($attributeAlias, sProduct::PHYSICAL_ATTRIBUTES, true)) {
                     $this->updateProductAttribute($product, $attributeAlias, $value);
                 }
             }
@@ -1608,15 +1608,18 @@ class ImportExportCSV extends BaseWorker
 
         $attribute = $attributes->where('alias', $attributeAlias)->first();
         if ($attribute) {
+            if (in_array($attributeAlias, sProduct::PHYSICAL_ATTRIBUTES, true)) {
+                $product->setPhysicalValue($attributeAlias, $value)->save();
+                return;
+            }
+            $product->unsetRelation('attrValues');
             $product->attrValues()->detach($attribute->id);
             switch ($attribute->type) {
                 case sAttribute::TYPE_ATTR_NUMBER : // 0
-                    if (trim($value)) {
-                        if (is_float($value)) {
-                            $value = floatval(str_replace(',', '.', $value));
-                        } else {
-                            $value = intval($value);
-                        }
+                    if (trim($value) !== '' || in_array($attributeAlias, sProduct::PHYSICAL_ATTRIBUTES, true)) {
+                        $value = in_array($attributeAlias, sProduct::PHYSICAL_ATTRIBUTES, true)
+                            ? sProduct::normalizePhysicalValue($value)
+                            : $sCommerceController->validateNumber($value);
                         $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => $value]);
                     }
                     break;

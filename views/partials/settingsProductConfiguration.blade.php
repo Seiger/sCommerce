@@ -217,56 +217,7 @@
         <input type="hidden" id="product__show_field_relevant" name="product__show_field_relevant" value="{{sCommerce::config('product.show_field_relevant', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
-<div class="row form-row">
-    <div class="col-auto">
-        <label for="product__show_field_weight" class="warning">@lang('sCommerce::global.weight')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.weight')"></i>
-    </div>
-    <div class="col">
-        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_weight);" @if(sCommerce::config('product.show_field_weight', 1) == 1) checked @endif>
-        <input type="hidden" id="product__show_field_weight" name="product__show_field_weight" value="{{sCommerce::config('product.show_field_weight', 1)}}" onchange="documentDirty=true;">
-    </div>
-</div>
-<div class="row form-row">
-    <div class="col-auto">
-        <label for="product__show_field_width" class="warning">@lang('sCommerce::global.width')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.width')"></i>
-    </div>
-    <div class="col">
-        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_width);" @if(sCommerce::config('product.show_field_width', 1) == 1) checked @endif>
-        <input type="hidden" id="product__show_field_width" name="product__show_field_width" value="{{sCommerce::config('product.show_field_width', 1)}}" onchange="documentDirty=true;">
-    </div>
-</div>
-<div class="row form-row">
-    <div class="col-auto">
-        <label for="product__show_field_height" class="warning">@lang('sCommerce::global.height')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.height')"></i>
-    </div>
-    <div class="col">
-        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_height);" @if(sCommerce::config('product.show_field_height', 1) == 1) checked @endif>
-        <input type="hidden" id="product__show_field_height" name="product__show_field_height" value="{{sCommerce::config('product.show_field_height', 1)}}" onchange="documentDirty=true;">
-    </div>
-</div>
-<div class="row form-row">
-    <div class="col-auto">
-        <label for="product__show_field_length" class="warning">@lang('sCommerce::global.length')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.length')"></i>
-    </div>
-    <div class="col">
-        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_length);" @if(sCommerce::config('product.show_field_length', 1) == 1) checked @endif>
-        <input type="hidden" id="product__show_field_length" name="product__show_field_length" value="{{sCommerce::config('product.show_field_length', 1)}}" onchange="documentDirty=true;">
-    </div>
-</div>
-<div class="row form-row">
-    <div class="col-auto">
-        <label for="product__show_field_volume" class="warning">@lang('sCommerce::global.volume')</label>
-        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field') @lang('sCommerce::global.volume')"></i>
-    </div>
-    <div class="col">
-        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.product__show_field_volume);" @if(sCommerce::config('product.show_field_volume', 1) == 1) checked @endif>
-        <input type="hidden" id="product__show_field_volume" name="product__show_field_volume" value="{{sCommerce::config('product.show_field_volume', 1)}}" onchange="documentDirty=true;">
-    </div>
-</div>
+
 <div class="row form-row">
     <div class="col-auto">
         <label for="product__visual_editor_introtext" class="warning">@lang('sCommerce::global.visual_editor_for') @lang('global.resource_summary')</label>

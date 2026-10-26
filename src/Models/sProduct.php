@@ -17,7 +17,8 @@ use Seiger\sGallery\sGallery;
  * Class sProduct
  *
  * This class represents a product in the sCommerce application.
- * It extends the base Model class.
+ * Physical measurements use numeric attributes. Positive legacy columns are consumed
+ * atomically when a product is saved; new installations do not contain these columns.
  *
  * @package Seiger\sCommerce
  *
@@ -38,6 +39,8 @@ use Seiger\sGallery\sGallery;
  */
 class sProduct extends Model
 {
+    use \Seiger\sCommerce\Models\Concerns\HasPhysicalAttributes;
+
     /**
      * Static cache for friendly URL suffix configuration.
      * Loaded once per request to avoid multiple config lookups.
@@ -485,7 +488,8 @@ class sProduct extends Model
     }
 
     /**
-     * Get the attribute associated with the product by alias.
+     * Get the localized attribute associated with the product by alias.
+     * Numeric values retain fractions; physical measurements use four decimal places.
      *
      * @param $alias
      * @return mixed
@@ -505,6 +509,12 @@ class sProduct extends Model
 
             switch ($attribute->type) {
                 case sAttribute::TYPE_ATTR_NUMBER:
+                    $value = in_array($alias, self::PHYSICAL_ATTRIBUTES, true)
+                        ? self::normalizePhysicalValue($attribute->pivot->value ?? 0)
+                        : (new sCommerceController())->validateNumber($attribute->pivot->value ?? 0);
+                    $attribute->value = $value;
+                    $attribute->label = $value;
+                    break;
                 case sAttribute::TYPE_ATTR_CHECKBOX:
                     $value = intval($attribute->pivot->value ?? 0);
                     $attribute->value = $value;

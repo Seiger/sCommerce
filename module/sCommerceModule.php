@@ -1228,11 +1228,13 @@ switch ($get) {
             $product->deposit = $sCommerceController->validatePrice(request()->input('deposit', 0));
         }
         $product->currency = request()->input('currency', sCommerce::config('basic.main_currency', 'USD'));
-        $product->weight = $sCommerceController->validateNumber(request()->input('weight', 0));
-        $product->width = $sCommerceController->validateNumber(request()->input('width', 0));
-        $product->height = $sCommerceController->validateNumber(request()->input('height', 0));
-        $product->length = $sCommerceController->validateNumber(request()->input('length', 0));
-        $product->volume = $sCommerceController->validateNumber(request()->input('volume', 0));
+        // Only existing positive legacy fields are submitted by the product form.
+        foreach (sProduct::PHYSICAL_ATTRIBUTES as $field) {
+            if ((float) ($product->getAttributes()[$field] ?? 0) > 0 && request()->has($field)) {
+                $product->setPhysicalValue($field, request()->input($field));
+                $product->setAttribute($field, 0);
+            }
+        }
         $product->cover = str_replace(EVO_SITE_URL, '', $cover->src ?? '/assets/images/noimage.png');
         $product->relevants = json_encode(request()->input('relevants', []), JSON_UNESCAPED_UNICODE);
         $product->similar = json_encode(request()->input('similar', []), JSON_UNESCAPED_UNICODE);
@@ -1310,6 +1312,8 @@ switch ($get) {
         $product = sCommerce::getProduct($requestId);
 
         if ($requestId > 0 && $product && isset($product->id) && (int)$product->id > 0) {
+            // Consume legacy measurements before copying the normal attribute rows.
+            $product->save();
             // Product
             $newProduct = sCommerce::getProduct(0);
             $newProduct->published = 0;
@@ -1323,11 +1327,6 @@ switch ($get) {
             $newProduct->price_opt_regular = $product->price_opt_regular;
             $newProduct->price_opt_special = $product->price_opt_special;
             $newProduct->currency = $product->currency;
-            $newProduct->weight = $product->weight;
-            $newProduct->width = $product->width;
-            $newProduct->height = $product->height;
-            $newProduct->length = $product->length;
-            $newProduct->volume = $product->volume;
             $newProduct->cover = $product->cover;
             $newProduct->relevants = $product->relevants;
             $newProduct->similar = $product->similar;
@@ -1653,88 +1652,97 @@ switch ($get) {
         $product = sCommerce::getProduct($requestId);
 
         if ($product) {
-            $product->attrValues()->detach();
-
-            $categoryParentsIds = [0];
-            if ($product->categories) {
-                foreach ($product->categories as $category) {
-                    $categoryParentsIds = array_merge($categoryParentsIds, $sCommerceController->categoryParentsIds($category->id));
+            DB::transaction(function () use ($product, $all, $filters, $sCommerceController) {
+                // Validate physical values before replacing any existing attribute rows.
+                foreach (sAttribute::whereIn('alias', sProduct::PHYSICAL_ATTRIBUTES)->get() as $physical) {
+                    $key = 'attribute__' . $physical->id;
+                    if ((int) $physical->type === sAttribute::TYPE_ATTR_NUMBER && array_key_exists($key, $all)) {
+                        $all[$key] = sProduct::normalizePhysicalValue($all[$key]);
+                    }
                 }
-            }
+                $product->attrValues()->detach();
 
-            $attributes = sAttribute::lang($sCommerceController->langDefault())->whereHas('categories', function ($q) use ($categoryParentsIds) {
-                $q->whereIn('category', $categoryParentsIds);
-            })->get();
+                $categoryParentsIds = [0];
+                if ($product->categories) {
+                    foreach ($product->categories as $category) {
+                        $categoryParentsIds = array_merge($categoryParentsIds, $sCommerceController->categoryParentsIds($category->id));
+                    }
+                }
 
-            foreach ($filters as $filter) {
-                foreach ($all as $key => $value) {
-                    if (str_starts_with($key, $filter . '__')) {
-                        $key = str_replace($filter . '__', '', $key);
-                        $attribute = $attributes->where('id', $key)->first();
-                        if ($attribute) {
-                            switch ($attribute->type) {
-                                case sAttribute::TYPE_ATTR_NUMBER : // 0
-                                    if (trim($value)) {
-                                        if (is_float($value)) {
-                                            $value = floatval(str_replace(',', '.', $value));
-                                        } else {
+                $attributes = sAttribute::lang($sCommerceController->langDefault())->whereHas('categories', function ($q) use ($categoryParentsIds) {
+                    $q->whereIn('category', $categoryParentsIds);
+                })->get();
+
+                foreach ($filters as $filter) {
+                    foreach ($all as $key => $value) {
+                        if (str_starts_with($key, $filter . '__')) {
+                            $key = str_replace($filter . '__', '', $key);
+                            $attribute = $attributes->where('id', $key)->first();
+                            if ($attribute) {
+                                switch ($attribute->type) {
+                                    case sAttribute::TYPE_ATTR_NUMBER : // 0
+                                        if (trim($value) !== '' || in_array($attribute->alias, sProduct::PHYSICAL_ATTRIBUTES, true)) {
+                                            $value = in_array($attribute->alias, sProduct::PHYSICAL_ATTRIBUTES, true)
+                                                ? sProduct::normalizePhysicalValue($value)
+                                                : $sCommerceController->validateNumber($value);
+                                            $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
+                                        }
+                                        break;
+                                    case sAttribute::TYPE_ATTR_CHECKBOX : // 1
+                                    case sAttribute::TYPE_ATTR_PRICE_RANGE : // 16
+                                        if (trim($value)) {
                                             $value = intval($value);
+                                            $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
                                         }
-                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
-                                    }
-                                    break;
-                                case sAttribute::TYPE_ATTR_CHECKBOX : // 1
-                                case sAttribute::TYPE_ATTR_PRICE_RANGE : // 16
-                                    if (trim($value)) {
-                                        $value = intval($value);
-                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => $value]);
-                                    }
-                                    break;
-                                case sAttribute::TYPE_ATTR_SELECT : // 3
-                                case sAttribute::TYPE_ATTR_COLOR : // 8
-                                    if (trim($value)) {
-                                        $valueId = intval($value);
-                                        $product->attrValues()->attach($key, ['valueid' => $valueId, 'value' => $value]);
-                                    }
-                                    break;
-                                case sAttribute::TYPE_ATTR_MULTISELECT : // 4
-                                    if (is_array($value) && count($value)) {
-                                        foreach ($value as $k => $v) {
-                                            if (trim($v)) {
-                                                $vId = intval($v);
-                                                $product->attrValues()->attach($key, ['valueid' => $vId, 'value' => $v]);
+                                        break;
+                                    case sAttribute::TYPE_ATTR_SELECT : // 3
+                                    case sAttribute::TYPE_ATTR_COLOR : // 8
+                                        if (trim($value)) {
+                                            $valueId = intval($value);
+                                            $product->attrValues()->attach($key, ['valueid' => $valueId, 'value' => $value]);
+                                        }
+                                        break;
+                                    case sAttribute::TYPE_ATTR_MULTISELECT : // 4
+                                        if (is_array($value) && count($value)) {
+                                            foreach ($value as $k => $v) {
+                                                if (trim($v)) {
+                                                    $vId = intval($v);
+                                                    $product->attrValues()->attach($key, ['valueid' => $vId, 'value' => $v]);
+                                                }
                                             }
                                         }
-                                    }
-                                    break;
-                                case sAttribute::TYPE_ATTR_TEXT : // 5
-                                    if (is_array($value) && count($value)) {
-                                        $vals = [];
-                                        foreach ($value as $k => $v) {
-                                            if (trim($v)) {
-                                                $vals[$k] = trim($v);
+                                        break;
+                                    case sAttribute::TYPE_ATTR_TEXT : // 5
+                                        if (is_array($value) && count($value)) {
+                                            $vals = [];
+                                            foreach ($value as $k => $v) {
+                                                if (trim($v)) {
+                                                    $vals[$k] = trim($v);
+                                                }
                                             }
+                                        } elseif (is_string($value) && trim($value)) {
+                                            $vals['base'] = trim($value);
                                         }
-                                    } elseif (is_string($value) && trim($value)) {
-                                        $vals['base'] = trim($value);
-                                    }
 
-                                    if (isset($vals) && count($vals)) {
-                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($vals, JSON_UNESCAPED_UNICODE)]);
-                                    }
-                                    break;
-                                case sAttribute::TYPE_ATTR_CUSTOM : // 15
-                                    if (is_array($value) && count($value)) {
-                                        $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($value, JSON_UNESCAPED_UNICODE)]);
-                                    } elseif (is_string($value) && trim($value)) {
-                                        $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => trim($value)]);
-                                    }
-                                    break;
+                                        if (isset($vals) && count($vals)) {
+                                            $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($vals, JSON_UNESCAPED_UNICODE)]);
+                                        }
+                                        break;
+                                    case sAttribute::TYPE_ATTR_CUSTOM : // 15
+                                        if (is_array($value) && count($value)) {
+                                            $product->attrValues()->attach($key, ['valueid' => 0, 'value' => json_encode($value, JSON_UNESCAPED_UNICODE)]);
+                                        } elseif (is_string($value) && trim($value)) {
+                                            $product->attrValues()->attach($attribute->id, ['valueid' => 0, 'value' => trim($value)]);
+                                        }
+                                        break;
+                                }
                             }
                         }
                     }
                 }
-            }
+                $product->unsetRelation('attrValues');
+                $product->save();
+            });
         }
 
         $_SESSION['itemaction'] = 'Saving a Product attributes';

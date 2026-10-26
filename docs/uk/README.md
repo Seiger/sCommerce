@@ -68,3 +68,7 @@ php artisan migrate
 - [CSV-імпорт та експорт](./admin/import-export.md)
 
 Ліцензія: GPL-3.0-or-later. Розробка та підтримка — [Seiger IT](https://seigerit.com/).
+
+## Фізичні параметри
+
+[Зберігання ваги та габаритів в атрибутах](attributes/physical-properties.md).

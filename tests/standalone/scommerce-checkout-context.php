@@ -91,6 +91,7 @@ $shop->mails = [];
 $quick = sCheckout::quickOrder(['productId' => 1, 'quantity' => 1, 'email' => 'quick@shop.test', 'environment' => 'live']);
 $app->webUser = 0;
 $check($quick['success'] && sOrder::query()->find($quick['order']->id)->isTest() && $recipients() === [], 'Quick test order: test context, no normal notifications');
+$check($quick['order']->products[0]['weight'] === '0.0125', 'Quick order stores attribute-backed delivery weight');
 Event::forget(CheckoutContext::EVENT);
 
 // 5. Pay links use the persisted context, whoever opens them.

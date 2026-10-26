@@ -319,76 +319,7 @@
                 </div>
             @endif
         </div>
-        @if(sCommerce::config('product.show_field_weight', 1) || sCommerce::config('product.show_field_width', 1) || sCommerce::config('product.show_field_height', 1) || sCommerce::config('product.show_field_length', 1) || sCommerce::config('product.show_field_volume', 1))
-            <div class="split my-3"></div>
-            <div class="row form-row">
-                @if(sCommerce::config('product.show_field_weight', 1))
-                    <div class="row-col col-lg-3 col-md-6 col-12">
-                        <div class="row form-row">
-                            <div class="col-auto col-title">
-                                <label for="weight">@lang('sCommerce::global.weight')</label>
-                                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.weight') - @lang('sCommerce::global.technical_parameter_for_delivery')"></i>
-                            </div>
-                            <div class="col">
-                                <input id="weight" class="form-control" name="weight" value="{{round($item->weight ?? 0, 4)}}" onblur="documentDirty=true;">
-                            </div>
-                        </div>
-                    </div>
-                @endif
-                @if(sCommerce::config('product.show_field_width', 1))
-                    <div class="row-col col-lg-3 col-md-6 col-12">
-                        <div class="row form-row">
-                            <div class="col-auto col-title">
-                                <label for="width">@lang('sCommerce::global.width')</label>
-                                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.width') - @lang('sCommerce::global.technical_parameter_for_delivery')"></i>
-                            </div>
-                            <div class="col">
-                                <input id="width" class="form-control" name="width" value="{{round($item->width ?? 0, 4)}}" onblur="documentDirty=true;">
-                            </div>
-                        </div>
-                    </div>
-                @endif
-                @if(sCommerce::config('product.show_field_height', 1))
-                    <div class="row-col col-lg-3 col-md-6 col-12">
-                        <div class="row form-row">
-                            <div class="col-auto col-title">
-                                <label for="height">@lang('sCommerce::global.height')</label>
-                                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.height') - @lang('sCommerce::global.technical_parameter_for_delivery')"></i>
-                            </div>
-                            <div class="col">
-                                <input id="height" class="form-control" name="height" value="{{round($item->height ?? 0, 4)}}" onblur="documentDirty=true;">
-                            </div>
-                        </div>
-                    </div>
-                @endif
-                @if(sCommerce::config('product.show_field_length', 1))
-                    <div class="row-col col-lg-3 col-md-6 col-12">
-                        <div class="row form-row">
-                            <div class="col-auto col-title">
-                                <label for="length">@lang('sCommerce::global.length')</label>
-                                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.length') - @lang('sCommerce::global.technical_parameter_for_delivery')"></i>
-                            </div>
-                            <div class="col">
-                                <input id="length" class="form-control" name="length" value="{{round($item->length ?? 0, 4)}}" onblur="documentDirty=true;">
-                            </div>
-                        </div>
-                    </div>
-                @endif
-                @if(sCommerce::config('product.show_field_volume', 1))
-                    <div class="row-col col-lg-3 col-md-6 col-12">
-                        <div class="row form-row">
-                            <div class="col-auto col-title">
-                                <label for="volume">@lang('sCommerce::global.volume')</label>
-                                <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.volume') - @lang('sCommerce::global.technical_parameter_for_delivery')"></i>
-                            </div>
-                            <div class="col">
-                                <input id="volume" class="form-control" name="volume" value="{{round($item->volume ?? 0, 4)}}" onblur="documentDirty=true;">
-                            </div>
-                        </div>
-                    </div>
-                @endif
-            </div>
-        @endif
+        @include('sCommerce::partials.legacyPhysicalFields')
     </div>
     @php($mainAttributes = sCommerce::config('constructor.main_product', []))
     @if(count($mainAttributes))
