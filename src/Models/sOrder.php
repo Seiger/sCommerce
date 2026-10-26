@@ -13,6 +13,8 @@ use Seiger\sCommerce\Events\OrderDeleted;
 use Seiger\sCommerce\Events\OrderPaymentStatusChanged;
 use Seiger\sCommerce\Events\OrderStatusChanged;
 use Seiger\sCommerce\Events\OrderUpdated;
+use Seiger\sCommerce\Payment\PaymentFlow;
+use Seiger\sCommerce\Services\OfflineSettlement;
 use Seiger\sCommerce\Services\OrderReferenceFormatter;
 
 /**
@@ -83,7 +85,7 @@ class sOrder extends Model
     private static array $uuidColumns = [];
 
     /**
-     * Fill the public UUID and record domain events after commit.
+     * Fill the public UUID, record domain events after commit and schedule offline settlement on status changes.
      *
      * @since 1.5.0
      */
@@ -113,6 +115,12 @@ class sOrder extends Model
             }
             if (isset($changes['status']) && (int)$order->status === self::ORDER_STATUS_CANCELED) {
                 $recorder->record(OrderCancelled::from($order, (int)$changes['status']['old']), $connection);
+            }
+            if (isset($changes['status'])) {
+                OfflineSettlement::schedule($order);
+            }
+            if (isset($changes['cost'])) {
+                PaymentFlow::resyncAfterCostChange($order);
             }
         });
         static::deleted(function (sOrder $order) {

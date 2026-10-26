@@ -215,7 +215,7 @@ class PaymentFlow
     }
 
     /**
-     * Ledger totals of an order in the order currency.
+     * Ledger totals of an order in the order currency, with the next installment of its payment schedule.
      *
      * @since 1.5.0
      */
@@ -313,17 +313,22 @@ class PaymentFlow
      *
      * Changes the latest row (any status, as the form always allowed) or creates a manual row
      * when the order has none. A partially refunded payment without a recorded returned amount
-     * stays unresolved; no amount is inferred.
+     * stays unresolved; no amount is inferred. "Partially paid" is refused: it needs an amount,
+     * which the manager records in the Payments panel.
      *
      * @param sOrder $order Order being edited.
      * @param int $orderPaymentStatus sOrder::PAYMENT_STATUS_* chosen by the manager.
      * @param int $managerId Manager user id.
      * @return array<string, mixed> Order history entry describing the change.
+     * @throws \InvalidArgumentException For "partially paid", with a translated message.
      * @since 1.5.0
      */
     public function applyManagerOverride(sOrder $order, int $orderPaymentStatus, int $managerId): array
     {
         $this->assertLedgerAvailable();
+        if ($orderPaymentStatus === sOrder::PAYMENT_STATUS_PARTIALLY_PAID) {
+            throw new \InvalidArgumentException(__('sCommerce::global.payment_partial_use_record'));
+        }
         $ledgerStatus = $this->mapOrderStatusToLedgerStatus($orderPaymentStatus);
 
         return DB::transaction(function () use ($order, $orderPaymentStatus, $ledgerStatus, $managerId): array {
@@ -427,6 +432,34 @@ class PaymentFlow
     }
 
     /**
+     * Re-project the payment status of an order with ledger rows after its cost changed, once
+     * the change commits. Orders without rows keep their status.
+     *
+     * @since 1.5.0
+     */
+    public static function resyncAfterCostChange(sOrder $order): void
+    {
+        $orderId = (int)$order->id;
+        $task = static fn () => EventScope::defer(static function () use ($orderId): void {
+            try {
+                $flow = new self();
+                $fresh = $flow->ledgerAvailable() ? sOrder::withTrashed()->find($orderId) : null;
+                if ($fresh && sOrderPayment::query()->where('order_id', $orderId)->exists()) {
+                    $flow->syncOrderPaymentStatusFromLedger($fresh);
+                }
+            } catch (Throwable $exception) {
+                (new self())->warning('sCommerce payment status resync failed', ['order_id' => $orderId, 'error' => $exception->getMessage()]);
+            }
+        }, 'payment_resync:' . $orderId);
+        try {
+            $order->getConnection()->afterCommit($task);
+        } catch (\RuntimeException) {
+            // Minimal bootstraps without a transactions manager.
+            $task();
+        }
+    }
+
+    /**
      * Read metadata stored by any sCommerce version: an array, JSON, or JSON encoded twice.
      *
      * @param mixed $value Raw or cast `metadata` value.
@@ -477,7 +510,7 @@ class PaymentFlow
     private function summarize(sOrder $order, iterable $rows): PaymentSummary
     {
         $currency = $this->orderCurrency($order, false);
-        $captured = $refunded = $authorized = $unresolved = 0;
+        $captured = $refunded = $authorized = $pending = $unresolved = 0;
         $disputed = false;
         $ignored = [];
         $last = null;
@@ -498,6 +531,8 @@ class PaymentFlow
                 }
                 if ($status === 'authorized') {
                     $authorized += $amount;
+                } elseif ($status === 'pending') {
+                    $pending += $amount;
                 } elseif ($status === 'refunded') {
                     // Legacy whole-row refund set by a manager.
                     $refunded += $amount;
@@ -517,6 +552,9 @@ class PaymentFlow
         }
 
         $total = self::toMinor($order->getAttributes()['cost'] ?? 0);
+        $outstanding = max(0, $total - max(0, $captured - $refunded));
+
+        $schedule = PaymentSchedule::of($order);
 
         return new PaymentSummary(
             $currency,
@@ -527,7 +565,10 @@ class PaymentFlow
             $disputed,
             $this->resolveOrderPaymentStatus($total, $captured, $refunded, $disputed, $unresolved, $last),
             array_values($ignored),
-            $unresolved
+            $unresolved,
+            // Installments already received or in progress are not requested again.
+            $schedule ? PaymentSchedule::next($schedule, $captured + $authorized + $pending, $outstanding, $total) : null,
+            $pending
         );
     }
 
@@ -594,9 +635,24 @@ class PaymentFlow
             throw new LedgerConflictException("Provider reference {$entry->provider}/{$entry->providerRef} belongs to another order.");
         }
 
-        $storedParent = self::normalizeMetadata($existing->getAttributes()['metadata'] ?? null)[self::CONTEXT_KEY]['parent_provider_ref'] ?? null;
+        $stored = self::normalizeMetadata($existing->getAttributes()['metadata'] ?? null);
+        $storedParent = $stored[self::CONTEXT_KEY]['parent_provider_ref'] ?? null;
+        $existingMinor = self::toMinor($existing->getAttributes()['amount'] ?? 0);
+        $entryMinor = self::toMinor($entry->amount);
+        $authorizedMinor = isset($stored[self::CONTEXT_KEY]['authorized_amount']) ? self::toMinor((string)$stored[self::CONTEXT_KEY]['authorized_amount']) : null;
+        if ((string)$existing->kind === $entry->kind && $entry->status === 'captured' && (string)$existing->status === 'authorized'
+            && $entryMinor > 0 && $entryMinor < $existingMinor) {
+            // Partial capture: the captured amount replaces the authorized one, which is kept for audit.
+            $stored[self::CONTEXT_KEY]['authorized_amount'] = PaymentSummary::decimal($existingMinor);
+            $existing->amount = PaymentSummary::decimal($entryMinor);
+            $existing->metadata = $stored;
+            $existingMinor = $entryMinor;
+        } elseif ($authorizedMinor === $entryMinor && $entry->status === 'authorized') {
+            // A late replay of the authorization of a partially captured payment.
+            $entryMinor = $existingMinor;
+        }
         if ((string)$existing->kind !== $entry->kind
-            || self::toMinor($existing->getAttributes()['amount'] ?? 0) !== self::toMinor($entry->amount)
+            || $existingMinor !== $entryMinor
             || strtoupper((string)$existing->currency) !== $entry->currency
             || ($entry->parentProviderRef !== null && $storedParent !== $entry->parentProviderRef)) {
             throw new LedgerConflictException("Provider reference {$entry->provider}/{$entry->providerRef} was recorded with a different kind, amount, currency or parent.");

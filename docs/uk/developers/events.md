@@ -296,7 +296,7 @@ Event::listen('evolution.sCommerceAfterAddToCart', function($params) {
 
 ### Область подій
 
-`Seiger\sCommerce\Events\EventScope` повідомляє слухачам, хто вніс зміну. sCommerce використовує такі значення `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat` і `system` (типове значення, коли жодну область не відкрито).
+`Seiger\sCommerce\Events\EventScope` повідомляє слухачам, хто вніс зміну. sCommerce використовує такі значення `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `offline_settlement` і `system` (типове значення, коли жодну область не відкрито).
 
 Код, який записує замовлення від імені інтеграції, має відкривати власну область. Тоді слухачі зможуть ігнорувати зміни, спричинені їхніми власними записами:
 
@@ -360,6 +360,26 @@ $supported = class_exists(sCommerce::class)
 - ключі контексту `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` і `occurredAt`.
 
 Якщо зміна статусу також змінює статус оплати замовлення, після неї викликається `sCommerce.OrderPaymentStatusChanged`. `sCommerce::supportsIntegration('payment-ledger-api')` повідомляє про підтримку. API, що записує журнал, описано в розділі [Запис платежів](payments/index.md#запис-платежів-ledger-api).
+
+## Подія графіка платежів
+
+### sCommerce.ResolvePaymentSchedule
+
+Викликається один раз для кожного нового замовлення (checkout і швидке замовлення) до його першого збереження. Слухач може розділити вартість замовлення на передоплату та фінальний платіж:
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.ResolvePaymentSchedule', function (array $payload) {
+    // $payload['order'] is the unsaved sOrder; $payload['schedule'] is passed by reference.
+    $payload['schedule'] = [
+        ['kind' => 'deposit', 'amount' => 30, 'due' => 'checkout'],
+        ['kind' => 'final', 'amount' => $payload['order']->cost - 30, 'due' => 'manual'],
+    ];
+});
+```
+
+Без слухачів графік лишається порожнім, і повна вартість списується, як і раніше. Формат частин і те, як способи оплати отримують `payment_request`, описано в розділі [Графіки платежів](payments/index.md#графіки-платежів-передоплата-та-фінальний-платіж).
 
 ## Додаткові події менеджера та frontend
 

@@ -201,7 +201,7 @@ New orders receive a UUID in `s_orders.uuid` when the column exists. Existing or
 
 ### Event scope
 
-`Seiger\sCommerce\Events\EventScope` tells listeners who made the change. sCommerce uses these `source` values: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat` and `system` (the default when no scope is open).
+`Seiger\sCommerce\Events\EventScope` tells listeners who made the change. sCommerce uses these `source` values: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `offline_settlement` and `system` (the default when no scope is open).
 
 Code that writes orders on behalf of an integration should open its own scope. Listeners can then ignore changes caused by their own writes:
 
@@ -265,6 +265,26 @@ Every payload contains:
 - the context keys `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` and `occurredAt`.
 
 A status change that also changes the order's payment status is followed by `sCommerce.OrderPaymentStatusChanged`. `sCommerce::supportsIntegration('payment-ledger-api')` reports support. See [Recording payments](payments/index.md#recording-payments-ledger-api) for the API that writes the ledger.
+
+## Payment schedule event
+
+### sCommerce.ResolvePaymentSchedule
+
+Dispatched once for every new order (checkout and quick order) before it is first saved. A listener can split the order cost into a deposit and a final payment:
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.ResolvePaymentSchedule', function (array $payload) {
+    // $payload['order'] is the unsaved sOrder; $payload['schedule'] is passed by reference.
+    $payload['schedule'] = [
+        ['kind' => 'deposit', 'amount' => 30, 'due' => 'checkout'],
+        ['kind' => 'final', 'amount' => $payload['order']->cost - 30, 'due' => 'manual'],
+    ];
+});
+```
+
+Without listeners the schedule stays empty and the full cost is charged as before. See [Payment schedules](payments/index.md#payment-schedules-deposit-and-final-payment) for the item format and how payment methods receive `payment_request`.
 
 ## Additional manager and frontend events
 

@@ -16,10 +16,14 @@ php tests/standalone/scommerce-order-events.php
 php tests/standalone/scommerce-credentials-column.php
 php tests/standalone/scommerce-payment-ledger.php
 php tests/standalone/scommerce-webhook-dispatch.php
+php tests/standalone/scommerce-payment-actions.php
+php tests/standalone/scommerce-payment-schedule.php
+php tests/standalone/scommerce-offline-settlement.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs
 node tests/standalone/scommerce-repeat.mjs
+node tests/standalone/scommerce-payment-actions.mjs
 ```
 
 `scommerce-payment-ledger.php` also runs against a disposable MySQL/MariaDB or PostgreSQL database when

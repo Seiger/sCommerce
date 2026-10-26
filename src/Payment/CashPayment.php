@@ -1,6 +1,6 @@
 <?php namespace Seiger\sCommerce\Payment;
 
-use Seiger\sCommerce\Payment\BasePaymentMethod;
+use Seiger\sCommerce\Interfaces\OfflineSettlementPaymentMethodInterface;
 
 /**
  * Class CashPayment
@@ -8,9 +8,13 @@ use Seiger\sCommerce\Payment\BasePaymentMethod;
  * This class represents the "Cash" payment method, allowing users to pay for their orders in cash.
  * It extends the `BasePaymentMethod` class to inherit core functionality and provides specific
  * implementations for the cash payment method.
+ *
+ * Cash on delivery can be settled automatically on configured order statuses.
  */
-class CashPayment extends BasePaymentMethod
+class CashPayment extends BasePaymentMethod implements OfflineSettlementPaymentMethodInterface
 {
+    use OfflineSettlementSettings;
+
     /**
      * Get the unique name of the payment method.
      *
@@ -79,7 +83,7 @@ class CashPayment extends BasePaymentMethod
                     ],
                 ],
             ],
-        ];
+        ] + $this->offlineSettlementSettings();
     }
 
 

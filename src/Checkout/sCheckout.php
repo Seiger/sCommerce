@@ -14,6 +14,8 @@ use Seiger\sCommerce\Interfaces\DeliveryMethodInterface;
 use Seiger\sCommerce\Models\sDeliveryMethod;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
+use Seiger\sCommerce\Payment\PaymentFlow;
+use Seiger\sCommerce\Payment\PaymentSchedule;
 use Seiger\sCommerce\Services\sPriceResolver;
 use View;
 
@@ -418,7 +420,8 @@ class sCheckout
      * Flow:
      * 1. Validate delivery/payment methods if they are enabled.
      * 2. Save the order to the database.
-     * 3. Call {@see PaymentMethodInterface::processPayment()} for the selected method.
+     * 3. Call {@see PaymentMethodInterface::processPayment()} for the selected method; with a payment
+     *    schedule, only an installment due at checkout is passed as `payment_request`.
      * 4. Merge payment data into `payment_info` and return it inside the `payment` key.
      * 5. Send notifications and clear checkout session data.
      *
@@ -474,16 +477,32 @@ class sCheckout
             evo()->logEvent(0, 1, "Order #{$order->id} successfully created.", "sCommerce: Order #{$order->id} Created");
             Log::channel('scommerce')->info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
+            $paymentData = $order->toArray();
+            $schedule = PaymentSchedule::of($order);
+            if ($paymentMethod && $schedule) {
+                // Only an installment due at checkout is charged now; the amount never comes from the client.
+                $installment = (new PaymentFlow())->summary($order)->nextInstallment;
+                if ($installment && $installment['due'] === 'checkout') {
+                    $paymentData['payment_request'] = PaymentSchedule::paymentRequest($order, $installment);
+                } else {
+                    $paymentMethod = null;
+                }
+            }
+
             if ($paymentMethod) {
                 try {
-                    $paymentOutcome = $paymentMethod->processPayment($order->toArray());
+                    $paymentOutcome = $paymentMethod->processPayment($paymentData);
 
                     if (is_array($paymentOutcome)) {
                         $paymentSuccess = (bool)($paymentOutcome['success'] ?? true);
 
                         $paymentInfo = $order->payment_info ?? [];
                         $paymentInfo = is_array($paymentInfo) ? $paymentInfo : [];
-                        $order->payment_info = array_merge($paymentInfo, $paymentOutcome);
+                        $paymentInfo = array_merge($paymentInfo, $paymentOutcome);
+                        if ($schedule) {
+                            $paymentInfo['schedule'] = $schedule;
+                        }
+                        $order->payment_info = $paymentInfo;
                         $history = $order->history;
                         $history[] = [
                             'payment_status' => sOrder::PAYMENT_STATUS_AWAITING_CONFIRMATION,
@@ -698,6 +717,19 @@ class sCheckout
         $order->manager_notes = $adminNotes;
         $order->history = $history;
 
+        try {
+            $schedule = PaymentSchedule::resolve($order);
+        } catch (\InvalidArgumentException $e) {
+            return [
+                'success' => false,
+                'product' => (int)$data['productId'],
+                'message' => $e->getMessage(),
+            ];
+        }
+        if ($schedule) {
+            $order->payment_info = ['schedule' => $schedule];
+        }
+
         EventScope::run('storefront_quick', (int)$userData['id'], static function () use ($order): void {
             DB::transaction(function () use ($order): void {
                 $order->save();
@@ -742,6 +774,9 @@ class sCheckout
      *
      * This method checks if the payment method exists and processes the payment
      * using the corresponding payment method's processPayment() method.
+     * A client-sent `payment_request` is discarded. For an order (`order` = identifier) with a
+     * payment schedule, or paid with a method that honours `payment_request`, it is replaced by
+     * the next due installment or the unpaid rest computed from the ledger; 409 when nothing is due.
      *
      * @param string|null $method The payment method identifier (optional, can be from URL).
      * @param array $data The data from the POST request (e.g., payment details).
@@ -761,6 +796,30 @@ class sCheckout
                 'message' => 'Payment method not found or invalid.',
                 'code' => 404,
             ];
+        }
+
+        // The amount to charge is computed on the server, never taken from the request.
+        unset($data['payment_request']);
+        $identifier = isset($data['order']) && (is_string($data['order']) || is_int($data['order'])) ? trim((string)$data['order']) : '';
+        $order = $identifier !== '' ? sOrder::where('identifier', $identifier)->first() : null;
+        if ($order && PaymentSchedule::of($order) && !PaymentSchedule::supports($paymentMethod)) {
+            return [
+                'success' => false,
+                'message' => __('sCommerce::global.payment_schedule_unsupported'),
+                'code' => 422,
+            ];
+        }
+        // Methods that honour `payment_request` are asked for the unpaid rest only.
+        if ($order && PaymentSchedule::supports($paymentMethod)) {
+            $installment = PaymentSchedule::nextPayment($order, (new PaymentFlow())->summary($order));
+            if (!$installment || !PaymentSchedule::isDue($installment, $order)) {
+                return [
+                    'success' => false,
+                    'message' => __('sCommerce::global.payment_nothing_due'),
+                    'code' => 409,
+                ];
+            }
+            $data['payment_request'] = PaymentSchedule::paymentRequest($order, $installment);
         }
 
         if (method_exists($paymentMethod, 'processPayment')) {
@@ -865,8 +924,10 @@ class sCheckout
      *
      * This method processes the order data stored in `$this->orderData` and saves it as a new record
      * in the `s_orders` table. It ensures the `identifier` is unique to avoid conflicts.
+     * The payment schedule from `sCommerce.ResolvePaymentSchedule` is stored in `payment_info.schedule`.
      *
      * @return \Seiger\sCommerce\Models\sOrder The newly created order model.
+     * @throws \InvalidArgumentException When the schedule is invalid or the payment method does not support installments.
      */
     protected function saveOrder(): sOrder
     {
@@ -900,6 +961,16 @@ class sCheckout
         $order->domain = trim((string)evo()->getConfig('site_key', 'default'));
         $order->identifier = $identifier;
         $order->history = $history;
+
+        $schedule = PaymentSchedule::resolve($order);
+        if ($schedule) {
+            $paymentMethod = $this->paymentMethods[$this->orderData['payment']['method'] ?? ''] ?? null;
+            if (sCommerce::config('basic.payments_on', 1) == 1 && !PaymentSchedule::supports($paymentMethod)) {
+                throw new \InvalidArgumentException(__('sCommerce::global.payment_schedule_unsupported'));
+            }
+            $paymentInfo = is_array($order->payment_info) ? $order->payment_info : [];
+            $order->payment_info = array_merge($paymentInfo, ['schedule' => $schedule]);
+        }
 
         DB::transaction(function () use ($order): void {
             $order->save();

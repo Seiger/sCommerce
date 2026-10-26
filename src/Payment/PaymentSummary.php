@@ -19,6 +19,9 @@ final readonly class PaymentSummary
      * @param int $paymentStatus Projected `sOrder::PAYMENT_STATUS_*`.
      * @param list<string> $ignoredCurrencies Currencies of rows excluded from the totals.
      * @param int $unresolvedLegacyRefunds Partially refunded payments without a recorded returned amount.
+     * @param array{id: string, kind: string, amount: float, amountMinor: int, due: string, label?: string}|null $nextInstallment
+     *        Next open item of the order's payment schedule ({@see PaymentSchedule::next()}); null without a schedule or when nothing is open.
+     * @param int $pendingMinor Payments started and not yet confirmed.
      */
     public function __construct(
         public string $currency,
@@ -30,6 +33,8 @@ final readonly class PaymentSummary
         public int $paymentStatus,
         public array $ignoredCurrencies = [],
         public int $unresolvedLegacyRefunds = 0,
+        public ?array $nextInstallment = null,
+        public int $pendingMinor = 0,
     ) {}
 
     /**
@@ -43,13 +48,33 @@ final readonly class PaymentSummary
     }
 
     /**
-     * Amount still to be paid, never below zero.
+     * Amount still to be paid (the balance due), never below zero.
      *
      * @since 1.5.0
      */
     public function outstandingMinor(): int
     {
         return max(0, $this->totalMinor - $this->netMinor());
+    }
+
+    /**
+     * Net received money above the order cost, e.g. after the cost was lowered.
+     *
+     * @since 1.5.0
+     */
+    public function overpaidMinor(): int
+    {
+        return max(0, $this->netMinor() - $this->totalMinor);
+    }
+
+    /**
+     * Money received (refunds not deducted), authorized or pending: what is not requested again.
+     *
+     * @since 1.5.0
+     */
+    public function allocatedMinor(): int
+    {
+        return $this->capturedMinor + $this->authorizedMinor + $this->pendingMinor;
     }
 
     /**

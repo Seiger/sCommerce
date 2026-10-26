@@ -623,6 +623,14 @@ switch ($get) {
         }
         $data['delivery'] = $deliveryMethod;
         $data['domains'] = $domains;
+        $data['paymentPanel'] = ['rows' => [], 'operations' => [], 'orderActions' => [], 'partialCapture' => false, 'totals' => null];
+        if ($item->exists && !isset($data['repeatSourceId'])) {
+            try {
+                $data['paymentPanel'] = (new \Seiger\sCommerce\Services\OrderPaymentAction())->panel($item);
+            } catch (\Throwable $e) {
+                Log::warning('sCommerce order view: payment ledger is unavailable', ['order_id' => $item->id, 'error' => $e->getMessage()]);
+            }
+        }
         $_SESSION['itemaction'] = $item->exists ? 'Editing a Order of #' . $item->id : 'Creating an Order';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
@@ -645,12 +653,16 @@ switch ($get) {
         }
         $response->send();
         exit;
+    case "orderPaymentAction":
+        (new \Seiger\sCommerce\Controllers\OrderPaymentActionController())->handle(request())->send();
+        exit;
     case "orderRepeatSave":
         (new \Seiger\sCommerce\Controllers\OrderRepeatController())->handle(request())->send();
         exit;
     case "orderSave":
         $requestId = request()->integer('i');
         $item = sOrder::find($requestId);
+        $paymentNotice = null;
 
         if ($item) {
             $scope = EventScope::begin('manager', (int)evo()->getLoginUserID('mgr'));
@@ -662,7 +674,12 @@ switch ($get) {
             $payment_status = request()->integer('payment_status', $item->payment_status);
             if ($payment_status != $item->payment_status) {
                 if ((new PaymentFlow())->ledgerAvailable()) {
-                    $history[] = (new PaymentFlow())->applyManagerOverride($item, $payment_status, (int) evo()->getLoginUserID('mgr'));
+                    try {
+                        $history[] = (new PaymentFlow())->applyManagerOverride($item, $payment_status, (int) evo()->getLoginUserID('mgr'));
+                    } catch (\InvalidArgumentException $e) {
+                        // "Partially paid" needs an amount: recorded in the Payments panel instead.
+                        $paymentNotice = 'partial_use_record';
+                    }
                 } else {
                     $item->payment_status = $payment_status;
                     $history[] = [
@@ -737,21 +754,10 @@ switch ($get) {
                     $oldProducts = $item->products;
                     $item->products = $productsData;
 
-                    // Recalculate order cost
-                    $totalCost = 0;
-                    foreach ($productsData as $product) {
-                        // Use priceNumber if available (numeric value), otherwise parse from formatted price
-                        if (isset($product['priceNumber']) && is_numeric($product['priceNumber'])) {
-                            $price = floatval($product['priceNumber']);
-                        } else {
-                            // Fallback: parse from formatted price string
-                            $priceValue = $product['price'] ?? 0;
-                            $price = sCommerce::convertPriceNumber($priceValue, $item->currency, $item->currency);
-                        }
-                        $quantity = intval($product['quantity'] ?? 1);
-                        $totalCost += $price * $quantity;
-                    }
-                    $item->cost = round($totalCost, 2);
+                    // Recalculate order cost; delivery cost and other non-product amounts are kept.
+                    $item->cost = \Seiger\sCommerce\Services\OrderCostRecalculator::recalculate(
+                        $item->getOriginal('cost') ?? 0, is_array($oldProducts) ? $oldProducts : [], $productsData, (string) $item->currency
+                    );
 
                     // Add history entry if products changed
                     if (json_encode($oldProducts) !== json_encode($productsData)) {
@@ -774,6 +780,10 @@ switch ($get) {
         }
 
         $back = str_replace('&i=0', '&i=' . ($item->id ?? 0), (request()->back ?? '&get=orders'));
+        if ($paymentNotice !== null) {
+            // Flash data does not survive the EVO session proxy sync, so the notice travels in the URL.
+            $back .= '&payment_notice=' . $paymentNotice;
+        }
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "orderDelete":
         $requestId = request()->integer('i');

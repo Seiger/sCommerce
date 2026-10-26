@@ -99,6 +99,9 @@
                 <div class="split my-3"></div>
             </div>
         </div>
+        @if($item->exists && (count($paymentPanel['rows'] ?? []) || count($paymentPanel['operations'] ?? []) || count($paymentPanel['orderActions'] ?? []) || \Seiger\sCommerce\Payment\PaymentSchedule::of($item)))
+            @include('sCommerce::partials.orderPayments', ['panel' => $paymentPanel ?? ['rows' => [], 'operations' => []]])
+        @endif
         <div class="row">
             <div class="col-md-4">
                 <h3 class="d-flex justify-content-between align-items-center">
