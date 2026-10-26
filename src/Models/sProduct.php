@@ -5,10 +5,12 @@ use EvolutionCMS\Models\SiteContent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use ReflectionClass;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sGallery\sGallery;
 
 /**
@@ -134,8 +136,8 @@ class sProduct extends Model
     // const MODE_VARIABLE = 3;     // Products with variations, such as size or color.
     // const MODE_OPTIONAL = 4;     // Additional items that can complement a purchase (e.g., accessories).
     // const MODE_DOWNLOADABLE = 5; // Digital products, such as software, eBooks, or media files.
-    // const MODE_VIRTUAL = 6;      // Non-physical products, including services or licenses.
-    // const MODE_SERVICE = 7;      // Offerings like installation, consulting, or maintenance.
+    const MODE_VIRTUAL = 6;      // Non-physical products, including services or licenses.
+    const MODE_SERVICE = 7;      // Offerings like installation, consulting, or maintenance.
     // const MODE_SUBSCRIPTION = 8; // Products with recurring billing (e.g., memberships or digital content).
     // const MODE_PREORDER = 9;     // Products not yet available but open for early purchase.
     // const MODE_CUSTOM = 10;      // Personalized or tailor-made products created upon request.
@@ -174,6 +176,37 @@ class sProduct extends Model
             }
         }
         return $list;
+    }
+
+    /**
+     * Whether a line of this product is shipped and counted against inventory.
+     *
+     * Virtual and service products need neither. The first array returned by a
+     * `sCommerce.ResolveProductFulfilment` listener replaces the default.
+     *
+     * @param int $optionId Cart option id; 0 = none.
+     * @return array{shipping: bool, inventory: bool}
+     * @since 1.5.0
+     */
+    public function fulfilment(int $optionId = 0): array
+    {
+        $physical = !in_array((int)$this->mode, [self::MODE_VIRTUAL, self::MODE_SERVICE], true);
+        $fulfilment = ['shipping' => $physical, 'inventory' => $physical];
+
+        foreach (Event::dispatch('sCommerce.ResolveProductFulfilment', [[
+            'product' => $this,
+            'optionId' => $optionId,
+            'fulfilment' => $fulfilment,
+        ]]) as $override) {
+            if (is_array($override)) {
+                return [
+                    'shipping' => (bool)($override['shipping'] ?? $fulfilment['shipping']),
+                    'inventory' => (bool)($override['inventory'] ?? $fulfilment['inventory']),
+                ];
+            }
+        }
+
+        return $fulfilment;
     }
 
     /**
@@ -888,6 +921,76 @@ class sProduct extends Model
     public function getOldPriceAsFloatAttribute(): float
     {
         return $this->oldPriceToNumber(sCommerce::currentCurrency());
+    }
+
+    /**
+     * Display prices with and without VAT, see {@see VatDisplay}. Stored prices include VAT;
+     * the price that is charged is still `priceAsFloat`.
+     *
+     * @param string|null $currency Display currency; the current currency by default.
+     * @param int $optionId Cart option id; 0 = none.
+     * @return array<string, float|string> Keys such as `priceNet`, `priceGross`, `displayPrice` and `vatRate`.
+     * @since 1.5.0
+     */
+    public function vatPricing(?string $currency = null, int $optionId = 0): array
+    {
+        $currency = $currency ?? sCommerce::currentCurrency();
+
+        return VatDisplay::pricing($this, $this->priceToNumber($currency), $this->oldPriceToNumber($currency), $currency, $optionId);
+    }
+
+    /** VAT rate in percent. @since 1.5.0 */
+    public function getVatRateAttribute(): float
+    {
+        return VatDisplay::rate($this);
+    }
+
+    /** Formatted price without VAT. @since 1.5.0 */
+    public function getPriceNetAttribute(): string
+    {
+        return $this->vatPricing()['priceNet'];
+    }
+
+    /** Price without VAT in the current currency. @since 1.5.0 */
+    public function getPriceNetAsFloatAttribute(): float
+    {
+        return $this->vatPricing()['priceNetAsFloat'];
+    }
+
+    /** Formatted price with VAT (the stored price). @since 1.5.0 */
+    public function getPriceGrossAttribute(): string
+    {
+        return $this->vatPricing()['priceGross'];
+    }
+
+    /** Price with VAT in the current currency. @since 1.5.0 */
+    public function getPriceGrossAsFloatAttribute(): float
+    {
+        return $this->vatPricing()['priceGrossAsFloat'];
+    }
+
+    /** Formatted price in the visitor's VAT display mode. @since 1.5.0 */
+    public function getDisplayPriceAttribute(): string
+    {
+        return $this->vatPricing()['displayPrice'];
+    }
+
+    /** Price in the visitor's VAT display mode. @since 1.5.0 */
+    public function getDisplayPriceAsFloatAttribute(): float
+    {
+        return $this->vatPricing()['displayPriceAsFloat'];
+    }
+
+    /** Formatted old price without VAT; empty without an old price. @since 1.5.0 */
+    public function getOldPriceNetAttribute(): string
+    {
+        return $this->vatPricing()['oldPriceNet'];
+    }
+
+    /** Formatted old price in the visitor's VAT display mode; empty without an old price. @since 1.5.0 */
+    public function getDisplayOldPriceAttribute(): string
+    {
+        return $this->vatPricing()['displayOldPrice'];
     }
 
     /**

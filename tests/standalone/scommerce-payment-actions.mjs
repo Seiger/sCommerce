@@ -11,7 +11,9 @@ function setup({confirm = true, fetch}) {
     const message = {hidden: true, textContent: '', classList: {toggle: (name, on) => (on ? classes.add(name) : classes.delete(name))}};
     const amount = {value: ' 12.50 ', disabled: false};
     const reason = {value: 'Damaged ', disabled: false};
-    const fields = {querySelector: selector => (selector === '[data-payment-amount]' ? amount : reason)};
+    const fields = {querySelector: selector => (selector === '[data-payment-amount]' ? amount : reason), querySelectorAll: () => []};
+    const containerFields = {querySelector: () => null, querySelectorAll: selector => (selector === '[data-payment-field]'
+        ? [{dataset: {paymentField: 'line'}, value: '2'}, {dataset: {paymentField: 'count'}, value: ' 3 '}, {dataset: {paymentField: 'settlement'}, value: 'credit'}] : [])};
     const row = {dataset: {payment: '7', label: '#2'}, querySelector: fields.querySelector};
     const orderRow = {dataset: {payment: '0', label: ''}};
     const button = (action, nonce, {form = null, parent = row} = {}) => {
@@ -22,6 +24,7 @@ function setup({confirm = true, fetch}) {
     const refund = button('refund', 'n-refund', {form: fields});
     const cancel = button('cancel', 'n-cancel');
     const receive = button('receive', 'n-receive', {form: fields, parent: orderRow});
+    const containers = button('containers', 'n-containers', {form: containerFields, parent: orderRow});
     let click;
     const panel = {
         dataset: {url: 'index.php?a=112&get=orderPaymentAction', order: '31', error: 'Request failed', sessionError: 'Session expired',
@@ -58,7 +61,7 @@ function setup({confirm = true, fetch}) {
     vm.createContext(context);
     vm.runInContext(source, context);
     const press = target => click({target, preventDefault() {}});
-    return {state, press, refund, cancel, receive, message, classes, amount};
+    return {state, press, refund, cancel, receive, containers, message, classes, amount};
 }
 
 // A confirmed refund posts the token, nonce, trimmed amount and reason, then reloads.
@@ -96,6 +99,12 @@ await recorded.press(recorded.receive);
 assert.deepEqual(['action', 'payment', 'nonce', 'amount', 'reason'].map(key => recorded.state.requests[0].options.body.get(key)),
     ['receive', '0', 'n-receive', '12.50', 'Damaged']);
 assert.equal(recorded.state.confirms[0], 'receive: 12.50?');
+
+// A container return posts its own fields: line, count and settlement.
+const returned = setup({fetch: async () => ({ok: true, status: 200, json: async () => ({success: true, message: 'Returned'})})});
+await returned.press(returned.containers);
+assert.deepEqual(['action', 'payment', 'nonce', 'line', 'count', 'settlement', 'amount'].map(key => returned.state.requests[0].options.body.get(key)),
+    ['containers', '0', 'n-containers', '2', '3', 'credit', null]);
 
 // Errors are shown as text and re-enable the controls.
 for (const [response, expected] of [

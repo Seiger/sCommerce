@@ -102,6 +102,92 @@ sCart::clearPriceMode();
 - `price_opt_special` використовується, якщо вона більша за `0` і менша за `price_opt_regular`;
 - інакше використовується `price_opt_regular`.
 
+### Ціни з ПДВ або без ПДВ
+
+Починаючи з 1.5.0, вітрина може показувати ціни з ПДВ (брутто) або без ПДВ (нетто). Ціни товарів зберігаються з ПДВ; це стосується лише відображення, а ціна, яка нараховується в кошику та під час оформлення замовлення, завжди дорівнює збереженій ціні.
+
+Налаштування (**Налаштування → Товар**):
+
+- **Ціни без ПДВ** (`product.vat_display_on`, типово вимкнено) вмикає функцію. Поки її вимкнено, наведені нижче налаштування приховано, ціни завжди показуються з ПДВ, ключі для відображення дорівнюють цінам до сплати, а `scommerce/vat-display` відповідає `404`;
+- **Ставка ПДВ, %** (`product.vat_rate`, типово `0`): ставка, включена в ціни товарів. За `0` ціна нетто дорівнює ціні брутто;
+- **Відображення цін** (`product.vat_display`, `gross` або `net`, типово `gross`): типове значення для відвідувачів, які не зробили вибір.
+
+Ціна нетто обчислюється як `round(gross / (1 + rate / 100), 2)`. Шаблони читають такі значення:
+
+| Де | Ключі |
+|---|---|
+| `sProduct` (сторінки товарів) | `$product->displayPrice`, `displayPriceAsFloat`, `displayOldPrice`, `priceNet`, `priceNetAsFloat`, `priceGross`, `priceGrossAsFloat`, `oldPriceNet`, `vatRate`; `$product->vatPricing()` повертає всі ключі одразу |
+| `sCommerce::productCards()` (списки товарів) | `displayPrice`, `displayOldPrice`, `priceNet`, `priceGross`, їхні варіанти `AsFloat`, `vatRate`, `vatDisplay` |
+| Позиції `sCart::getMiniCart()` | ті самі ключі, а також `sumNet`, `sumNetAsFloat`, `displaySum`, `displaySumAsFloat` |
+| Підсумки `sCart::getMiniCart()` | `totalSumNet`, `totalSumNetFormatted`, `totalSumDisplay`, `totalSumDisplayFormatted`, `vatDisplay` |
+
+Наявні ключі `price`, `priceAsFloat`, `sum` і `totalSum` і надалі містять ціни, що нараховуються. Значення для відображення не зберігаються в рядках замовлення.
+
+Перемкнути поточного відвідувача на сервері:
+
+```php
+use Seiger\sCommerce\Facades\sCart;
+
+sCart::setVatDisplay('net');   // or 'gross'
+sCart::getVatDisplay();        // 'net'
+sCart::clearVatDisplay();      // back to the shop default
+```
+
+Перемикач на вітрині може надсилати `mode=gross|net` на `scommerce/vat-display` (маршрут `sCommerce.vatDisplay`). У відповіді повертаються `vatDisplay` і оновлений `miniCart`.
+
+#### sCommerce.ResolveProductVatRate
+
+Повертає іншу ставку для товару, наприклад знижену. Payload містить `product`, `optionId` і `rate` (ставку магазину). Використовується перша числова відповідь від `0` до `100`; поверніть `null`, щоб залишити ставку магазину.
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.ResolveProductVatRate', function (array $payload) {
+    return str_starts_with((string) $payload['product']->sku, 'BOOK-') ? 10 : null;
+});
+```
+
+#### sCommerce.ResolveVatDisplay
+
+Перевизначає режим відображення, наприклад щоб показувати ціни нетто авторизованим бізнес-клієнтам. Payload містить `mode` (вибір із сесії або типове значення магазину). Використовується перша відповідь `gross` або `net`.
+
+```php
+Event::listen('sCommerce.ResolveVatDisplay', function (array $payload) {
+    $userId = (int) evo()->getLoginUserID('web');
+    return $userId && in_array($userId, config('shop.business_customers', []), true) ? 'net' : null;
+});
+```
+
+`sCommerce::supportsIntegration('vat-display')` повідомляє про підтримку.
+
+#### Роздрібний акциз
+
+Деякі товари (наприклад, алкоголь, тютюн і пальне) обкладаються акцизним податком з роздрібної торгівлі, який нараховується на ціну з ПДВ і друкується в чеку окремим рядком. Збережена ціна вже містить його, тому ціна до сплати не змінюється.
+
+- **Роздрібний акциз** (`product.retail_excise_on`, типово вимкнено) вмикає функцію. Поки її вимкнено, акциз не обчислюється й не зберігається, а налаштування його ставки приховано.
+- **Ставка роздрібного акцизу, %** (`product.retail_excise_rate`, типово `0`) задає ставку для всього магазину. Зазвичай вона залишається `0`, а слухач `sCommerce.ResolveProductRetailExciseRate` повертає ставку для потрібних товарів. Payload містить `product`, `optionId` і `rate`; використовується перша числова відповідь від `0` до `100`.
+- Для збереженої ціни P і ставки акцизу r акциз дорівнює `round(P × r / (100 + r), 2)`. Тоді ціна без ПДВ не містить і акцизу: `round((P − excise) / (1 + VAT / 100), 2)`. Наприклад, якщо ПДВ становить 23 %, а акциз 5 %, ціна 129.15 містить акциз 6.15, а ціна без ПДВ дорівнює 100.00.
+- Ключі для відображення: `retailExciseRate`, `retailExciseAmount` і `retailExciseAmountAsFloat` у товарів, карток у списках і позицій кошика; `sumRetailExcise` і `sumRetailExciseAsFloat` у позицій кошика; `totalRetailExcise` і `totalRetailExciseFormatted` у мінікошику.
+- Рядки замовлення таких товарів зберігають для чека `retail_excise_rate` і `retail_excise_amount` (акциз, включений у суму рядка). Сума перераховується, коли менеджер редагує рядки або зберігає повторне замовлення. Сторінка замовлення в менеджері та друкований документ показують її як **У тому числі роздрібний акциз**.
+
+```php
+Event::listen('sCommerce.ResolveProductRetailExciseRate', function (array $payload) {
+    return in_array($payload['product']->sku, ['BEER-05', 'WINE-07'], true) ? 5 : null;
+});
+```
+
+`sCommerce::supportsIntegration('retail-excise')` повідомляє про підтримку.
+
+### sCommerce.ResolveProductDeposit
+
+Повертає заставну вартість зворотної тари за одиницю товару, наприклад заставу за бутель. Викликається лише тоді, коли ввімкнено налаштування **Заставна вартість зворотної тари**. Payload містить `product`, `optionId`, `currency` і `deposit` (значення **Застава за тару** товару, переведене у `currency`). Використовується перша невід’ємна числова відповідь; поверніть `null`, щоб залишити його. Див. [Заставна вартість зворотної тари](payments/index.md#заставна-вартість-зворотної-тари).
+
+```php
+Event::listen('sCommerce.ResolveProductDeposit', function (array $payload) {
+    return str_starts_with((string) $payload['product']->sku, 'WATER-19') ? 250 : null;
+});
+```
+
 ### sCommerce.CheckoutValidationRules
 
 Викликається в `sCheckout::getValidationRules(array $data)` після об’єднання базових правил із правилами вибраного способу доставки.
@@ -124,7 +210,7 @@ Event::listen('sCommerce.CheckoutValidationRules', function (array $params) {
 });
 ```
 
-`setOrderData()` потім залишає лише правила для ключів, наявних у переданих даних. Тому доданий `required` не робить відсутнє поле обов’язковим під час такого часткового оновлення. Видалення правила також виключає поле з цього шляху валідації, а не забезпечує збереження довільних полів. Швидке замовлення має власні правила та не викликає цей хук.
+`setOrderData()` потім залишає лише правила для ключів, наявних у переданих даних. Тому доданий `required` не робить відсутнє поле обов’язковим під час такого часткового оновлення. Видалення правила також виключає поле з цього шляху валідації, а не забезпечує збереження довільних полів. Щоб зберегти поля проєкту в `meta` замовлення, використовуйте [`sCommerce.BeforeOrderCreate`](#scommercebeforeordercreate). Якщо жоден рядок кошика не потребує доставки, `delivery.method` видаляється ще до цієї події. Швидке замовлення має власні правила та не викликає цей хук.
 
 Для цих трьох подій використовуйте точні назви з цієї сторінки, без префікса `evolution.`. Попередні цінові події `evolution.sCommerceResolveProductPriceMode` і `evolution.sCommerceResolveProductPrice` більше не викликаються; оновлюйте проєктні слухачі та sPricing разом із sCommerce.
 
@@ -277,6 +363,7 @@ Event::listen('evolution.sCommerceAfterAddToCart', function($params) {
 - `event`: об’єкт події (`Seiger\sCommerce\Events\Order*`);
 - `order`: від’єднана копія `sOrder` закоміченого рядка, зроблена в момент фіксації зміни. Використовуйте її лише для читання даних. Не зберігайте її, а коли потрібен поточний стан замовлення, перечитайте його;
 - `orderId`, `orderUuid`, `reference`, `status`, `paymentStatus`, `cost`, `currency`, `isQuick`, `siteKey` (`domain` замовлення);
+- `environment`: `live` або `test` для замовлень [довіреного тестового checkout](#довірений-контекст-checkout);
 - `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`: контекст зміни (див. нижче);
 - `eventId` (UUID v4) і `occurredAt` (UTC, наприклад `2026-10-20T08:15:30.123Z`).
 
@@ -296,7 +383,7 @@ Event::listen('evolution.sCommerceAfterAddToCart', function($params) {
 
 ### Область подій
 
-`Seiger\sCommerce\Events\EventScope` повідомляє слухачам, хто вніс зміну. sCommerce використовує такі значення `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `offline_settlement` і `system` (типове значення, коли жодну область не відкрито).
+`Seiger\sCommerce\Events\EventScope` повідомляє слухачам, хто вніс зміну. sCommerce використовує такі значення `source`: `storefront`, `storefront_quick`, `storefront_pay`, `payment_callback`, `manager`, `manager_bulk_status`, `manager_bulk_menu`, `manager_repeat`, `manager_payment_action`, `manager_container_return`, `offline_settlement` і `system` (типове значення, коли жодну область не відкрито).
 
 Код, який записує замовлення від імені інтеграції, має відкривати власну область. Тоді слухачі зможуть ігнорувати зміни, спричинені їхніми власними записами:
 
@@ -341,7 +428,7 @@ $supported = class_exists(sCommerce::class)
     && sCommerce::supportsIntegration('order-events');
 ```
 
-`sCommerce::INTEGRATION_EVENTS_VERSION` (зараз `1`) змінюється лише тоді, коли payload змінюється несумісно. `sCommerce::integrationFeatures()` повертає список доступних ключів можливостей.
+`sCommerce::INTEGRATION_EVENTS_VERSION` (зараз `1`) змінюється лише тоді, коли payload змінюється несумісно. `sCommerce::integrationFeatures()` повертає список доступних ключів можливостей, наприклад `line-identity`, `fulfilment-modes`, `line-tax-data` і `checkout-context`.
 
 ## Події журналу платежів
 
@@ -380,6 +467,136 @@ Event::listen('sCommerce.ResolvePaymentSchedule', function (array $payload) {
 ```
 
 Без слухачів графік лишається порожнім, і повна вартість списується, як і раніше. Формат частин і те, як способи оплати отримують `payment_request`, описано в розділі [Графіки платежів](payments/index.md#графіки-платежів-передоплата-та-фінальний-платіж).
+
+## Рядки замовлення, виконання та податки
+
+Починаючи з 1.5.0, кожне нове замовлення перед першим збереженням проходить ці хуки в такому порядку: `sCommerce.ResolveCheckoutContext`, `sCommerce.ResolveOrderTaxes`, `sCommerce.BeforeOrderCreate`, `sCommerce.ResolvePaymentSchedule`. Після коміту настає `sCommerce.OrderCreated`.
+
+### sCommerce.ResolveLineIdentity
+
+Викликається в `OrderLineIdentity::resolve()` для кожного нового рядка замовлення: рядків кошика, швидкого замовлення одного товару, пошуку товарів у менеджері, а також рядків із менеджера або повторного замовлення, які ще не мають ідентичності. Payload містить `product`, `optionId` (id опції кошика, `0` — опції немає) та `identity`, що передається за посиланням.
+
+Слухачі можуть змінювати лише `sku` (фактичний SKU, наприклад SKU варіанта) і `gtin`. Після цього sCommerce відновлює `line_key`, `product_id`, `option_id` і `product_sku`, тож їх неможливо підмінити. Усі ключі описано в розділі [Знімок рядка замовлення](integration.md#знімок-рядка-замовлення).
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.ResolveLineIdentity', function (array $payload) {
+    if ($payload['optionId'] === 3) {
+        $payload['identity']['sku'] = $payload['product']->sku . '-RED';
+    }
+});
+```
+
+### sCommerce.ResolveProductFulfilment
+
+Викликається в `sProduct::fulfilment($optionId)`. Payload містить `product`, `optionId` і `fulfilment` (`['shipping' => bool, 'inventory' => bool]`). Типово товари типів **Віртуальний** і **Послуга** не доставляються й не враховуються в залишках; усі інші товари доставляються та враховуються. Увімкніть ці типи в налаштуваннях товарів (**Доступні типи**), щоб їх можна було вибрати в товарі.
+
+Перша відповідь-масив замінює типове значення; ключ, якого в ній немає, зберігає типове значення. Поверніть `null`, щоб залишити типове значення.
+
+```php
+Event::listen('sCommerce.ResolveProductFulfilment', function (array $payload) {
+    if ($payload['product']->sku === 'GIFT-CARD') {
+        return ['shipping' => false];
+    }
+    return null;
+});
+```
+
+Результат зберігається в кожному рядку кошика й замовлення як `requires_shipping` і `tracks_inventory`:
+
+- кошик обмежує кількість залишком лише для рядків, що враховуються, тому послугу із залишком `0` можна замовити;
+- з увімкненим `basic.deliveries_on` checkout вимагає спосіб доставки, лише якщо хоча б один рядок потребує доставки. Інакше правило `delivery.method` видаляється до `sCommerce.CheckoutValidationRules`, вартість доставки не додається, а замовлення зберігає `delivery_info = {"method": "", "required": false, "cost": 0}`;
+- `sCheckout::requiresDelivery()` повідомляє це рішення, а `initCheckout()` повертає його як `requiresDelivery`, тож шаблон може приховати крок доставки.
+
+Рядки замовлень, створених до 1.5.0, не мають прапорців і вважаються такими, що доставляються та враховуються в залишках.
+
+### sCommerce.ResolveOrderTaxes
+
+Викликається один раз для кожного нового замовлення (checkout і швидке замовлення) до його першого збереження. sCommerce ніколи не розраховує податки: їх передає слухач. Payload містить `order` (незбережений `sOrder`), `lines` і `totals` (обидва передаються за посиланням) та `source` (`storefront` або `storefront_quick`).
+
+Слухачі можуть задавати в кожному рядку `lines` такі необов’язкові ключі:
+
+| Ключ | Тип |
+|---|---|
+| `tax_rate` | float, відсоток |
+| `tax_code` | string, до 32 символів |
+| `unit_price_net` | float, ціна одиниці без податку |
+| `unit_price_gross` | float, ціна одиниці з податком |
+| `tax_amount` | float, податок усього рядка |
+| `prices_include_tax` | bool |
+| `retail_excise_amount` | float, роздрібний акциз, включений у суму рядка |
+
+`totals` зберігається в колонці `s_orders.totals`. Підтримувані ключі: `subtotal_net`, `subtotal_gross`, `shipping_net`, `shipping_gross`, `shipping_tax_rate`, `discount_gross`, `tax_total`, `grand_total`, `retail_excise_total` (float) і `prices_include_tax` (bool). sCommerce задає `retail_excise_amount` у рядках із роздрібним акцизом до цієї події, тому слухачі бачать його й можуть замінити.
+
+Значення неправильного типу, інші ключі, додані рядки та зміни цін або кількостей ігноруються. `cost` замовлення ніколи не змінюється; якщо `totals.grand_total` відрізняється від нього більше ніж на `0.01`, у канал `scommerce` записується попередження. Без слухачів `totals` залишається `NULL`, а рядки не змінюються.
+
+```php
+Event::listen('sCommerce.ResolveOrderTaxes', function (array $payload) {
+    foreach ($payload['lines'] as &$line) {
+        $line['tax_rate'] = 23;
+        $line['unit_price_gross'] = (float) $line['priceAsFloat'];
+        $line['unit_price_net'] = round($line['unit_price_gross'] / 1.23, 2);
+        $line['prices_include_tax'] = true;
+    }
+    unset($line);
+    $payload['totals'] = ['grand_total' => (float) $payload['order']->cost, 'prices_include_tax' => true];
+});
+```
+
+### sCommerce.BeforeOrderCreate
+
+Викликається безпосередньо перед першим збереженням нового замовлення з checkout або швидкого замовлення. Payload містить `order` (незбережений `sOrder`), `data` (дані checkout без прапорців оточення клієнта) і `source`. Слухачі можуть задавати атрибути замовлення. Поля проєкту, наприклад дату бронювання або адресу виконання робіт, зберігайте в JSON-колонці `s_orders.meta`; сторінка замовлення в менеджері показує `meta` лише для читання.
+
+```php
+Event::listen('sCommerce.BeforeOrderCreate', function (array $payload) {
+    $meta = $payload['order']->meta ?? [];
+    $meta['booking'] = ['date' => $payload['data']['booking_date'] ?? '', 'slot' => '09:00-11:00'];
+    $payload['order']->meta = $meta;
+});
+```
+
+`meta.integration` зарезервовано для контексту checkout (див. нижче); слухачі не можуть його змінити.
+
+## Довірений контекст checkout
+
+Сайт завжди залишається в робочому режимі. Довірений користувач, наприклад обліковий запис QA, може оформлювати тестові замовлення на робочому сайті, поки всі інші відвідувачі продовжують робити реальні покупки. sCommerce визначає оточення кожного нового замовлення на сервері; дані, введені клієнтом, ніколи його не вибирають.
+
+### sCommerce.ResolveCheckoutContext
+
+Викликається checkout на сайті (`processOrder()`) і швидкими замовленнями до перевірки способу оплати, до збереження замовлення та до будь-якого платежу чи листа. Payload містить `data` (дані checkout), `source` і `context`, що передається за посиланням. Типовий контекст: `['environment' => 'live', 'actorId' => <logged-in web or manager user id, 0 for guests>]`.
+
+Слухач, який перевірив права користувача на сервері, може задати:
+
+- `environment`: `live` або `test`;
+- `reference`: непрозорий рядок або масив розміром до 2 КБ, наприклад підключення до sandbox, яке слід використати;
+- `testRecipients`: адреси e-mail, які отримують листи тестового замовлення;
+- `refusal`: повідомлення, яке показується клієнтові. Checkout зупиняється до створення замовлення, платежу та будь-якого листа, наприклад коли тестовий платіж неможливо ізолювати для вибраного платіжного сервісу.
+
+Потім sCommerce перевіряє контекст: будь-яке інше оточення відхиляється, а не вважається робочим, гості не можуть отримати `test`, а `actorId` і `source` завжди беруться із запиту. Ключі, за допомогою яких клієнт міг би заявити оточення (`environment`, `test`, `is_test`, `test_mode`, `sandbox`, `livemode`, `checkout_context`, `meta`, `integration` та їхні форми в camelCase), видаляються з даних до того, як їх побачать слухачі та способи оплати.
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.ResolveCheckoutContext', function (array $payload) {
+    $userId = $payload['context']['actorId'];
+    if ($userId > 0 && in_array($userId, config('shop.test_users', []), true)) {
+        $payload['context']['environment'] = 'test';
+        $payload['context']['reference'] = ['connection' => 'stripe-sandbox'];
+        $payload['context']['testRecipients'] = ['qa@example.com'];
+    }
+});
+```
+
+Визначений контекст зберігається один раз у `s_orders.meta.integration` і більше ніколи не змінюється, хоч би які подальші записи, виходи із системи чи зміни ролей відбувалися. Читайте його через `CheckoutContext::of($order)`; замовлення без збереженого контексту вважаються робочими (`live`).
+
+- Способи оплати отримують його як `checkout_context` у `processPayment()` — з checkout і з платіжних посилань, що передають `order`, незалежно від того, хто відкрив посилання. Вибирайте облікові дані sandbox або робочі облікові дані на його основі, а не за поточним користувачем.
+- Тестове замовлення надсилає листи замовлення лише на `testRecipients` (нікому, якщо список порожній) і ніколи — магазину чи клієнтові.
+- Тестові замовлення ніколи не зараховуються офлайн-зарахуванням і виключаються з метрик дашборду та списку замовлень. У списку замовлень є посилання **Тестові замовлення** для їх перегляду, а тестове замовлення позначене значком **ТЕСТ**.
+- Скоупи `sOrder::live()` і `sOrder::test()` фільтрують запити, а `$order->isTest()` перевіряє окреме замовлення. Події замовлень передають `environment`.
+- Запис журналу, у якого `metadata.environment` відрізняється від оточення замовлення, відхиляється (див. [Запис платежів](payments/index.md#метадані)).
+
+Тестовим контекстам потрібна колонка `s_orders.meta`; виконайте міграції sCommerce. Без неї тестові checkout відхиляються, а робочі продовжують працювати. `sCommerce::supportsIntegration('checkout-context')` повідомляє про підтримку.
 
 ## Додаткові події менеджера та frontend
 

@@ -43,6 +43,8 @@
         body.set('nonce', button.dataset.nonce);
         if (amount) body.set('amount', amount.value.trim());
         if (reason) body.set('reason', reason.value.trim());
+        // Extra inputs of an action form, e.g. the line and count of a container return.
+        if (fields) fields.querySelectorAll('[data-payment-field]').forEach(input => { body.set(input.dataset.paymentField, input.value.trim()); });
         const label = row.dataset.label ? ' ' + row.dataset.label : '';
         if (!await confirmAction(button.textContent.trim() + label + (body.get('amount') ? ': ' + body.get('amount') : '') + '?')) {
             return;

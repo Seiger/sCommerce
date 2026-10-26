@@ -37,6 +37,23 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         sCheckout::quickOrder(request()->all()),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
     );
+    // Display only: show prices with (gross) or without (net) VAT to this visitor.
+    $vatDisplayHandler = function () {
+        if (!\Seiger\sCommerce\Services\VatDisplay::enabled()) {
+            return response()->json(['success' => false, 'message' => 'Prices without VAT are not enabled.'], 404);
+        }
+        $mode = request()->string('mode')->trim()->lower()->value();
+        if (!in_array($mode, ['gross', 'net'], true)) {
+            return response()->json(['success' => false, 'message' => 'Unsupported VAT display mode.'], 422);
+        }
+        sCart::setVatDisplay($mode);
+
+        return response()->json(['success' => true, 'vatDisplay' => sCart::getVatDisplay(), 'miniCart' => sCart::getMiniCart()]);
+    };
+    // Empty returnable containers the customer hands over for a cart line (no new deposit for them).
+    $containerExchangeHandler = fn() => \Seiger\sCommerce\Services\ContainerDeposit::enabled()
+        ? tap(sCart::setContainerExchange(), fn($result) => response()->json($result, $result['success'] === true ? 200 : 422))
+        : response()->json(['success' => false, 'message' => 'Container deposits are not enabled.'], 404);
     $wishlistHandler = fn() => tap(
         sWishlist::updateWishlist(request()->all()),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
@@ -50,6 +67,8 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
     Route::post('pay-order/{method?}', $payOrderHandler)->name('payOrder');
     Route::post('quick-order', $quickOrderHandler)->name('quickOrder');
     Route::post('wishlist', $wishlistHandler)->name('wishlist');
+    Route::post('vat-display', $vatDisplayHandler)->name('vatDisplay');
+    Route::post('container-exchange', $containerExchangeHandler)->name('containerExchange');
 
     // Routes with suffix (for frontend calls with friendly URLs)
     $suffix = sCommerce::config('basic.friendlyUrlSuffix', evo()->getConfig('friendly_url_suffix', ''));
@@ -61,6 +80,8 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         Route::post('pay-order/{method?}' . $suffix, $payOrderHandler);
         Route::post('quick-order' . $suffix, $quickOrderHandler);
         Route::post('wishlist' . $suffix, $wishlistHandler);
+        Route::post('vat-display' . $suffix, $vatDisplayHandler);
+        Route::post('container-exchange' . $suffix, $containerExchangeHandler);
     }
 });
 

@@ -104,6 +104,9 @@ $tabs[] = 'dashboard';
 
 if (sCommerce::config('basic.orders_on', 1) == 1) {
     $tabs[] = 'orders';
+    if (sCommerce::config('product.container_deposit_on', 0) == 1 && Schema::hasTable('s_container_returns')) {
+        $tabs[] = 'containers';
+    }
 }
 $tabs = array_merge($tabs, ['products', 'attributes', 'reviews']);
 if (sCommerce::config('basic.integrations_on', 1) == 1) {
@@ -240,30 +243,31 @@ switch ($get) {
             sOrder::ORDER_STATUS_DELETED,
         ];
 
+        // Test checkouts never count as sales.
         // Orders statistics
-        $totalOrders = sOrder::count();
-        $newOrders = sOrder::whereIn('status', $unprocessedes)->count();
-        $workingOrders = sOrder::whereIn('status', $workings)->count();
-        $completedOrders = sOrder::whereIn('status', $completeds)->count();
-        $canceledOrders = sOrder::whereIn('status', $canceleds)->count();
+        $totalOrders = sOrder::live()->count();
+        $newOrders = sOrder::live()->whereIn('status', $unprocessedes)->count();
+        $workingOrders = sOrder::live()->whereIn('status', $workings)->count();
+        $completedOrders = sOrder::live()->whereIn('status', $completeds)->count();
+        $canceledOrders = sOrder::live()->whereIn('status', $canceleds)->count();
 
         // Today's statistics
-        $todayOrders = sOrder::whereDate('created_at', today())->count();
-        $todayRevenue = sOrder::whereDate('created_at', today())
+        $todayOrders = sOrder::live()->whereDate('created_at', today())->count();
+        $todayRevenue = sOrder::live()->whereDate('created_at', today())
             ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
             ->sum('cost');
 
         // This month statistics
-        $monthOrders = sOrder::whereMonth('created_at', now()->month)
+        $monthOrders = sOrder::live()->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
-        $monthRevenue = sOrder::whereMonth('created_at', now()->month)
+        $monthRevenue = sOrder::live()->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
             ->sum('cost');
 
         // Total revenue (paid orders)
-        $totalRevenue = sOrder::where('payment_status', sOrder::PAYMENT_STATUS_PAID)->sum('cost');
+        $totalRevenue = sOrder::live()->where('payment_status', sOrder::PAYMENT_STATUS_PAID)->sum('cost');
 
         // Products statistics
         $totalProducts = sProduct::count();
@@ -271,8 +275,8 @@ switch ($get) {
         $unpublishedProducts = $totalProducts - $publishedProducts;
 
         // Payment statistics
-        $paidOrders = sOrder::where('payment_status', sOrder::PAYMENT_STATUS_PAID)->count();
-        $pendingOrders = sOrder::whereIn('payment_status', [
+        $paidOrders = sOrder::live()->where('payment_status', sOrder::PAYMENT_STATUS_PAID)->count();
+        $pendingOrders = sOrder::live()->whereIn('payment_status', [
             sOrder::PAYMENT_STATUS_PENDING,
             sOrder::PAYMENT_STATUS_AWAITING_CONFIRMATION,
             sOrder::PAYMENT_STATUS_AUTHORIZED,
@@ -287,7 +291,7 @@ switch ($get) {
         $periodStart = now()->copy()->startOfDay()->subDays($dashboardPeriod - 1);
         $previousPeriodStart = $periodStart->copy()->subDays($dashboardPeriod);
         $previousPeriodEnd = $periodStart->copy()->subSecond();
-        $salesByDate = sOrder::selectRaw(
+        $salesByDate = sOrder::live()->selectRaw(
             'DATE(created_at) as date, SUM(CASE WHEN payment_status = ? THEN cost ELSE 0 END) as revenue, COUNT(*) as orders',
             [sOrder::PAYMENT_STATUS_PAID]
         )
@@ -306,24 +310,24 @@ switch ($get) {
                 'orders' => (int) ($day->orders ?? 0),
             ];
         }
-        $previousPeriodOrders = sOrder::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count();
-        $previousPeriodRevenue = sOrder::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])
+        $previousPeriodOrders = sOrder::live()->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])->count();
+        $previousPeriodRevenue = sOrder::live()->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])
             ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
             ->sum('cost');
-        $periodPaidOrders = sOrder::whereBetween('created_at', [$periodStart, now()])
+        $periodPaidOrders = sOrder::live()->whereBetween('created_at', [$periodStart, now()])
             ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
             ->count();
-        $previousPeriodPaidOrders = sOrder::whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])
+        $previousPeriodPaidOrders = sOrder::live()->whereBetween('created_at', [$previousPeriodStart, $previousPeriodEnd])
             ->where('payment_status', sOrder::PAYMENT_STATUS_PAID)
             ->count();
 
         // Recent orders
-        $recentOrders = sOrder::orderBy('created_at', 'desc')->limit(9)->get();
+        $recentOrders = sOrder::live()->orderBy('created_at', 'desc')->limit(9)->get();
 
         // Top products
         $topProductsData = [];
         try {
-            $allOrders = sOrder::select('products')->get();
+            $allOrders = sOrder::live()->select('products')->get();
             $productStats = [];
             foreach ($allOrders as $order) {
                 if (is_array($order->products)) {
@@ -428,6 +432,8 @@ switch ($get) {
         };
         $dateFrom = $validDate(trim((string)request()->input('date_from', '')));
         $dateTo = $validDate(trim((string)request()->input('date_to', '')));
+        // Test checkouts are listed only in their explicit view.
+        $environment = request()->input('environment') === 'test' ? 'test' : 'live';
         $order = request()->input('order', 'id');
         $order = in_array($order, ['id', 'client', 'created_at', 'cost', 'status', 'payment_status'], true) ? $order : 'id';
         $direc = request()->input('direc', 'desc') === 'asc' ? 'asc' : 'desc';
@@ -440,7 +446,7 @@ switch ($get) {
             $selectedDomains = [];
         }
 
-        $query = sOrder::query()->select('*');
+        $query = sOrder::query()->{$environment}()->select('*');
         if ($selectedDomains) {$query->whereIn('domain', $selectedDomains);}
         if ($selectedStatuses) {$query->whereIn('status', $selectedStatuses);}
         if ($selectedPaymentStatuses) {$query->whereIn('payment_status', $selectedPaymentStatuses);}
@@ -501,11 +507,13 @@ switch ($get) {
         } catch (\Throwable) {
             $data['deliveryMethods'] = collect();
         }
-        $data['total'] = sOrder::count();
-        $data['unprocessed'] = sOrder::whereIn('status', $unprocessedes)->count();
-        $data['working'] = sOrder::whereIn('status', $workings)->count();
-        $data['completed'] = sOrder::whereIn('status', $completeds)->count();
-        $data['canceled'] = sOrder::whereIn('status', $canceleds)->count();
+        $data['total'] = sOrder::{$environment}()->count();
+        $data['unprocessed'] = sOrder::{$environment}()->whereIn('status', $unprocessedes)->count();
+        $data['working'] = sOrder::{$environment}()->whereIn('status', $workings)->count();
+        $data['completed'] = sOrder::{$environment}()->whereIn('status', $completeds)->count();
+        $data['canceled'] = sOrder::{$environment}()->whereIn('status', $canceleds)->count();
+        $data['environment'] = $environment;
+        $data['testOrders'] = $environment === 'test' ? $data['total'] : sOrder::test()->count();
         $data['domains'] = $domains;
         $_SESSION['itemaction'] = 'Viewing a list of orders';
         $_SESSION['itemname'] = __('sCommerce::global.title');
@@ -751,6 +759,9 @@ switch ($get) {
                 $productsData = json_decode($productsDataJson, true);
 
                 if (json_last_error() === JSON_ERROR_NONE && is_array($productsData)) {
+                    $productsData = \Seiger\sCommerce\Services\ContainerDeposit::applyToLines(\Seiger\sCommerce\Services\OrderTaxes::applyRetailExcise(
+                        app(\Seiger\sCommerce\Services\OrderLineIdentity::class)->fillMissing($productsData, (string)$item->currency)
+                    ));
                     $oldProducts = $item->products;
                     $item->products = $productsData;
 
@@ -819,7 +830,7 @@ switch ($get) {
                 $productData = sCommerce::getProduct($product->id, $locale);
                 $priceNumber = $productData->price_regular ?? $product->price_regular ?? 0;
                 $priceFormatted = sCommerce::convertPrice($priceNumber, $orderCurrency);
-                $products[] = [
+                $products[] = array_merge([
                     'id' => $product->id,
                     'title' => $productData->pagetitle ?? $product->pagetitle ?? '',
                     'sku' => $product->sku ?? '',
@@ -827,13 +838,32 @@ switch ($get) {
                     'priceNumber' => $priceNumber, // Store numeric price for calculations
                     'coverSrc' => $productData->coverSrc ?? '/assets/images/noimage.png',
                     'link' => $productData->link ?? '#',
-                ];
+                ], app(\Seiger\sCommerce\Services\OrderLineIdentity::class)->snapshot(($productData->id ?? 0) ? $productData : $product));
             }
         }
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'products' => $products]);
         exit;
+    /*
+    |--------------------------------------------------------------------------
+    | Container returns
+    |--------------------------------------------------------------------------
+    */
+    case "containers":
+        $data['returns'] = Schema::hasTable('s_container_returns')
+            ? \Seiger\sCommerce\Models\sContainerReturn::query()->latest('id')->limit(100)->get() : collect();
+        $data['depositProducts'] = Schema::hasColumn('s_products', 'deposit')
+            ? sProduct::lang(evo()->getLocale())->where('s_products.deposit', '>', 0)->orderBy('s_products.sku')->limit(500)->get() : collect();
+        $data['containerNonce'] = \Seiger\sCommerce\Services\OrderPaymentAction::permitted(\Seiger\sCommerce\Controllers\ContainerReturnController::NONCE_ACTION)
+            ? \Seiger\sCommerce\Services\OrderPaymentAction::issueNonce(0, 0, \Seiger\sCommerce\Controllers\ContainerReturnController::NONCE_ACTION) : null;
+        $_SESSION['itemaction'] = 'Viewing container returns';
+        $_SESSION['itemname'] = __('sCommerce::global.title');
+        break;
+    case "containerReturnSave":
+        $result = (new \Seiger\sCommerce\Controllers\ContainerReturnController())->save(request());
+        // Flash data does not survive the EVO session proxy sync, so the notice travels in the URL.
+        return header('Location: ' . sCommerce::moduleUrl() . '&get=containers&container_notice=' . ($result['success'] ? 'ok' : $result['message']));
     /*
     |--------------------------------------------------------------------------
     | Products
@@ -1194,6 +1224,9 @@ switch ($get) {
         $product->price_special = $sCommerceController->validatePrice(request()->input('price_special', 0));
         $product->price_opt_regular = $sCommerceController->validatePrice(request()->input('price_opt_regular', 0));
         $product->price_opt_special = $sCommerceController->validatePrice(request()->input('price_opt_special', 0));
+        if (sCommerce::config('product.container_deposit_on', 0) == 1 && Schema::hasColumn('s_products', 'deposit')) {
+            $product->deposit = $sCommerceController->validatePrice(request()->input('deposit', 0));
+        }
         $product->currency = request()->input('currency', sCommerce::config('basic.main_currency', 'USD'));
         $product->weight = $sCommerceController->validateNumber(request()->input('weight', 0));
         $product->width = $sCommerceController->validateNumber(request()->input('width', 0));

@@ -11,12 +11,21 @@ use Seiger\sCommerce\Services\OrderRepeater;
 $checks = 0;
 $app->eventFailure = false;
 $app->events = [];
+// Lines without identity are resolved from the current product on save.
+$app->instance('sCommerce', new class extends Seiger\sCommerce\sCommerce {
+    public function __construct() { $this->currencies = collect([['alpha' => 'UAH', 'symbol' => '₴', 'show' => 1, 'position' => 'after']]); }
+    public function getProduct(int $productId, ?string $lang = null): object
+    {
+        return (new Seiger\sCommerce\Models\sProduct())->forceFill(['id' => $productId === 5 ? 5 : 0, 'sku' => 'SKU-1', 'gtin' => '4006381333931', 'mode' => 0]);
+    }
+});
+Illuminate\Support\Facades\Facade::clearResolvedInstance('sCommerce');
 $db->schema()->create('s_order_payments', static function ($table): void { $table->id(); });
 $db->table('s_order_payments')->insert(['id' => 1]);
 $db->schema()->table('s_orders', static function ($table): void {
     $table->string('identifier')->nullable()->unique();
     $table->string('uuid')->nullable()->unique();
-    foreach (['lang', 'domain', 'manager_info', 'manager_notes'] as $field) $table->text($field)->nullable();
+    foreach (['lang', 'domain', 'manager_info', 'manager_notes', 'meta', 'totals'] as $field) $table->text($field)->nullable();
     foreach (['user_id', 'is_quick', 'do_not_call'] as $field) $table->integer($field)->default(0);
 });
 $product = ['id' => 5, 'title' => 'Original item', 'sku' => 'SKU-1', 'link' => '', 'coverSrc' => '',
@@ -90,6 +99,10 @@ $check($response->getStatusCode() === 200, 'Save succeeds: ' . $response->getCon
 $result = $response->getData(true);
 $created = sOrder::query()->latest('id')->first();
 $check($result['created'] && $created->id !== $sourceId, 'New order persisted');
+$line = $created->products[0];
+$check($line['line_key'] === '5:0' && $line['product_id'] === 5 && $line['option_id'] === 0 && $line['sku'] === 'SKU-1'
+    && $line['product_sku'] === 'SKU-1' && $line['gtin'] === '4006381333931' && $line['requires_shipping'] === true
+    && $line['title'] === 'Original item' && $line['quantity'] === 2, 'Repeated line without identity gets it from the current product');
 $check($created->identifier !== $source->identifier && $created->uuid !== $source->uuid && $created->reference !== $source->reference, 'Identifiers regenerated');
 $check($created->status === 1 && $created->payment_status === 0, 'Submitted old statuses ignored');
 $check((float) $created->cost === 25.0 && $created->user_info['first_name'] === 'Edited', 'Edited customer and computed total saved');
@@ -119,6 +132,16 @@ $check(str_contains($html, 'get=orderRepeatSave') && str_contains($html, 'name="
 $check(str_contains($html, 'name="repeat_token"') && str_contains($html, 'name="_token"'), 'Form carries retry and CSRF tokens');
 $check(str_contains($html, 'name="payment_status" disabled') && str_contains($html, 'name="status" disabled'), 'Copy statuses visibly locked');
 $check(str_contains($html, 'repeatBusy') && str_contains($html, 'event.preventDefault()'), 'Async copy save handler rendered');
+// A test order with booking meta renders its badge and read-only meta; its old-style line has no identity keys.
+$testOrder = (new sOrder())->forceFill(['identifier' => 'test-render', 'status' => 1, 'payment_status' => 0, 'currency' => 'UAH', 'cost' => 25,
+    'products' => [$product + ['retail_excise_rate' => 5, 'retail_excise_amount' => 1.19]], 'manager_notes' => [], 'history' => [], 'delivery_info' => ['method' => '', 'required' => false, 'cost' => 0],
+    'meta' => ['booking' => ['date' => '2026-11-02'], 'integration' => ['environment' => 'test', 'actorId' => 7]]]);
+$testOrder->save();
+$html = $view->file(__DIR__ . '/fixtures/scommerce-new-order.blade.php', ['item' => $testOrder->fresh(), 'domains' => null, 'payment' => false, 'delivery' => false])->render();
+$check(str_contains($html, 'data-order-environment="test"') && str_contains($html, '<code>booking.date</code>: 2026-11-02')
+    && str_contains($html, '<code>integration.environment</code>: test'), 'Test badge and meta rendered');
+$check(str_contains($html, __('sCommerce::global.delivery_not_required')) && str_contains($html, 'Original item'), 'Delivery-less order and old line render');
+$check(str_contains($html, 'data-order-retail-excise') && str_contains($html, __('sCommerce::global.retail_excise_included')), 'Included retail excise rendered');
 $beforeFailure = sOrder::withTrashed()->count();
 $eventsBeforeFailure = count($app->events);
 $app->instance(Seiger\sCommerce\Services\OrderReferenceGenerator::class, new class {

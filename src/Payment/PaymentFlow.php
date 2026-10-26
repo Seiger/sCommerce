@@ -4,6 +4,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Seiger\sCommerce\Checkout\CheckoutContext;
 use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sOrderPayment;
@@ -818,6 +819,12 @@ class PaymentFlow
         $currency = strtoupper(trim($entry->currency)) ?: $orderCurrency;
         if ($currency !== $orderCurrency) {
             throw new \InvalidArgumentException("Ledger currency $currency differs from the order currency $orderCurrency.");
+        }
+
+        // A test receipt never pays a live order and vice versa.
+        $environment = $entry->metadata['environment'] ?? null;
+        if ($environment !== null && $environment !== CheckoutContext::environmentOf($order)) {
+            throw new \InvalidArgumentException('Ledger environment ' . (is_scalar($environment) ? $environment : gettype($environment)) . ' differs from the order environment ' . CheckoutContext::environmentOf($order) . '.');
         }
 
         $parent = $this->normalizeRef($entry->parentProviderRef);

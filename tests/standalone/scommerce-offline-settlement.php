@@ -93,6 +93,7 @@ $schema->create('s_payment_methods', static function ($table): void {
 });
 (require $package . '/database/migrations/2026_03_01_000000_create_order_payments_table.php')->up();
 (require $package . '/database/migrations/2026_10_20_000002_create_payment_operations_table.php')->up();
+(require $package . '/database/migrations/2026_10_20_000005_add_meta_to_orders.php')->up();
 $settle = static function (string $name, array $statuses) use ($db): void {
     $db->table('s_payment_methods')->where('name', $name)->update(['settings' => json_encode($statuses ? ['settle_on_statuses' => array_map('strval', $statuses)] : [])]);
     PaymentMethodResolver::flush();
@@ -209,6 +210,13 @@ $order = $newOrder();
 DB::table('s_orders')->where('id', $order->id)->update(['status' => sOrder::ORDER_STATUS_DELIVERED]);
 $check($rows($order)->isEmpty() && (new OfflineSettlement())->reconcile() === 1 && $rows($order)->count() === 1, 'Reconciliation settles missed orders');
 $check((new OfflineSettlement())->reconcile() === 0, 'Reconciliation is idempotent');
+// Test checkouts never trigger cash-on-delivery settlement, directly or by reconciliation.
+$order = $newOrder();
+$order->forceFill(['meta' => ['integration' => ['environment' => 'test', 'actorId' => 7]]]);
+DB::table('s_orders')->where('id', $order->id)->update(['meta' => json_encode($order->meta)]);
+$order = $setStatus($order->fresh(), sOrder::ORDER_STATUS_DELIVERED);
+$check($rows($order)->isEmpty() && (new OfflineSettlement())->settle((int)$order->id) === null, 'Test orders are not settled');
+$check((new OfflineSettlement())->reconcile() === 0 && $rows($order)->isEmpty(), 'Reconciliation skips test orders');
 
 // Settings: Cash and Bank invoice expose settle_on_statuses.
 $cash = new CashPayment();

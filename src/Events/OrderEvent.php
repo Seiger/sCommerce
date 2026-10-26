@@ -1,5 +1,6 @@
 <?php namespace Seiger\sCommerce\Events;
 
+use Seiger\sCommerce\Checkout\CheckoutContext;
 use Seiger\sCommerce\Models\sOrder;
 
 /**
@@ -7,7 +8,8 @@ use Seiger\sCommerce\Models\sOrder;
  *
  * `attributes` is the raw committed `s_orders` row captured at record time. The `order`
  * listener key is a detached copy built from it: use it for reading, never to write the
- * live order or as a substitute for re-reading current state.
+ * live order or as a substitute for re-reading current state. `environment` is the order's
+ * immutable checkout environment (`live` or `test`).
  *
  * @since 1.5.0
  */
@@ -76,6 +78,7 @@ abstract readonly class OrderEvent extends DomainEvent
             'currency' => (string)($attributes['currency'] ?? ''),
             'isQuick' => (bool)($attributes['is_quick'] ?? false),
             'siteKey' => isset($attributes['domain']) ? (string)$attributes['domain'] : null,
+            'environment' => CheckoutContext::environmentOf($attributes['meta'] ?? null),
         ] + $this->contextArray();
     }
 

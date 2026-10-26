@@ -16,6 +16,10 @@ use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Payment\PaymentFlow;
 use Seiger\sCommerce\Payment\PaymentSchedule;
+use Seiger\sCommerce\Services\ContainerDeposit;
+use Seiger\sCommerce\Services\OrderLineIdentity;
+use Seiger\sCommerce\Services\OrderTaxes;
+use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sCommerce\Services\sPriceResolver;
 use View;
 
@@ -33,6 +37,8 @@ class sCheckout
     protected array $orderData = [];
     protected array $deliveryMethods = [];
     protected array $paymentMethods = [];
+    /** Trusted context of the checkout being processed, see {@see CheckoutContext}. */
+    protected array $checkoutContext = [];
 
     /**
      * sCheckout constructor.
@@ -53,7 +59,8 @@ class sCheckout
      * This method dynamically generates validation rules for the checkout process
      * based on the provided order data. It includes base validation rules for user,
      * delivery, and payment fields and integrates additional rules from the selected
-     * delivery method. Plugins can then add, replace, or remove rules through
+     * delivery method. When no cart line needs shipping, the delivery rules are dropped.
+     * Plugins can then add, replace, or remove rules through
      * the sCommerce.CheckoutValidationRules event. Its payload contains
      * the input data and the rules array passed by reference.
      *
@@ -105,7 +112,9 @@ class sCheckout
             'user.recipient_phone' => 'nullable|string|max:20|regex:/^\+?[1-9]\d{7,14}$/',
         ];
 
-        if (!empty($data['delivery']['method']) && isset($this->deliveryMethods[$data['delivery']['method']])) {
+        if (!$this->requiresDelivery()) {
+            unset($rules['delivery.method']);
+        } elseif (!empty($data['delivery']['method']) && isset($this->deliveryMethods[$data['delivery']['method']])) {
             $deliveryMethod = $this->deliveryMethods[$data['delivery']['method']];
             $rules = array_merge($rules, $deliveryMethod->getValidationRules());
         }
@@ -116,10 +125,35 @@ class sCheckout
     }
 
     /**
+     * Whether the checkout needs a delivery method: deliveries are enabled and at least one
+     * cart line is shipped. Lines without the `requires_shipping` key are shipped.
+     *
+     * @since 1.5.0
+     */
+    public function requiresDelivery(): bool
+    {
+        if (sCommerce::config('basic.deliveries_on', 1) != 1) {
+            return false;
+        }
+        $lines = $this->orderData['products'] ?? (sCart::getMiniCart()['items'] ?? []);
+        if (!is_array($lines) || $lines === []) {
+            return true;
+        }
+        foreach ($lines as $line) {
+            if (!is_array($line) || OrderLineIdentity::requiresShipping($line)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Initialize the checkout process.
      *
      * Prepares order data for the user, including cart items, delivery, and payment preferences.
-     * Redirects if the cart is empty.
+     * Redirects if the cart is empty. The result also contains `requiresDelivery`, so templates
+     * can hide the delivery step of a services-only cart.
      *
      * @return array The prepared order data.
      */
@@ -164,7 +198,7 @@ class sCheckout
 
         $_SESSION['sCheckout'] = $this->orderData;
 
-        return $this->orderData;
+        return $this->orderData + ['requiresDelivery' => $this->requiresDelivery()];
     }
 
     /**
@@ -402,7 +436,7 @@ class sCheckout
 
         $this->orderData = array_replace_recursive($this->orderData, $resultData);
 
-        if (sCommerce::config('basic.deliveries_on', 1) == 1) {
+        if ($this->requiresDelivery()) {
             if (!empty($validatedData['delivery']['method']) && isset($this->deliveryMethods[$this->orderData['delivery']['method']])) {
                 $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method']];
                 $this->orderData['delivery']['cost'] = $deliveryMethod->calculateCost($this->orderData);
@@ -418,12 +452,15 @@ class sCheckout
      * Process the order and optionally trigger payment handling.
      *
      * Flow:
-     * 1. Validate delivery/payment methods if they are enabled.
-     * 2. Save the order to the database.
-     * 3. Call {@see PaymentMethodInterface::processPayment()} for the selected method; with a payment
-     *    schedule, only an installment due at checkout is passed as `payment_request`.
-     * 4. Merge payment data into `payment_info` and return it inside the `payment` key.
-     * 5. Send notifications and clear checkout session data.
+     * 1. Resolve the trusted checkout context; a refused context stops before any side effect.
+     * 2. Validate delivery/payment methods if they are enabled. A cart without shipped lines
+     *    needs no delivery method and stores `delivery_info = {method: '', required: false, cost: 0}`.
+     * 3. Save the order to the database.
+     * 4. Call {@see PaymentMethodInterface::processPayment()} for the selected method with the context
+     *    in `checkout_context`; with a payment schedule, only an installment due at checkout is passed
+     *    as `payment_request`.
+     * 5. Merge payment data into `payment_info` and return it inside the `payment` key.
+     * 6. Send notifications (test orders: only to the context's test recipients) and clear checkout session data.
      *
      * @return array{
      *     success: bool,
@@ -442,18 +479,22 @@ class sCheckout
                 throw new \Exception("Invalid products in Order.");
             }
 
+            $this->checkoutContext = CheckoutContext::resolve($this->orderData, 'storefront', self::trustedActorId());
+
             $paymentMethod = null;
             $paymentOutcome = null;
             $paymentSuccess = true;
 
-            if (sCommerce::config('basic.deliveries_on', 1) == 1) {
-                $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method']] ?? null;
+            if ($this->requiresDelivery()) {
+                $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method'] ?? ''] ?? null;
 
                 if (!$deliveryMethod) {
-                    throw new \Exception("Invalid delivery method $this->orderData['delivery']['method'].");
+                    throw new \Exception('Invalid delivery method ' . ($this->orderData['delivery']['method'] ?? '') . '.');
                 }
 
                 $this->orderData['cost'] += $this->orderData['delivery']['cost'] ?? 0;
+            } elseif (sCommerce::config('basic.deliveries_on', 1) == 1) {
+                $this->orderData['delivery'] = ['method' => '', 'required' => false, 'cost' => 0];
             }
 
             if (sCommerce::config('basic.payments_on', 1) == 1) {
@@ -478,6 +519,7 @@ class sCheckout
             Log::channel('scommerce')->info("Order #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
             $paymentData = $order->toArray();
+            $paymentData['checkout_context'] = $this->checkoutContext;
             $schedule = PaymentSchedule::of($order);
             if ($paymentMethod && $schedule) {
                 // Only an installment due at checkout is charged now; the amount never comes from the client.
@@ -529,20 +571,12 @@ class sCheckout
             }
 
             if (sCommerce::config('notifications.email_template_admin_order_on', 0)) {
-                sCommerce::notifyEmail(
-                    sCommerce::adminNotificationEmails(),
-                    sCommerce::config('notifications.email_template_admin_order', ''),
-                    ['order' => $order]
-                );
+                self::notifyOrder($this->checkoutContext, sCommerce::adminNotificationEmails(), 'notifications.email_template_admin_order', $order);
             }
 
             if (sCommerce::config('notifications.email_template_customer_order_on', 0)) {
                 if (!empty($order->user_info['email'])) {
-                    sCommerce::notifyEmail(
-                        $order->user_info['email'],
-                        sCommerce::config('notifications.email_template_customer_order', ''),
-                        ['order' => $order]
-                    );
+                    self::notifyOrder($this->checkoutContext, $order->user_info['email'], 'notifications.email_template_customer_order', $order);
                 }
             }
 
@@ -560,6 +594,12 @@ class sCheckout
             }
 
             return $response;
+        } catch (CheckoutContextException $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error_code' => 0,
+            ];
         } catch (\Exception $e) {
             evo()->logEvent(0, 3, $e->getMessage(), 'sCommerce: Order Processing Failed');
             Log::channel('scommerce')->error("Order processing failed: {$e->getMessage()}", ['order_data' => $this->orderData, 'error' => $e->getTraceAsString()]);
@@ -579,8 +619,10 @@ class sCheckout
      *
      * This method validates the input data, creates a new order for a quick purchase,
      * and saves it in the database. If product is 0, it will fetch products from the cart.
+     * The trusted checkout context is resolved before the order is built.
      *
-     * @param array $data The data from the request, including product_id, quantity, user_phone, and/or user_email.
+     * @param array $data The data from the request, including productId, optionId, quantity, exchange (empty returnable
+     *                    containers handed over), phone, and/or email.
      * @return array An array containing the result of the operation with success status and a message.
      */
     public static function quickOrder(array $data)
@@ -631,6 +673,16 @@ class sCheckout
             ];
         }
 
+        try {
+            $context = CheckoutContext::resolve($data, 'storefront_quick', self::trustedActorId());
+        } catch (CheckoutContextException $e) {
+            return [
+                'success' => false,
+                'product' => (int)$data['productId'],
+                'message' => $e->getMessage(),
+            ];
+        }
+
         if (empty($data['productId']) || $data['productId'] == 0) {
             $cartData = sCart::getMiniCart();
             if (empty($cartData['items'])) {
@@ -651,7 +703,8 @@ class sCheckout
             }
 
             $quantity = isset($data['quantity']) && $data['quantity'] > 0 ? (int) $data['quantity'] : 1;
-            $pricing = static::resolveProductPricing($product);
+            $optionId = max(0, (int)($data['optionId'] ?? 0));
+            $pricing = static::resolveProductPricing($product, $optionId);
             $price = (float)$pricing['priceAsFloat'];
             $cost = $price * $quantity;
 
@@ -673,6 +726,10 @@ class sCheckout
             if (isset($pricing['priceMode'])) {
                 $productData['priceMode'] = $pricing['priceMode'];
             }
+            $productData = array_merge($productData, app(OrderLineIdentity::class)->snapshot($product, $optionId));
+            // Units exchanged for empty returnable containers carry no new deposit.
+            $productData = array_merge($productData, ContainerDeposit::lineFields(ContainerDeposit::unit($product, $optionId), $quantity, max(0, (int)($data['exchange'] ?? 0))));
+            $cost += (float)($productData['deposit_amount'] ?? 0);
 
             $productsData = [$productData];
         }
@@ -718,8 +775,9 @@ class sCheckout
         $order->history = $history;
 
         try {
+            self::prepareNewOrder($order, $data, 'storefront_quick', $context);
             $schedule = PaymentSchedule::resolve($order);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException|CheckoutContextException $e) {
             return [
                 'success' => false,
                 'product' => (int)$data['productId'],
@@ -745,20 +803,12 @@ class sCheckout
         Log::channel('scommerce')->info("Order By Click #{$order->id} successfully created.", ['order_id' => $order->id, 'total_cost' => $order->cost, 'user_id' => $order->user_id]);
 
         if (sCommerce::config('notifications.email_template_admin_fast_order_on', 0)) {
-            sCommerce::notifyEmail(
-                sCommerce::adminNotificationEmails(),
-                sCommerce::config('notifications.email_template_admin_fast_order', ''),
-                ['order' => $order]
-            );
+            self::notifyOrder($context, sCommerce::adminNotificationEmails(), 'notifications.email_template_admin_fast_order', $order);
         }
 
         if (sCommerce::config('notifications.email_template_customer_fast_order_on', 0)) {
             if (!empty($order->user_info['email'])) {
-                sCommerce::notifyEmail(
-                    $order->user_info['email'],
-                    sCommerce::config('notifications.email_template_customer_fast_order', ''),
-                    ['order' => $order]
-                );
+                self::notifyOrder($context, $order->user_info['email'], 'notifications.email_template_customer_fast_order', $order);
             }
         }
 
@@ -777,6 +827,8 @@ class sCheckout
      * A client-sent `payment_request` is discarded. For an order (`order` = identifier) with a
      * payment schedule, or paid with a method that honours `payment_request`, it is replaced by
      * the next due installment or the unpaid rest computed from the ledger; 409 when nothing is due.
+     * Client environment flags are discarded; for a known order the method receives its persisted
+     * context in `checkout_context`, whoever opens the pay link.
      *
      * @param string|null $method The payment method identifier (optional, can be from URL).
      * @param array $data The data from the POST request (e.g., payment details).
@@ -800,8 +852,12 @@ class sCheckout
 
         // The amount to charge is computed on the server, never taken from the request.
         unset($data['payment_request']);
+        $data = CheckoutContext::withoutClientFlags($data);
         $identifier = isset($data['order']) && (is_string($data['order']) || is_int($data['order'])) ? trim((string)$data['order']) : '';
         $order = $identifier !== '' ? sOrder::where('identifier', $identifier)->first() : null;
+        if ($order) {
+            $data['checkout_context'] = CheckoutContext::of($order);
+        }
         if ($order && PaymentSchedule::of($order) && !PaymentSchedule::supports($paymentMethod)) {
             return [
                 'success' => false,
@@ -924,10 +980,13 @@ class sCheckout
      *
      * This method processes the order data stored in `$this->orderData` and saves it as a new record
      * in the `s_orders` table. It ensures the `identifier` is unique to avoid conflicts.
-     * The payment schedule from `sCommerce.ResolvePaymentSchedule` is stored in `payment_info.schedule`.
+     * The checkout context is stored in `meta.integration`, tax data from `sCommerce.ResolveOrderTaxes`
+     * in the lines and `totals`, and the payment schedule from `sCommerce.ResolvePaymentSchedule`
+     * in `payment_info.schedule`.
      *
      * @return \Seiger\sCommerce\Models\sOrder The newly created order model.
      * @throws \InvalidArgumentException When the schedule is invalid or the payment method does not support installments.
+     * @throws CheckoutContextException When the context cannot be resolved or stored.
      */
     protected function saveOrder(): sOrder
     {
@@ -962,6 +1021,9 @@ class sCheckout
         $order->identifier = $identifier;
         $order->history = $history;
 
+        $context = $this->checkoutContext ?: CheckoutContext::resolve($this->orderData, 'storefront', self::trustedActorId());
+        self::prepareNewOrder($order, $this->orderData, 'storefront', $context);
+
         $schedule = PaymentSchedule::resolve($order);
         if ($schedule) {
             $paymentMethod = $this->paymentMethods[$this->orderData['payment']['method'] ?? ''] ?? null;
@@ -980,6 +1042,67 @@ class sCheckout
         $_SESSION['orderNumber'] = $order->id;
 
         return $order;
+    }
+
+    /**
+     * Bind the checkout context and collect tax data and project fields of an unsaved order.
+     *
+     * `sCommerce.BeforeOrderCreate` listeners may set order attributes, e.g. `meta.booking`;
+     * they cannot change `meta.integration`.
+     *
+     * @param array<string, mixed> $data Checkout data of the order.
+     * @param array<string, mixed> $context Resolved checkout context.
+     * @throws CheckoutContextException When a test context cannot be stored.
+     */
+    private static function prepareNewOrder(sOrder $order, array $data, string $source, array $context): void
+    {
+        $canStore = $order->hasOptionalColumn('meta');
+        if (!$canStore && ($context['environment'] ?? CheckoutContext::LIVE) !== CheckoutContext::LIVE) {
+            Log::channel('scommerce')->error('sCommerce cannot store a test checkout context: run the sCommerce migrations', ['source' => $source]);
+            throw new CheckoutContextException(__('sCommerce::global.checkout_context_unavailable'));
+        }
+        if ($canStore) {
+            CheckoutContext::apply($order, $context);
+        }
+        // VAT display values depend on the visitor's mode; they are not order data.
+        if (is_array($order->products)) {
+            $display = array_flip(VatDisplay::keys());
+            $order->products = OrderTaxes::applyRetailExcise(array_map(static fn ($line) => is_array($line) ? array_diff_key($line, $display) : $line, $order->products));
+        }
+
+        OrderTaxes::apply($order, $source);
+        Event::dispatch('sCommerce.BeforeOrderCreate', [['order' => $order, 'data' => CheckoutContext::withoutClientFlags($data), 'source' => $source]]);
+
+        if ($canStore) {
+            CheckoutContext::apply($order, $context);
+        } elseif ($order->meta !== null) {
+            Log::channel('scommerce')->warning('sCommerce order meta was not stored: run the sCommerce migrations', ['source' => $source]);
+            $order->offsetUnset('meta');
+        }
+    }
+
+    /**
+     * Send an order notification; a test order reaches only the context's test recipients.
+     *
+     * @param array<string, mixed> $context Checkout context of the order.
+     * @param string|array<int, string> $recipients Live recipients.
+     */
+    private static function notifyOrder(array $context, string|array $recipients, string $templateKey, sOrder $order): void
+    {
+        $recipients = CheckoutContext::recipients($context, $recipients);
+        if ($recipients === [] || $recipients === '') {
+            return;
+        }
+
+        sCommerce::notifyEmail($recipients, sCommerce::config($templateKey, ''), ['order' => $order]);
+    }
+
+    /**
+     * Authenticated web or manager user of the request; never taken from posted data.
+     */
+    private static function trustedActorId(): int
+    {
+        return (int)(evo()->getLoginUserID('web') ?: evo()->getLoginUserID('mgr'));
     }
 
     /**

@@ -112,8 +112,9 @@ $check($payload['event'] instanceof OrderCreated && $payload['orderId'] === $ord
     && $payload['paymentStatus'] === 0 && $payload['cost'] === 25.0 && $payload['currency'] === 'EUR'
     && $payload['isQuick'] === false && $payload['siteKey'] === 'default', 'Payload summarizes the order');
 $expectedKeys = ['event', 'order', 'orderId', 'orderUuid', 'reference', 'status', 'paymentStatus', 'cost', 'currency', 'isQuick',
-    'siteKey', 'source', 'actorId', 'correlationId', 'causationId', 'integrationActor', 'eventId', 'occurredAt'];
+    'siteKey', 'environment', 'source', 'actorId', 'correlationId', 'causationId', 'integrationActor', 'eventId', 'occurredAt'];
 $check(array_keys($payload) === $expectedKeys, 'Documented payload keys');
+$check($payload['environment'] === 'live', 'Orders without a checkout context are live');
 $check(preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/', $payload['occurredAt']) === 1, 'occurredAt is UTC with milliseconds');
 $check($payload['order'] instanceof sOrder && $payload['order']->id === $order->id && $payload['order'] !== $order, 'Order is a detached copy');
 $payload['order']->status = 13;

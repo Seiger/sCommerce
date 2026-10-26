@@ -54,7 +54,7 @@
     };
 
     $ordersUrl = static function (array $changes = []): string {
-        $query = request()->only(['search', 'status', 'payment_status', 'payment_method', 'delivery_method', 'domain', 'date_from', 'date_to', 'order', 'direc']);
+        $query = request()->only(['search', 'status', 'payment_status', 'payment_method', 'delivery_method', 'domain', 'date_from', 'date_to', 'order', 'direc', 'environment']);
         foreach ($changes as $key => $value) {
             if ($value === null || $value === '') {
                 unset($query[$key]);
@@ -98,6 +98,12 @@
                 <div class="scom-orders-summary__title">
                     <strong>@lang('sCommerce::global.orders')</strong>
                     <span>@lang('sCommerce::global.total'): {{$total ?? 0}}</span>
+                    @if(($environment ?? 'live') === 'test')
+                        <span class="badge bg-warning text-dark" data-orders-environment="test">@lang('sCommerce::global.test_badge')</span>
+                        <a href="{!!$ordersUrl(['environment' => null, 'page' => null])!!}">@lang('sCommerce::global.live_orders')</a>
+                    @elseif(($testOrders ?? 0) > 0)
+                        <a href="{!!$ordersUrl(['environment' => 'test', 'page' => null])!!}" data-orders-environment="live">@lang('sCommerce::global.test_orders'): {{$testOrders}}</a>
+                    @endif
                 </div>
                 <div class="scom-orders-summary__detail">
                     @lang('sCommerce::global.unprocessed_orders'): {{$unprocessed ?? 0}}<span aria-hidden="true">|</span>@lang('sCommerce::global.working_orders'): {{$working ?? 0}}<span aria-hidden="true">|</span>@lang('sCommerce::global.completed_orders'): {{$completed ?? 0}}

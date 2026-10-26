@@ -105,6 +105,85 @@
         <input type="hidden" id="product__show_field_sku" name="product__show_field_sku" value="{{sCommerce::config('product.show_field_sku', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
+{{-- Optional features: their fields are shown only while the feature is on. --}}
+<div class="row form-row">
+    <div class="col-auto">
+        <label for="product__vat_display_on" class="warning">@lang('sCommerce::global.vat_display_on')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.vat_display_on_help')"></i>
+    </div>
+    <div class="col">
+        <input type="checkbox" class="form-checkbox form-control" data-feature-toggle="vat_display_on" onchange="documentDirty=true;" onclick="changestate(document.form.product__vat_display_on);" @if(sCommerce::config('product.vat_display_on', 0) == 1) checked @endif>
+        <input type="hidden" id="product__vat_display_on" name="product__vat_display_on" value="{{sCommerce::config('product.vat_display_on', 0)}}" onchange="documentDirty=true;">
+    </div>
+</div>
+<div class="row form-row" data-feature="vat_display_on" @style(['display:none' => sCommerce::config('product.vat_display_on', 0) != 1])>
+    <div class="col-auto">
+        <label for="product__vat_rate">@lang('sCommerce::global.vat_rate')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.vat_rate_help')"></i>
+    </div>
+    <div class="col col-4 col-md-3 col-lg-2">
+        <input type="number" id="product__vat_rate" name="product__vat_rate" class="form-control" min="0" max="100" step="0.01" value="{{sCommerce::config('product.vat_rate', 0)}}" onchange="documentDirty=true;">
+    </div>
+</div>
+<div class="row form-row" data-feature="vat_display_on" @style(['display:none' => sCommerce::config('product.vat_display_on', 0) != 1])>
+    <div class="col-auto">
+        <label for="product__vat_display">@lang('sCommerce::global.vat_display')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.vat_display_help')"></i>
+    </div>
+    <div class="col col-4 col-md-3 col-lg-2">
+        <select id="product__vat_display" class="form-control" name="product__vat_display" onchange="documentDirty=true;">
+            <option value="gross" @if(sCommerce::config('product.vat_display', 'gross') == 'gross') selected @endif>@lang('sCommerce::global.vat_display_gross')</option>
+            <option value="net" @if(sCommerce::config('product.vat_display', 'gross') == 'net') selected @endif>@lang('sCommerce::global.vat_display_net')</option>
+        </select>
+    </div>
+</div>
+<div class="row form-row">
+    <div class="col-auto">
+        <label for="product__retail_excise_on" class="warning">@lang('sCommerce::global.retail_excise_on')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.retail_excise_on_help')"></i>
+    </div>
+    <div class="col">
+        <input type="checkbox" class="form-checkbox form-control" data-feature-toggle="retail_excise_on" onchange="documentDirty=true;" onclick="changestate(document.form.product__retail_excise_on);" @if(sCommerce::config('product.retail_excise_on', 0) == 1) checked @endif>
+        <input type="hidden" id="product__retail_excise_on" name="product__retail_excise_on" value="{{sCommerce::config('product.retail_excise_on', 0)}}" onchange="documentDirty=true;">
+    </div>
+</div>
+<div class="row form-row" data-feature="retail_excise_on" @style(['display:none' => sCommerce::config('product.retail_excise_on', 0) != 1])>
+    <div class="col-auto">
+        <label for="product__retail_excise_rate">@lang('sCommerce::global.retail_excise_rate')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.retail_excise_rate_help')"></i>
+    </div>
+    <div class="col col-4 col-md-3 col-lg-2">
+        <input type="number" id="product__retail_excise_rate" name="product__retail_excise_rate" class="form-control" min="0" max="100" step="0.01" value="{{sCommerce::config('product.retail_excise_rate', 0)}}" onchange="documentDirty=true;">
+    </div>
+</div>
+<div class="row form-row">
+    <div class="col-auto">
+        <label for="product__container_deposit_on" class="warning">@lang('sCommerce::global.container_deposit_on')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.container_deposit_on_help')"></i>
+    </div>
+    <div class="col">
+        <input type="checkbox" class="form-checkbox form-control" data-feature-toggle="container_deposit_on" onchange="documentDirty=true;" onclick="changestate(document.form.product__container_deposit_on);" @if(sCommerce::config('product.container_deposit_on', 0) == 1) checked @endif>
+        <input type="hidden" id="product__container_deposit_on" name="product__container_deposit_on" value="{{sCommerce::config('product.container_deposit_on', 0)}}" onchange="documentDirty=true;">
+    </div>
+</div>
+<div class="row form-row" data-feature="container_deposit_on" @style(['display:none' => sCommerce::config('product.container_deposit_on', 0) != 1])>
+    <div class="col-auto">
+        <label for="product__container_terms">@lang('sCommerce::global.container_terms')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.container_terms_help')"></i>
+    </div>
+    <div class="col">
+        <input type="text" id="product__container_terms" name="product__container_terms" class="form-control" maxlength="255" value="{{sCommerce::config('product.container_terms', '')}}" onchange="documentDirty=true;">
+    </div>
+</div>
+<script>
+    document.querySelectorAll('[data-feature-toggle]').forEach(function (box) {
+        box.addEventListener('click', function () {
+            document.querySelectorAll('[data-feature="' + box.dataset.featureToggle + '"]').forEach(function (row) {
+                row.style.display = box.checked ? '' : 'none';
+            });
+        });
+    });
+</script>
 <div class="row form-row">
     <div class="col-auto">
         <label for="product__available_modes">@lang('sCommerce::global.available_types')</label>

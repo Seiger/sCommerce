@@ -8,6 +8,7 @@ use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sOrderPayment;
 use Seiger\sCommerce\Models\sPaymentOperation;
 use Seiger\sCommerce\Payment\PaymentActionException;
+use Seiger\sCommerce\Services\ContainerDeposit;
 use Seiger\sCommerce\Services\OrderPaymentAction;
 
 /**
@@ -40,6 +41,9 @@ final class OrderPaymentActionController
         }
 
         $action = $request->input('action');
+        if ($action === OrderPaymentAction::CONTAINER_ACTION) {
+            return OrderPaymentAction::permitted($action) ? $this->returnContainers($request, $managerId) : $this->fail('payment_action_forbidden', 403);
+        }
         $offline = is_string($action) && in_array($action, OrderPaymentAction::OFFLINE_ACTIONS, true);
         if (!is_string($action) || (!$offline && !in_array($action, OrderPaymentAction::ACTIONS, true))) {
             return $this->fail('payment_action_ineligible', 422);
@@ -97,6 +101,46 @@ final class OrderPaymentActionController
         }
 
         return new JsonResponse(['success' => $success, 'state' => $outcome['state'], 'message' => $message], $status);
+    }
+
+    /**
+     * Return containers of an order line: refund in cash or credit to another order.
+     */
+    private function returnContainers(Request $request, int $managerId): JsonResponse
+    {
+        $integer = static fn ($value, int $min) => (is_int($value) || is_string($value))
+            ? filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min]]) : false;
+        $orderId = $integer($request->input('order'), 1);
+        $line = $integer($request->input('line'), 0);
+        $count = $integer($request->input('count'), 1);
+        $settlement = $request->input('settlement', 'cash');
+        $creditId = $settlement === 'credit' ? $integer($request->input('credit_order'), 1) : null;
+        $nonce = $request->input('nonce');
+        if ($orderId === false || $line === false || $count === false || $creditId === false || !in_array($settlement, ['cash', 'credit'], true) || !is_string($nonce)) {
+            return $this->fail('container_return_invalid', 422);
+        }
+        if (!OrderPaymentAction::nonceMatches($nonce, $orderId, 0, OrderPaymentAction::CONTAINER_ACTION)) {
+            return $this->fail('bulk_status_session_expired', 403);
+        }
+        $order = sOrder::query()->find($orderId);
+        $credit = $creditId ? sOrder::query()->find($creditId) : null;
+        if (!$order || ($creditId && (!$credit || $credit->id === $order->id))) {
+            return $this->fail('container_return_invalid', 422);
+        }
+
+        try {
+            EventScope::run(ContainerDeposit::SOURCE, $managerId, fn () => (new ContainerDeposit())->returnContainers([
+                'reference' => "order/$orderId/" . substr(hash('sha256', $nonce), 0, 24), 'sourceOrder' => $order, 'lineIndex' => $line,
+                'quantity' => $count, 'settlement' => $settlement, 'creditOrder' => $credit, 'note' => (string)$request->input('reason', ''),
+            ], $managerId));
+        } catch (PaymentActionException $exception) {
+            return $this->fail($exception->messageKey, $exception->status);
+        } catch (\Throwable $exception) {
+            Log::channel('scommerce')->error('sCommerce container return failed', ['order_id' => $orderId, 'exception' => $exception]);
+            return $this->fail('bulk_status_error', 500);
+        }
+
+        return new JsonResponse(['success' => true, 'state' => 'succeeded', 'message' => __('sCommerce::global.container_return_success')]);
     }
 
     private function fail(string $key, int $status): JsonResponse

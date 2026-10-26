@@ -284,3 +284,36 @@ class SCommerceProductController extends BaseController
     </a>
 </div>
 ```
+
+## Снимок строки заказа
+
+Начиная с 1.5.0, каждая новая строка заказа (корзина на сайте, быстрый заказ, редактор в менеджере и повторные заказы) хранит свою идентичность в JSON `products` заказа рядом с существующими ключами (`id`, `title`, `price`, `quantity` и другими):
+
+| Ключ | Тип | Значение |
+|---|---|---|
+| `line_key` | string | `"{productId}:{optionId}"`, например `"5:3"` |
+| `product_id` | int | id товара (совпадает с `id`) |
+| `option_id` | int | id опции корзины; `0` — опции нет |
+| `sku` | string | фактический SKU; равен `product_sku`, если слушатель `sCommerce.ResolveLineIdentity` не задал SKU варианта |
+| `product_sku` | string | собственный SKU товара |
+| `gtin` | string или null | GTIN товара |
+| `unit_price_net`, `tax_rate` | float или null | заготовки для налогов, заполняются только слушателями `sCommerce.ResolveOrderTaxes` |
+| `requires_shipping` | bool | строка доставляется |
+| `tracks_inventory` | bool | строка учитывается в остатках |
+| `retail_excise_rate`, `retail_excise_amount` | float | только в строках с розничным акцизом: его ставка и сумма, включённая в сумму строки, для чека |
+| `deposit_unit`, `exchange_quantity`, `deposit_quantity`, `deposit_amount`, `deposit_returnable`, `deposit_terms`, `deposit_returned_quantity` | mixed | только в строках с залогом за возвратную тару, см. [Залог за возвратную тару](payments/index.md#залог-за-возвратную-тару) |
+
+Налоговые слушатели также могут добавлять `tax_code`, `unit_price_gross`, `tax_amount` и `prices_include_tax`. См. [События](events.md#строки-заказа-исполнение-и-налоги).
+
+Две строки корзины с одним товаром и разными опциями теперь различаются по `option_id` и `line_key`. Смысл id опции определяет проект, например его ценовые слушатели; он не указывает на строку `s_product_modifications`.
+
+Заказы, созданные до 1.5.0, не содержат этих ключей. Потребители должны использовать запасные значения:
+
+- `id` для `product_id`;
+- `0` для `option_id`;
+- `sku` для `sku` и `product_sku`;
+- `true` для `requires_shipping` и `tracks_inventory`.
+
+`line_key` уникален в пределах заказа, созданного из корзины. Менеджер может добавить один и тот же товар дважды, поэтому потребителям следует также использовать индекс строки. Строки, добавленные в менеджере, получают идентичность на сервере при сохранении заказа; строки, у которых уже есть `line_key`, сохраняют его.
+
+`sCommerce::supportsIntegration('line-identity')` сообщает о поддержке.

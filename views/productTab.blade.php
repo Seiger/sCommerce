@@ -116,6 +116,22 @@
                     </div>
                 </div>
             @endif
+            @if(sCommerce::config('product.container_deposit_on', 0) == 1)
+            <div class="row-col col-lg-3 col-md-6 col-12">
+                <div class="row form-row">
+                    <div class="col-auto col-title">
+                        <label for="deposit">@lang('sCommerce::global.container_deposit')</label>
+                        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.container_deposit_help')"></i>
+                    </div>
+                    <div class="input-group col">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><small>{{str_replace('&nbsp;', ' ', trim(sCommerce::getCurrencies([$item->currency ?? sCommerce::config('basic.main_currency', 'USD')])->first()['symbol']))}}</small></span>
+                        </div>
+                        <input id="deposit" class="form-control" name="deposit" value="{{(float)($item->deposit ?? 0) > 0 ? $item->deposit : ''}}" onblur="documentDirty=true;">
+                    </div>
+                </div>
+            </div>
+            @endif
             @if(sCommerce::config('product.show_field_price_opt', 1) == 1)
                 <div class="row-col col-lg-3 col-md-6 col-12">
                     <div class="row form-row">
@@ -186,7 +202,7 @@
                         <div class="col">
                             <select id="mode" name="mode" class="form-control" onchange="documentDirty=true;">
                                 @foreach(sCommerce::config('product.available_modes', []) as $mode)
-                                    <option value="{{$type}}" @if(($item->mode ?? 0) == $mode) selected @endif>{{sProduct::listMode()[$mode]}}</option>
+                                    <option value="{{$mode}}" @if(($item->mode ?? 0) == $mode) selected @endif>{{sProduct::listMode()[$mode]}}</option>
                                 @endforeach
                             </select>
                         </div>
