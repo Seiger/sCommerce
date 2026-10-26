@@ -677,6 +677,20 @@ public function defineAvailableModes(): array
 ]
 ```
 
+### Multiselect Field
+
+The selected values are stored as a list. End the `name` with `[]`:
+
+```php
+[
+    'type' => 'multiselect',
+    'label' => 'Order statuses',
+    'name' => 'statuses[]',
+    'value' => $this->getSettings()['statuses'] ?? [],
+    'options' => \Seiger\sCommerce\Models\sOrder::listOrderStatuses(),
+]
+```
+
 ## Recording payments (ledger API)
 
 Every payment of an order is a row in the payments ledger (`s_order_payments`). `s_orders.payment_status` is derived from the ledger: never write it directly. Record payment results with `Seiger\sCommerce\Payment\PaymentFlow`:
@@ -764,6 +778,8 @@ After each change, sCommerce recalculates `payment_status` from the rows in the 
 - rows in another currency are ignored and logged once.
 
 A payment that a manager marked as partially refunded, without a recorded returned amount, shows the order as partially refunded but does not change the totals.
+
+When the order cost changes after payment (a manager edits the products, a surcharge, a weighed item), the status is recalculated once the change is committed: a higher cost makes a paid order *partially paid*, and a lower cost leaves it *paid* with an overpayment that the **Payments** panel shows. Editing the products in the manager keeps the delivery cost and any other amount checkout added on top of the products. The order form no longer accepts *Partially paid* as a status choice: the amount is recorded with **Record payment** instead (see below).
 
 The ledger dispatches `sCommerce.PaymentRecorded` and `sCommerce.PaymentStatusChanged` (see [Events](../events.md)).
 
@@ -922,6 +938,165 @@ Classes that define `handleWebhook()` without parameters, or the matchers `canHa
 ### Listening to results
 
 Use `sCommerce.PaymentRecorded`, `sCommerce.PaymentStatusChanged` and `sCommerce.OrderPaymentStatusChanged` to react to payments (see [Events](../events.md)).
+
+## Manager payment operations
+
+Since 1.5.0, the manager order screen shows a **Payments** panel with the ledger rows of the order. A payment method can add **Capture**, **Refund** and **Cancel** buttons by implementing optional interfaces. Implement only what the provider supports:
+
+| Interface | Method | Button shown for |
+|---|---|---|
+| `CapturablePaymentMethodInterface` | `capture(sOrder, sOrderPayment, ?float $amount, string $idempotencyKey)` | `authorized` rows; `$amount` is `null` for the full authorization |
+| `RefundablePaymentMethodInterface` | `refund(sOrder, sOrderPayment, float $amount, string $reason, string $idempotencyKey)` | `captured` rows with money left to refund |
+| `CancelablePaymentMethodInterface` | `cancel(sOrder, sOrderPayment, string $reason, string $idempotencyKey)` | `pending` and `authorized` rows |
+
+The interfaces are in `Seiger\sCommerce\Interfaces` and extend `PaymentMethodInterface`. Each method returns a `Seiger\sCommerce\Payment\PaymentOperationResult`:
+
+```php
+new PaymentOperationResult(
+    outcome: 'succeeded',      // succeeded | pending | failed
+    providerRef: 're_789',     // provider id of the refund or capture
+    message: '',               // safe to show to a manager
+    metadata: [],              // stored with the ledger row
+);
+```
+
+A button appears only when the method implements the interface, the row is eligible and the manager has `exec_module` plus the permission `scommerce_payment_capture`, `scommerce_payment_refund` or `scommerce_payment_cancel`. A migration creates these permissions and grants them to the administrator role. Rows of methods without the interfaces are shown read-only.
+
+```php
+use Seiger\sCommerce\Interfaces\RefundablePaymentMethodInterface;
+use Seiger\sCommerce\Models\sOrder;
+use Seiger\sCommerce\Models\sOrderPayment;
+use Seiger\sCommerce\Payment\BasePaymentMethod;
+use Seiger\sCommerce\Payment\PaymentOperationResult;
+
+class MyPspPayment extends BasePaymentMethod implements RefundablePaymentMethodInterface
+{
+    // getName(), processPayment() and the other methods are omitted.
+
+    public function supportsPartialRefund(): bool
+    {
+        return true;
+    }
+
+    public function refund(sOrder $order, sOrderPayment $payment, float $amount, string $reason, string $idempotencyKey): PaymentOperationResult
+    {
+        $response = $this->client()->refunds->create([
+            'payment' => $payment->provider_ref,
+            'amount' => (int)round($amount * 100),
+            'reason' => $reason,
+        ], ['idempotency_key' => $idempotencyKey]); // Same key, same refund at the provider.
+
+        return match ($response->status) {
+            'succeeded' => new PaymentOperationResult('succeeded', $response->id),
+            'pending' => new PaymentOperationResult('pending', $response->id),
+            default => new PaymentOperationResult('failed', $response->id, 'The provider declined the refund.'),
+        };
+    }
+}
+```
+
+How sCommerce runs an operation:
+
+1. It checks the manager session, CSRF token, permissions and a form nonce bound to the order, payment and action.
+2. Under the order lock it checks the row and reserves the amount: a refund cannot exceed the captured amount minus refunds that are recorded, pending or still running. It stores the operation in `s_payment_operations` with the key `{action}/{orderId}/{paymentId}/{nonce}`, which is also the `$idempotencyKey`. No database lock is held while the provider is called.
+3. It records the result through `PaymentFlow`:
+   - refund `succeeded`: a `refund` row with status `refunded`, `providerRef` = the returned refund id and `parentProviderRef` = the original payment. A succeeded refund must return its provider id;
+   - refund `pending`: a `refund` row with status `pending`; your webhook later records `refunded` (or `failed`) with the same `providerRef`. Without a `providerRef` the amount stays reserved in the operation;
+   - capture `succeeded`: the same row becomes `captured`. After a partial capture its amount becomes the captured amount and the authorized amount is kept in `metadata._ledger.authorized_amount`;
+   - cancel `succeeded`: the row becomes `canceled`;
+   - a `pending` capture or cancel and every `failed` outcome change no ledger row.
+4. Sending the same form again returns the stored operation and does not call the provider. The same nonce with another amount or reason is refused as a conflict.
+
+If the provider call throws (for example a timeout after the request was sent), the operation becomes `unknown`. sCommerce never repeats it blindly and keeps the amount reserved. Implement `PaymentOperationLookupInterface::findPaymentOperation(PaymentOperationRequest $request)` to let sCommerce ask the provider by the idempotency key: return the result, or `null` when the provider has definitely not received the request (it is then sent again with the same key). The hidden sTask worker **Payment reconciliation** (every 15 minutes) completes pending operations from the ledger and looks up unknown ones.
+
+A method that already has its own durable operation store (for example a financial integration package) implements `DelegatedPaymentOperationsInterface` instead. sCommerce then checks the manager guards and passes a `PaymentOperationRequest` to `runPaymentOperation()` without creating a second operation. The implementation must deduplicate by `idempotencyKey`, reserve the amount, recover uncertain results and record confirmed money facts through `PaymentFlow` itself. `supportsPaymentOperation($action)` tells which buttons to show.
+
+### Partial capture (weighed goods)
+
+For goods whose final price is known only after weighing, authorize an estimate at checkout and capture the actual amount. When `supportsPartialCapture()` returns `true`, the **Capture** button gets an amount field, prefilled with the authorization capped at the current balance due. The amount must be positive and not above the authorization; `capture()` then receives it as `$amount`, and the provider releases the rest of the authorization. Methods that return `false` capture only the full authorization. If the weighed cost is higher than the authorization, capture the authorization and collect the rest with a payment link (see [Payment schedules](#payment-schedules-deposit-and-final-payment)).
+
+A capture reported first by the provider's webhook is recorded the same way: `PaymentFlow::record()` with status `captured`, the authorization's `providerRef` and a lower amount turns the `authorized` row into a partial capture. A later replay of the original authorization is ignored.
+
+### Recording offline payments
+
+Cash and bank transfers are not moved by a provider, so the manager records them. For an order paid with an offline method (one implementing `OfflineSettlementPaymentMethodInterface`, such as **Cash** and **Bank invoice**), the panel shows:
+
+- **Record payment**: the amount received (up to the balance due) and an optional receipt number or note. It is recorded as a `captured` row with `provider` = the method name; it is a `deposit` while it fits the open deposit installment, otherwise `final`;
+- **Record return**: money given back to the customer, for example after a lighter item or a lowered cost (up to the money this method received). It is recorded as a `refund` row with status `refunded`.
+
+Both need the permission `scommerce_payment_record`. The ledger reference is derived from the form nonce, so sending the same form again records nothing new, and the same form with another amount is refused. Offline settlement then records only what is still unpaid.
+
+`sCommerce::supportsIntegration('payment-capabilities')` reports support.
+
+## Payment schedules (deposit and final payment)
+
+By default the whole order cost is charged at once. A listener of `sCommerce.ResolvePaymentSchedule` can split it into installments when the order is placed (checkout and quick order), before the order is first saved:
+
+```php
+use Illuminate\Support\Facades\Event;
+
+Event::listen('sCommerce.ResolvePaymentSchedule', function (array $payload) {
+    $order = $payload['order']; // unsaved sOrder
+    if (!str_starts_with((string)($order->products[0]['sku'] ?? ''), 'SRV-')) {
+        return;
+    }
+
+    $deposit = round($order->cost * 0.3, 2);
+    $payload['schedule'] = [
+        ['kind' => 'deposit', 'amount' => $deposit, 'due' => 'checkout', 'label' => 'Booking deposit'],
+        ['kind' => 'final', 'amount' => round($order->cost - $deposit, 2), 'due' => 'on_status:8'],
+    ];
+});
+```
+
+| Key | Values |
+|---|---|
+| `kind` | `deposit` or `final`; repeated kinds are allowed |
+| `amount` | positive; all amounts must add up to the order cost (0.01 tolerance) |
+| `due` | `checkout`: charged when the order is placed; `manual`: payable by payment link at any time; `on_status:<int>`: payable once the order has reached that status |
+| `label` | optional text for managers and e-mails |
+
+sCommerce validates the schedule and stores it in `payment_info.schedule` with stable item ids. An invalid schedule fails the checkout before the order is saved or charged; it never falls back to charging the full cost.
+
+The amount to charge is always computed on the server and passed to `processPayment()` and `payButton()` as `payment_request`:
+
+```php
+[
+    'kind' => 'deposit',
+    'amount' => 30.0,
+    'currency' => 'EUR',
+    'orderIdentifier' => 'kq3...',   // s_orders.identifier
+    'scheduleItem' => '1',
+    'key' => 'installment/15/1/3000', // stable per order, item and amount
+]
+```
+
+- At checkout, only an installment due `checkout` is requested. When the first open installment is due later, `processPayment()` is not called.
+- `sCheckout::payOrder()` discards any `payment_request` sent by the client. When the request contains `order` (the order identifier) and the order has a schedule, it sets the next due installment, or answers that nothing is due. Pay links must therefore send `order`.
+- `sCommerce::payButton()` passes the order with `payment_request` when it is called with an order id or identifier, and renders nothing when no installment is due.
+- Received, authorized and pending payments are allocated to the installments in order. A partially paid installment requests only its rest. Refunds do not reopen an installment: collecting again needs a new explicit request.
+- The last installment absorbs cost changes made after checkout: it is the current order cost minus the earlier installments. A surcharge raises it, a lower weighed cost lowers it, and earlier installments stay as agreed. The panel shows the adjusted amount.
+- For an order without a schedule paid with an `InstallmentPaymentMethodInterface` method, `payOrder()` and `payButton()` also pass `payment_request`: one `final` payment of the unpaid rest (`scheduleItem` `1`, due by payment link). A partially paid order is therefore never charged its full cost again, and a paid order or an open authorization answers that nothing is due. Methods without the marker behave as before.
+
+Payment methods must declare that they charge `payment_request.amount` by implementing the marker `InstallmentPaymentMethodInterface`, and record each payment with the requested `kind`. Checkout and pay links refuse a scheduled order for other methods. Offline methods (cash, bank invoice) accept schedules.
+
+`PaymentFlow::summary($order)` returns the totals, `outstandingMinor()` (the balance due), `overpaidMinor()` and `nextInstallment`; `PaymentSchedule::nextPayment($order, $summary)` returns the next payment to request with or without a schedule. `sCommerce::supportsIntegration('payment-schedule')` reports support.
+
+## Offline settlement
+
+Cash on delivery and bank transfers can be recorded as paid automatically when the order reaches a status. In the settings of the **Cash** or **Bank invoice** method, select statuses in **Mark as paid on order status**, for example *Delivered*. The setting is empty (off) by default.
+
+When an order with that payment method reaches a selected status, sCommerce records the unpaid balance as one `final` capture:
+
+- `provider` is the method name (`cash`, `bank_invoice`) and `providerRef` is `settle/{orderId}/{status}`, so repeating the status never records a second payment;
+- `metadata` contains `source: offline_settlement` and `trigger_status`; the events carry the source `offline_settlement`;
+- only the balance due is recorded, so a deposit paid online is respected;
+- nothing is recorded when money was refunded, a payment operation is unfinished, or the order is fully paid;
+- partial payments recorded with **Record payment** are respected the same way.
+
+Settlement runs after the status change is committed, once per business operation. The **Payment reconciliation** worker retries settlements that were missed, for example after an error or a status written with a direct database query. Enable the setting only when no other system (an ERP receipt import or a financial integration) records the same payments.
+
+Third-party offline methods opt in by implementing the marker `OfflineSettlementPaymentMethodInterface` and a `settle_on_statuses` setting; the `OfflineSettlementSettings` trait provides the settings field. `sCommerce::supportsIntegration('offline-settlement')` reports support.
 
 ## Testing Payment Methods
 

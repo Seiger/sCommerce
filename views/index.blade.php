@@ -138,7 +138,10 @@
                 alertify.success("{{session('success')}}");
             @endif
             @if (session()->has('error'))
-                alertify.success("{{session('error')}}");
+                alertify.error("{{session('error')}}");
+            @endif
+            @if (request()->query('payment_notice') === 'partial_use_record')
+                alertify.error(@json(__('sCommerce::global.payment_partial_use_record')));
             @endif
         });
 

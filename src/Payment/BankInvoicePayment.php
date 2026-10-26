@@ -1,7 +1,7 @@
 <?php namespace Seiger\sCommerce\Payment;
 
+use Seiger\sCommerce\Interfaces\OfflineSettlementPaymentMethodInterface;
 use Seiger\sCommerce\Models\sOrder;
-use Seiger\sCommerce\Payment\BasePaymentMethod;
 use Seiger\sCommerce\Services\OrderReferenceFormatter;
 
 /**
@@ -11,8 +11,10 @@ use Seiger\sCommerce\Services\OrderReferenceFormatter;
  * using an invoice. It extends the `BasePaymentMethod` class to inherit core functionality and provides
  * specific implementations for the bank invoice payment method.
  */
-class BankInvoicePayment extends BasePaymentMethod
+class BankInvoicePayment extends BasePaymentMethod implements OfflineSettlementPaymentMethodInterface
 {
+    use OfflineSettlementSettings;
+
     /**
      * Get the unique name of the payment method.
      *
@@ -131,7 +133,7 @@ class BankInvoicePayment extends BasePaymentMethod
                     ],
                 ],
             ],
-        ];
+        ] + $this->offlineSettlementSettings();
     }
 
     /**
@@ -175,7 +177,8 @@ class BankInvoicePayment extends BasePaymentMethod
             'account_number' => $this->getSettings()['account_number'] ?? '',
             'bank_code' => $this->getSettings()['bank_code'] ?? '',
             'tax_id' => $this->getSettings()['tax_id'] ?? '',
-            'cost' => $order->cost ?? 0,
+            // A scheduled order shows the installment requested now, not the whole cost.
+            'cost' => is_array($data) && isset($data['payment_request']['amount']) ? $data['payment_request']['amount'] : ($order->cost ?? 0),
             'currency' => $order->currency ?? 'UAH',
             'order_id' => OrderReferenceFormatter::orderNumber($order->reference ?? null) ?? ($order->id ?? 0),
             'payment_terms' => $this->getSettings()['payment_terms'] ?? 7,

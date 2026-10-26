@@ -22,6 +22,8 @@ use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
+use Seiger\sCommerce\Payment\PaymentFlow;
+use Seiger\sCommerce\Payment\PaymentSchedule;
 use Seiger\sCommerce\Services\ProductListingService;
 use Seiger\sCommerce\Services\sPriceResolver;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -83,7 +85,7 @@ class sCommerce
      */
     public static function integrationFeatures(): array
     {
-        return ['order-events', 'payment-ledger-api', 'webhook-interface'];
+        return ['order-events', 'payment-ledger-api', 'webhook-interface', 'payment-capabilities', 'payment-schedule', 'offline-settlement'];
     }
 
     /**
@@ -1082,16 +1084,23 @@ class sCommerce
      *  - If it's a string, the method assumes it's the order key (identifier).
      *  - If it's an array, it assumes it's the complete order data.
      *
+     *  For an order id or identifier with a payment schedule, or paid with a method that honours
+     *  `payment_request`, the method receives the order array with `payment_request` set to the
+     *  next due installment or the unpaid rest; no button is shown when nothing is due.
+     *
      * @return string The HTML for the payment button or an empty string if the payment method is not found or invalid.
      *
      * @throws \Exception If there is an issue accessing the payment method class or other unforeseen issues.
      */
     public static function payButton(int|string|array $data): string
     {
+        $model = null;
         if (is_int($data)) {
-            $order = sOrder::whereId((int)$data)->first()->toArray();
+            $model = sOrder::whereId((int)$data)->first();
+            $order = $model?->toArray();
         } elseif (is_string($data)) {
-            $order = sOrder::whereIdentifier(trim($data))->first()->toArray();
+            $model = sOrder::whereIdentifier(trim($data))->first();
+            $order = $model?->toArray();
         } elseif (is_array($data)) {
             $order = $data;
         }
@@ -1107,6 +1116,15 @@ class sCommerce
         }
 
         $instance = new $paymentMethod->class($paymentMethod->identifier);
+
+        if ($model && (PaymentSchedule::of($model) || PaymentSchedule::supports($instance))) {
+            // The order data with the next due payment (installment or unpaid rest), or no button.
+            $installment = PaymentSchedule::nextPayment($model, (new PaymentFlow())->summary($model));
+            if (!$installment || !PaymentSchedule::isDue($installment, $model) || !PaymentSchedule::supports($instance)) {
+                return '';
+            }
+            $data = $order + ['payment_request' => PaymentSchedule::paymentRequest($model, $installment)];
+        }
 
         return $instance->payButton($data);
     }

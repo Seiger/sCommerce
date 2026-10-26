@@ -17,6 +17,9 @@ final class EventScope
     /** @var list<self> Open scopes, outermost first. */
     private static array $stack = [];
 
+    /** @var array<string|int, callable> Work to run when the outermost scope ends. */
+    private static array $deferred = [];
+
     private bool $ended = false;
 
     /**
@@ -83,10 +86,49 @@ final class EventScope
         foreach (array_slice(self::$stack, $index + 1) as $inner) {
             $inner->ended = true;
         }
-        self::$stack = array_slice(self::$stack, 0, $index);
 
-        if (self::$stack === []) {
-            DomainEventRecorder::instance()->flush();
+        try {
+            if ($index === 0) {
+                // Deferred work runs while this scope is still open, so its events join the same flush.
+                self::$stack = [$this];
+                while (self::$deferred !== []) {
+                    $tasks = self::$deferred;
+                    self::$deferred = [];
+                    foreach ($tasks as $task) {
+                        $task();
+                    }
+                }
+            }
+        } finally {
+            self::$stack = array_slice(self::$stack, 0, $index);
+            if (self::$stack === []) {
+                DomainEventRecorder::instance()->flush();
+            }
+        }
+    }
+
+    /**
+     * Run internal follow-up work when the outermost scope ends, or now when no scope is open.
+     *
+     * Use it for work that must see the whole business operation, e.g. offline settlement
+     * after a status change. The callback must handle its own errors.
+     *
+     * @param callable $task Work to run.
+     * @param string|null $key Deduplication key; a later task with the same key replaces the earlier one.
+     * @since 1.5.0
+     */
+    public static function defer(callable $task, ?string $key = null): void
+    {
+        if (!self::active()) {
+            $task();
+            return;
+        }
+
+        if ($key === null) {
+            self::$deferred[] = $task;
+        } else {
+            unset(self::$deferred[$key]);
+            self::$deferred[$key] = $task;
         }
     }
 
