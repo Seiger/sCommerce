@@ -131,6 +131,7 @@ of Evolution CMS for seamless and efficient **online commerce**.
     - [x] sCommerce.ResolveCheckoutContext.
 - [x] Shipments and Tracking (ERP/carrier API, partial parcels, optional order status from shipments).
     - [x] sCommerce.ShipmentUpdated.
+- [x] Measured Quantities (sell by weight, length, volume or count in whole base units, price per unit or per 100 g / 1,000 items, actual quantities of cut or weighed goods).
 - [x] Stock Integration (external stock provider, stock write API, optional stock reduction on orders).
     - [x] sCommerce.ResolveProductStock.
     - [x] sCommerce.ProductStockChanged.

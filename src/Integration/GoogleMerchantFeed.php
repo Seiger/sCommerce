@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Seiger\sCommerce\Controllers\sCommerceController;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sProduct;
+use Seiger\sCommerce\Services\MeasuredQuantity;
 use Seiger\sGallery\Models\sGalleryModel as sGalleryModel;
 use Seiger\sLang\Facades\sLang;
 use Seiger\sTask\Models\sTaskModel;
@@ -1466,6 +1467,12 @@ class GoogleMerchantFeed extends BaseWorker
             $writer->writeElement('g:sale_price', $salePrice);
         }
 
+        // Goods sold by measure: the price refers to the price basis (EU unit price display).
+        if (($unitPricing = self::unitPricingMeasure($product)) !== null) {
+            $writer->writeElement('g:unit_pricing_measure', $unitPricing);
+            $writer->writeElement('g:unit_pricing_base_measure', $unitPricing);
+        }
+
         $writer->writeElement('g:condition', 'new');
         $writer->writeElement('g:brand', $this->sanitizeText($brand, 70));
         $writer->writeElement('g:mpn', $this->sanitizeText($product->sku ?: $identifier, 70));
@@ -1484,6 +1491,27 @@ class GoogleMerchantFeed extends BaseWorker
         }
 
         $writer->endElement(); // item
+    }
+
+    /**
+     * Google unit pricing measure of a product sold by weight, length or volume: the price basis
+     * in the largest unit that keeps it whole (`1m`, `1kg`, `100g`, `100ml`); null otherwise.
+     *
+     * @since 1.5.0
+     */
+    public static function unitPricingMeasure(object $product): ?string
+    {
+        $rules = MeasuredQuantity::rules($product);
+        if (!in_array($rules->measure, ['weight', 'length', 'volume'], true)) {
+            return null;
+        }
+        foreach (MeasuredQuantity::units($rules->measure) as [$unit, $factor]) {
+            if ($rules->factor % $factor === 0) {
+                return intdiv($rules->factor, $factor) . $unit;
+            }
+        }
+
+        return null;
     }
 
     /**

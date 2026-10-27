@@ -122,6 +122,39 @@ $app->eventFailure = true;
 $check($call(['repeat_token' => str_repeat('b', 64)])->getStatusCode() === 200, 'Listener failure after commit does not report rollback');
 $app->eventFailure = false;
 
+// Measured lines are repeated with the current rules of their product.
+$measured = ['id' => 6, 'sku' => 'CABLE', 'mode' => 0, 'measure' => 2, 'price_unit' => 'm', 'quantity_step' => 10, 'quantity_min' => 1000, 'quantity_tolerance' => 500];
+$app->instance('sCommerce', new class($measured) extends Seiger\sCommerce\sCommerce {
+    public function __construct(public array $measured) { $this->currencies = collect([['alpha' => 'UAH', 'symbol' => '₴', 'show' => 1, 'position' => 'after']]); }
+    public function getProduct(int $productId, ?string $lang = null): object
+    {
+        return (new Seiger\sCommerce\Models\sProduct())->forceFill($productId === 6 ? $this->measured : ['id' => $productId === 5 ? 5 : 0, 'sku' => 'SKU-1', 'mode' => 0]);
+    }
+});
+Illuminate\Support\Facades\Facade::clearResolvedInstance('sCommerce');
+$rules = Seiger\sCommerce\Services\MeasuredQuantity::rules(Seiger\sCommerce\Facades\sCommerce::getProduct(6));
+$cable = ['id' => 6, 'line_key' => '6:0', 'product_id' => 6, 'option_id' => 0, 'title' => 'Cable', 'sku' => 'CABLE', 'link' => '', 'coverSrc' => '',
+    'price' => '1.20', 'priceNumber' => 1.2, 'quantity' => 2530, 'actual_quantity' => 2553, 'actual_quantity_by' => 3] + $rules->lineKeys();
+$measuredSource = (new sOrder())->forceFill(['identifier' => 'measured-source', 'status' => 8, 'payment_status' => 3, 'currency' => 'UAH', 'cost' => 3.06, 'lang' => 'en',
+    'user_info' => ['first_name' => 'Cutter'], 'products' => [$cable], 'delivery_info' => [], 'payment_info' => [], 'history' => []]);
+$measuredSource->save();
+$measuredDraft = (new OrderRepeater())->draft($measuredSource);
+$check(!isset($measuredDraft->products[0]['actual_quantity']) && !isset($measuredDraft->products[0]['actual_quantity_by']) && $measuredDraft->cost === 3.04,
+    'The draft bills the ordered quantity, not the source actual quantity');
+$repeatLine = static fn (array $line, string $token) => $controller->handle(Request::create('/', 'POST', array_replace($payload,
+    ['repeat_from' => $measuredSource->id, 'repeat_token' => $token, 'products_data' => json_encode([$line])])));
+$check($repeatLine(array_replace($measuredDraft->products[0], ['quantity' => 2535]), str_repeat('d', 64))->getStatusCode() === 422, 'Repeat validates the step strictly');
+$check($repeatLine(array_replace($measuredDraft->products[0], ['quantity' => 900]), str_repeat('d', 64))->getStatusCode() === 422, 'Repeat validates the minimum strictly');
+$response = $repeatLine(array_replace($measuredDraft->products[0], ['quantity' => 3000, 'factor' => 1, 'quantity_step' => 1, 'actual_quantity' => 5]), str_repeat('d', 64));
+$repeated = sOrder::query()->latest('id')->first()->products[0];
+$check($response->getStatusCode() === 200 && $repeated['quantity'] === 3000 && $repeated['factor'] === 1000 && $repeated['quantity_step'] === 10
+    && !isset($repeated['actual_quantity']) && $repeated['quantity_label'] === '3 m' && $repeated['sumAsFloat'] === 3.6
+    && (float)sOrder::query()->latest('id')->first()->cost === 3.6, 'Repeat uses the current rules and the exact total');
+$app->make('sCommerce')->measured['measure'] = 1;
+$check($repeatLine(array_replace($measuredDraft->products[0], ['quantity' => 3000]), str_repeat('e', 64))->getStatusCode() === 422, 'A product whose measure changed is refused');
+$app->make('sCommerce')->measured['measure'] = 0;
+$check($repeatLine(array_replace($measuredDraft->products[0], ['quantity' => 3000]), str_repeat('f', 64))->getStatusCode() === 422, 'A product now sold by the piece is refused');
+
 // Render the actual copy form and compile its embedded JS.
 $app->instance('request', Request::create('/', 'GET', ['i' => 0, 'repeat_from' => $sourceId]));
 $html = $view->file(__DIR__ . '/fixtures/scommerce-new-order.blade.php', [

@@ -194,6 +194,8 @@
         @foreach($item->products as $index => $product)
             @php
                 $info = '';
+                $lineRules = \Seiger\sCommerce\Services\MeasuredQuantity::fromLine(is_array($product) ? $product : []);
+                $linePrice = $lineRules->isMeasured() ? sCommerce::convertPriceNumber($product['price'], $item->currency, $item->currency) : 0.0;
             @endphp
             @foreach($product as $p)
                 @if(is_array($p) && isset($p['title']))
@@ -216,11 +218,39 @@
                     @endif
                 </td>
                 @if (sCommerce::config('product.show_field_sku', 1))<td>{{$product['sku']}}</td>@endif
+                @if($lineRules->isMeasured())
+                    {{-- Measured lines: entered in the price unit, stored in base units, labelled in the manager's language. --}}
+                    <td>{{\Seiger\sCommerce\Services\MeasuredQuantity::unitPriceLabel(sCommerce::convertPrice($product['priceNumber'] ?? $product['priceAsFloat'] ?? $linePrice, $item->currency), $lineRules)}}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <input type="number" class="form-control product-amount" value="{{\Seiger\sCommerce\Services\MeasuredQuantity::toPriceUnits((int)$product['quantity'], $lineRules->unitFactor)}}"
+                                   min="{{\Seiger\sCommerce\Services\MeasuredQuantity::toPriceUnits($lineRules->min, $lineRules->unitFactor)}}" step="{{\Seiger\sCommerce\Services\MeasuredQuantity::toPriceUnits($lineRules->step, $lineRules->unitFactor)}}"
+                                   data-unit-factor="{{$lineRules->unitFactor}}" style="width: 110px;">
+                            <small class="ms-1">{{\Seiger\sCommerce\Services\MeasuredQuantity::translate('unit_' . $lineRules->priceUnit)}}</small>
+                        </div>
+                        @if(isset($product['actual_quantity']))
+                            <div class="small">@lang('sCommerce::global.actual_quantity'): <b>{{\Seiger\sCommerce\Services\MeasuredQuantity::label(\Seiger\sCommerce\Services\MeasuredQuantity::effective($product), $lineRules)}}</b></div>
+                        @endif
+                        @if(!empty($actualQuantityNonce) && is_string($product['line_key'] ?? null))
+                            <div class="small mt-1 product-actual" data-line-key="{{$product['line_key']}}" data-nonce="{{$actualQuantityNonce}}" data-order="{{(int)$item->id}}"
+                                 data-url="{!!sCommerce::moduleUrl()!!}&get=orderActualQuantitySave">
+                                <label class="mb-0" data-tooltip="@lang('sCommerce::global.actual_quantity_help')">@lang('sCommerce::global.actual_quantity'):
+                                    <input type="number" class="form-control d-inline-block product-actual-amount" style="width: 100px;" min="0"
+                                           step="{{\Seiger\sCommerce\Services\MeasuredQuantity::toPriceUnits(1, $lineRules->unitFactor)}}"
+                                           value="{{isset($product['actual_quantity']) ? \Seiger\sCommerce\Services\MeasuredQuantity::toPriceUnits((int)$product['actual_quantity'], $lineRules->unitFactor) : ''}}"></label>
+                                <label class="mb-0 ms-1"><input type="checkbox" class="product-actual-over"> @lang('sCommerce::global.actual_quantity_over_tolerance')</label>
+                                <button type="button" class="btn btn-sm btn-secondary product-actual-save">@lang('sCommerce::global.actual_quantity_save')</button>
+                            </div>
+                        @endif
+                    </td>
+                    <td class="product-sum">{{sCommerce::convertPrice(\Seiger\sCommerce\Services\MeasuredQuantity::lineSum($product, $linePrice), $item->currency)}}</td>
+                @else
                 <td>{{sCommerce::convertPrice($product['price'])}}</td>
                 <td>
                     <input type="number" name="products[{{$index}}][quantity]" class="form-control product-quantity" value="{{$product['quantity']}}" min="1" style="width: 70px;">
                 </td>
                 <td class="product-sum">{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $item->currency, $item->currency), $item->currency)}}</td>
+                @endif
                 <td>
                     <button type="button" class="btn btn-sm btn-danger remove-product" data-product-index="{{$index}}" title="@lang('global.delete')">
                         <i class="fa fa-trash"></i>
@@ -541,6 +571,8 @@
                 }
             });
 
+            @include('sCommerce::scripts.measuredQuantity')
+
             // Order products management
             let orderProducts = JSON.parse($('#products-data').val() || '[]');
             const orderId = @js((int) $item->id);
@@ -574,7 +606,7 @@
                 const priceStr = product.price.toString().replace(/[^\d.,]/g, '').replace(',', '.');
                 const price = parseFloat(priceStr) || 0;
                 const quantity = parseInt(product.quantity) || 1;
-                const sum = price * quantity;
+                const sum = product.measure ? sCommerceMeasured.lineSum(product) : price * quantity;
 
                 // Format sum - simple format for now, can be improved with sCommerce.convertPrice if available
                 const $row = $(`tr[data-product-index="${index}"]`);
@@ -585,6 +617,10 @@
             function recalculateTotal() {
                 let total = 0;
                 orderProducts.forEach(function(product) {
+                    if (product.measure) {
+                        total += sCommerceMeasured.lineSum(product);
+                        return;
+                    }
                     // Extract numeric value from price string (handles currency symbols)
                     const priceStr = product.price.toString().replace(/[^\d.,]/g, '').replace(',', '.');
                     const price = parseFloat(priceStr) || 0;
@@ -612,6 +648,46 @@
                 updateProductSum(index);
                 updateProductsData();
                 recalculateTotal();
+            });
+
+            // Measured lines: the amount in the price unit becomes base units; the server validates the step.
+            $(document).on('change', '.product-amount', function() {
+                const index = parseInt($(this).closest('tr').data('product-index'));
+                const quantity = sCommerceMeasured.parseAmount(String($(this).val()).replace(',', '.'), parseInt($(this).data('unit-factor')) || 1);
+                if (!quantity) {
+                    $(this).val(sCommerceMeasured.toUnits(parseInt(orderProducts[index].quantity) || 0, parseInt($(this).data('unit-factor')) || 1));
+                    return;
+                }
+                orderProducts[index].quantity = quantity;
+                updateProductSum(index);
+                updateProductsData();
+                recalculateTotal();
+            });
+
+            // Actual quantity of a cut or weighed line, saved on its own and reloaded.
+            $(document).on('click', '.product-actual-save', async function() {
+                const box = this.closest('.product-actual');
+                const body = new FormData();
+                body.set('_token', document.querySelector('meta[name="csrf-token"]')?.content || $('#form [name="_token"]').val() || '');
+                body.set('order', box.dataset.order);
+                body.set('nonce', box.dataset.nonce);
+                body.set('line_key', box.dataset.lineKey);
+                body.set('amount', String(box.querySelector('.product-actual-amount').value).replace(',', '.'));
+                body.set('over_tolerance', box.querySelector('.product-actual-over')?.checked ? '1' : '0');
+                this.disabled = true;
+                try {
+                    const response = await fetch(box.dataset.url, {method: 'POST', body, headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        alertify.success(data.message);
+                        window.setTimeout(function () { window.location.reload(); }, 800);
+                        return;
+                    }
+                    alertify.error(String(data.message || ''));
+                } catch (error) {
+                    alertify.error(@json(__('sCommerce::global.bulk_status_error')));
+                }
+                this.disabled = false;
             });
 
             // Empty containers exchanged on a deposit line; the server recalculates the deposit and total.
@@ -658,7 +734,8 @@
                             if (response.success && response.products) {
                                 let html = '<div class="list-group">';
                                 response.products.forEach(function(product) {
-                                    html += '<a href="#" class="list-group-item list-group-item-action add-product-item" data-product-id="' + product.id + '" data-product-title="' + (product.title || '').replace(/'/g, "&#39;") + '" data-product-price="' + (product.price || '') + '" data-product-price-number="' + (product.priceNumber || 0) + '" data-product-cover="' + (product.coverSrc || '') + '" data-product-link="' + (product.link || '#') + '">';
+                                    const rules = product.measure ? JSON.stringify({measure: product.measure, factor: product.factor, price_per: product.price_per, quantity_min: product.quantity_min}).replace(/'/g, '&#39;') : '';
+                                    html += '<a href="#" class="list-group-item list-group-item-action add-product-item" data-product-id="' + product.id + '" data-product-title="' + (product.title || '').replace(/'/g, "&#39;") + '" data-product-price="' + (product.price || '') + '" data-product-price-number="' + (product.priceNumber || 0) + '" data-product-cover="' + (product.coverSrc || '') + '" data-product-link="' + (product.link || '#') + '"' + (rules ? " data-product-rules='" + rules + "'" : '') + '>';
                                     html += '<div class="d-flex align-items-center">';
                                     html += '<img src="' + product.coverSrc + '" style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px;">';
                                     html += '<div><strong>' + product.title + '</strong><br><small>' + product.sku + ' - ' + product.price + '</small></div>';
@@ -688,17 +765,25 @@
                     quantity: 1,
                     sku: $item.find('small').text().split(' - ')[0]
                 };
+                const measured = $item.data('product-rules');
+                if (measured && measured.measure) {
+                    // The server fills the rule keys of new lines; the minimum is the starting quantity.
+                    Object.assign(product, measured, {quantity: measured.quantity_min || 1});
+                }
                 orderProducts.push(product);
                 updateProductsData();
 
                 // Add row to table
                 const index = orderProducts.length - 1;
-                const productSum = (parseFloat(product.priceNumber || 0) * product.quantity).toFixed(2) + ' ' + orderCurrency;
+                const unitFactor = product.measure ? Math.max(1, Math.round((product.factor || 1) / (product.price_per || 1))) : 1;
+                const productSum = (product.measure ? sCommerceMeasured.lineSum(product) : parseFloat(product.priceNumber || 0) * product.quantity).toFixed(2) + ' ' + orderCurrency;
                 const row = '<tr data-product-index="' + index + '" style="height: 42px;">' +
                     '<td><img src="' + product.coverSrc + '" class="product-thumbnail">' +
                     '<a href="' + product.link + '" target="_blank"><b>' + product.title + '</b></a></td>' +
                     '<td>' + product.price + '</td>' +
-                    '<td><input type="number" name="products[' + index + '][quantity]" class="form-control product-quantity" value="' + product.quantity + '" min="1" style="width: 70px;"></td>' +
+                    (product.measure
+                        ? '<td><input type="number" class="form-control product-amount" value="' + sCommerceMeasured.toUnits(product.quantity, unitFactor) + '" data-unit-factor="' + unitFactor + '" style="width: 110px;"></td>'
+                        : '<td><input type="number" name="products[' + index + '][quantity]" class="form-control product-quantity" value="' + product.quantity + '" min="1" style="width: 70px;"></td>') +
                     '<td class="product-sum">' + productSum + '</td>' +
                     '<td><button type="button" class="btn btn-sm btn-danger remove-product" data-product-index="' + index + '" title="@lang("global.delete")"><i class="fa fa-trash"></i></button></td>' +
                     '</tr>';

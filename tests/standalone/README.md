@@ -29,11 +29,14 @@ php tests/standalone/scommerce-vat-display.php
 php tests/standalone/scommerce-container-deposit.php
 php tests/standalone/scommerce-shipments.php
 php tests/standalone/scommerce-stock.php
+php tests/standalone/scommerce-measured-quantities.php
+php tests/standalone/scommerce-actual-quantities.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs
 node tests/standalone/scommerce-repeat.mjs
 node tests/standalone/scommerce-payment-actions.mjs
+node tests/standalone/scommerce-measured-quantities.mjs
 ```
 
 `scommerce-payment-ledger.php` also runs against a disposable MySQL/MariaDB or PostgreSQL database when
@@ -43,6 +46,10 @@ node tests/standalone/scommerce-payment-actions.mjs
 Package classes, Blade templates and translations are loaded from this checkout,
 not the installed consumer copy. These checks do not replace browser QA.
 The new-order checks cover draft initialization and rendering, not order creation.
+
+`scommerce-measured-quantities.php` compares the piece cart and order JSON with
+`fixtures/piece-cart-master.json`, captured from `master` by `fixtures/piece-cart-capture.php`; the
+measured-quantity vectors in `fixtures/measured-quantities.json` are shared by the PHP and JS checks.
 
 Physical attribute checks run the actual fresh installation and additive upgrade migration,
 verify positive legacy values are consumed and zeroed atomically on save, and exercise decimal attribute, copy and delivery flows.

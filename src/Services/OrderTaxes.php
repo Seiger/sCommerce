@@ -101,6 +101,7 @@ final class OrderTaxes
     /**
      * Set `retail_excise_amount` (the excise included in the line total, for the receipt) on lines
      * with a `retail_excise_rate`. Called for new orders and after manager edits of the lines.
+     * Measured lines use their billable total, see {@see MeasuredQuantity::lineSum()}.
      *
      * @param array<int, mixed> $lines Order `products` snapshot.
      * @return array<int, mixed>
@@ -114,7 +115,7 @@ final class OrderTaxes
                 continue;
             }
             $price = $line['priceNumber'] ?? $line['priceAsFloat'] ?? $line['price'] ?? 0;
-            $lines[$index]['retail_excise_amount'] = VatDisplay::excise(is_numeric($price) ? (float)$price * (int)($line['quantity'] ?? 1) : 0.0, $rate);
+            $lines[$index]['retail_excise_amount'] = VatDisplay::excise(is_numeric($price) ? MeasuredQuantity::lineSum($line, (float)$price) : 0.0, $rate);
         }
 
         return $lines;

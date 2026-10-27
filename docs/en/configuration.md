@@ -13,7 +13,7 @@ Since 1.5.0, orders can reduce product stock. The settings are on the product se
 
 - Each order reduces stock once. All its lines change or none: when a product has less stock than the order needs, nothing changes and the order is retried later. Stock never becomes negative.
 - Lines that do not track inventory (virtual and service products) and orders of trusted test users never change stock.
-- A returned order gets back exactly the quantities it took, even if its lines were edited afterwards. An order that leaves the cancelled status reduces stock again.
+- When a manager edits the products of an order that reduced stock, stock follows the edit (changed, added and removed lines). A returned order gets back exactly the quantities it holds at that time. An order that leaves the cancelled status reduces stock again.
 - `s_orders.inventory_committed_at` marks orders whose stock is reduced; `meta.inventory` keeps the reduced quantities.
 - The reduction runs after the order is saved, independently of event listeners. The hidden sTask worker **Stock reconciliation** retries failed reductions and returns every 15 minutes.
 - When an ERP is the stock source and imports quantities that already exclude open orders, keep `none`; otherwise open orders are subtracted twice. A bound stock provider can also reduce and return stock in the ERP itself; see [Stock events](developers/events.md#stock-events).

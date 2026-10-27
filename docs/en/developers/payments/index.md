@@ -1021,6 +1021,10 @@ For goods whose final price is known only after weighing, authorize an estimate 
 
 A capture reported first by the provider's webhook is recorded the same way: `PaymentFlow::record()` with status `captured`, the authorization's `providerRef` and a lower amount turns the `authorized` row into a partial capture. A later replay of the original authorization is ignored.
 
+### Measured goods: authorization ceiling and actual quantities
+
+Goods sold by length or weight may be cut or weighed above the ordered amount, within the line's tolerance (see [Measured quantities](../measured-quantities.md#actual-quantities)). `sOrder::authorizationCeiling()` returns the order cost plus, for every measured line with a tolerance, the line total times the tolerance, rounded half up to cents. A method that authorizes and captures later may authorize up to this ceiling; this is opt-in, and existing methods keep their amounts. When an actual quantity changes the cost, capture the new amount, collect the difference with the final item of the payment schedule, or refund an overpayment.
+
 ### Recording offline payments
 
 Cash and bank transfers are not moved by a provider, so the manager records them. For an order paid with an offline method (one implementing `OfflineSettlementPaymentMethodInterface`, such as **Cash** and **Bank invoice**), the panel shows:

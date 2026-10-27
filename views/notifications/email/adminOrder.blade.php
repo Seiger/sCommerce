@@ -41,9 +41,16 @@
                     <a href="{{$product['link']}}" target="_blank"><b>{{$product['title']}}</b></a>
                     @if(trim($info))<i class="fa fa-question-circle" data-tooltip="{!!$info!!}"></i>@endif
                 </td>
+                @if(isset($product['measure']))
+                    @php($lineRules = \Seiger\sCommerce\Services\MeasuredQuantity::fromLine($product))
+                    <td>{{\Seiger\sCommerce\Services\MeasuredQuantity::unitPriceLabel((string)$product['price'], $lineRules)}}</td>
+                    <td>{{\Seiger\sCommerce\Services\MeasuredQuantity::label(\Seiger\sCommerce\Services\MeasuredQuantity::effective($product), $lineRules)}}</td>
+                    <td>{{sCommerce::convertPrice(\Seiger\sCommerce\Services\MeasuredQuantity::lineSum($product, sCommerce::convertPriceNumber($product['price'], $order->currency, $order->currency)), $order->currency)}}@if(($currencies[$order->currency]['show'] ?? 0) == 0) {{$order->currency}}@endif</td>
+                @else
                 <td>{{$product['price']}}</td>
                 <td>{{$product['quantity']}}</td>
                 <td>{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $order->currency, $order->currency), $order->currency)}}@if(($currencies[$order->currency]['show'] ?? 0) == 0) {{$order->currency}}@endif</td>
+                @endif
             </tr>
         @endforeach
         </tbody>

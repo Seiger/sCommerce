@@ -553,7 +553,8 @@ final class OrderShipments
     }
 
     /**
-     * Ordered quantity of each line that requires shipping.
+     * Billable quantity of each line that requires shipping: the actual quantity of a measured
+     * line when set, else the ordered one (base units for measured lines).
      *
      * @return array<int, int>
      */
@@ -561,7 +562,7 @@ final class OrderShipments
     {
         $ordered = [];
         foreach ($lines as $index => $line) {
-            $quantity = is_array($line) ? self::positiveInt($line['quantity'] ?? null) : null;
+            $quantity = is_array($line) ? self::positiveInt(isset($line['actual_quantity']) ? MeasuredQuantity::effective($line) : ($line['quantity'] ?? null)) : null;
             if ($quantity !== null && is_int($index) && OrderLineIdentity::requiresShipping($line)) {
                 $ordered[$index] = $quantity;
             }

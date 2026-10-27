@@ -343,6 +343,7 @@ Rules:
 - Reaching `shipped`, `in_transit` or `delivered` without a date sets `shipped_at` to now; `delivered` also sets `delivered_at`.
 - **Items** refer to order lines by `line` (the index in `s_orders.products`) and/or `line_key`. `product_id` and `sku` are optional and checked against the line. Quantities are positive integers; the same line listed twice is summed. Lines with `requires_shipping = false` (services) cannot be shipped. `items = null` ships the whole order and cannot be combined with other active shipments of the order.
 - The shipped quantities of active shipments (all except `failed`, `returned` and `canceled`) cannot exceed the ordered quantities.
+- Lines of products sold by measure are shipped in base units (grams, millimetres, millilitres). When an actual quantity is set, it replaces the ordered quantity for coverage. Use the line's `line_weight` (grams for the whole line) instead of `weight × quantity`; see [Measured quantities](measured-quantities.md#order-lines).
 - Canceling a sent parcel is a correction: its quantities are released, `metadata.voided_after` records the previous status, a warning is logged, and the order status is not moved back.
 - Errors: `InvalidArgumentException` for invalid data, `Seiger\sCommerce\Shipping\ShipmentConflictException` when the reference belongs to another order or the quantities exceed or overlap the order.
 - Writes lock the order row. A concurrent insert of the same reference is detected and applied to the existing shipment.

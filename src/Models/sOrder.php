@@ -18,6 +18,7 @@ use Seiger\sCommerce\Events\OrderUpdated;
 use Seiger\sCommerce\Payment\PaymentFlow;
 use Seiger\sCommerce\Services\OfflineSettlement;
 use Seiger\sCommerce\Services\OrderReferenceFormatter;
+use Seiger\sCommerce\Services\MeasuredQuantity;
 use Seiger\sCommerce\Services\StockCommitter;
 
 /**
@@ -397,6 +398,33 @@ class sOrder extends Model
         }
 
         return $list;
+    }
+
+    /**
+     * Largest amount an authorize-then-capture payment may reserve: `cost` plus, for each measured
+     * line with a tolerance, the line total times the tolerance, rounded half up to cents.
+     *
+     * The actual quantity of a cut or weighed line may exceed the ordered one by its tolerance
+     * ({@see \Seiger\sCommerce\Services\OrderActualQuantity}). Opt-in for payment methods; sCommerce
+     * does not change how existing methods compute their amount.
+     *
+     * @since 1.5.0
+     */
+    public function authorizationCeiling(): float
+    {
+        $extra = 0;
+        foreach (is_array($this->products) ? $this->products : [] as $line) {
+            if (!is_array($line) || (int)($line['quantity_tolerance'] ?? 0) <= 0 || !isset($line['measure'])) {
+                continue;
+            }
+            $price = $line['priceNumber'] ?? $line['priceAsFloat'] ?? $line['price'] ?? 0;
+            $rules = MeasuredQuantity::fromLine($line);
+            $total = MeasuredQuantity::lineTotalMinor(MeasuredQuantity::scalePrice(is_numeric($price) ? max(0.0, (float)$price) : 0.0),
+                max(0, (int)($line['quantity'] ?? 0)), $rules->factor);
+            $extra += intdiv(2 * $total * $rules->tolerance + 10000, 20000);
+        }
+
+        return round((float)$this->cost + $extra / 100, 2);
     }
 
     /**

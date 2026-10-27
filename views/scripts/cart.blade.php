@@ -90,7 +90,12 @@
 
         // Buy
         if (pId = ds.scBuy ?? ds.sBuy ?? ds.sbuy) {
-            const quantity = parseInt(target.parentElement?.querySelector('[type="number"]')?.value || 1);
+            const input = target.parentElement?.querySelector('[type="number"]');
+            // Measured inputs (data-sc-measure) hold an amount in the price unit, e.g. 2.53 metres.
+            if (input?.dataset.scMeasure) {
+                return addToCart(e, parseInt(pId), 0, 'buy', measuredAmount(input));
+            }
+            const quantity = parseInt(input?.value || 1);
             return addToCart(e, parseInt(pId), quantity, 'buy');
         }
 
@@ -119,6 +124,9 @@
         }
 
         if (pId) {
+            if (e.target.dataset.scMeasure) {
+                return addToCart(e, parseInt(pId), 0, 'quantity', measuredAmount(e.target));
+            }
             return addToCart(e, parseInt(pId), parseInt(e.target.value), 'quantity');
         }
     });
@@ -126,13 +134,22 @@
     // ============================================
     // Cart Functions
     // ============================================
-    function addToCart(e, productId, quantity, trigger) {
+    // Amount of a measured input with a `.` decimal separator; the server validates and fits it to the step.
+    function measuredAmount(input) {
+        return String(input.value || '').trim().replace(/\s/g, '').replace(',', '.');
+    }
+
+    function addToCart(e, productId, quantity, trigger, amount = null) {
         e.preventDefault();
         e.target.disabled = true;
 
         let form = new FormData();
         form.append('productId', productId);
-        form.append('quantity', quantity);
+        if (amount !== null) {
+            form.append('amount', amount);
+        } else {
+            form.append('quantity', quantity);
+        }
         form.append('trigger', trigger);
 
         fetch('{{route('sCommerce.addToCart')}}', {

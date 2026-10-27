@@ -38,6 +38,15 @@ final class FakeProduct
     public float $oldPrice = 0.0;
     public float $deposit = 0.0;
     public string $currency = 'EUR';
+    /** Quantity columns of products sold by measure; 0 / null = piece and site defaults. */
+    public int $measure = 0;
+    public ?string $price_unit = null;
+    public ?int $price_per = null;
+    public ?int $quantity_step = null;
+    public ?int $quantity_min = null;
+    public ?int $quantity_tolerance = null;
+    public ?string $quantity_rounding = null;
+    public int $weight = 125;
 
     public function __construct(public int $id, public string $sku, public float $price = 10.0, public int $mode = sProduct::MODE_SIMPLE,
                                 public ?string $gtin = null, public int $inventory = 100, public string $title = '')
@@ -55,7 +64,7 @@ final class FakeProduct
      */
     public function physicalPayload(): array
     {
-        return ['weight' => 125, 'width' => 0, 'height' => 0, 'length' => 0, 'volume' => 0];
+        return ['weight' => $this->weight, 'width' => 0, 'height' => 0, 'length' => 0, 'volume' => 0];
     }
     public function attribute(string $alias) { return null; }
     public function toArray(): array { return get_object_vars($this); }

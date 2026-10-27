@@ -551,6 +551,12 @@ Since 1.5.0, a change of `s_products.inventory` or `s_products.availability` dis
 
 The payload contains `event`, `productId`, `modificationId` (always `0`), `sku`, `oldQuantity`, `newQuantity`, `oldAvailability`, `newAvailability`, `stockSource` (the writer: `manager`, `import`, `order`, the source passed to `StockWriter`, or the event scope source for other model saves) and the context keys `source`, `actorId`, `correlationId`, `causationId`, `integrationActor`, `eventId` and `occurredAt`. Stock reductions and returns of orders run in the event scope source `inventory`.
 
+For products sold by weight, length, volume or count, all stock quantities (inventory, events, commits and the provider's `available()`) are base units: grams, millimetres, millilitres or items. See [Measured quantities](measured-quantities.md#stock-and-shipments).
+
+### Stock follows order edits
+
+Since 1.5.0, when a manager changes the products of an order whose stock sCommerce reduced locally, the stock follows in the same request: `StockCommitter::adjust($order)` takes or returns the difference for changed, added and removed lines, for piece and measured products alike. Actual quantities of measured lines adjust stock the same way. When a product has too little stock for an increase, the edit is not saved. Orders committed by a stock provider are not adjusted locally; the provider sees `sCommerce.OrderUpdated`. A later return restores exactly the adjusted quantities. Before 1.5.0 manager edits did not change reduced stock.
+
 `sCommerce::supportsIntegration('stock-provider')` reports support.
 
 ## Additional manager and frontend events

@@ -346,7 +346,7 @@ $check(sCommerce::integrationFeatures()[0] === 'order-events', 'Feature list');
 $module = file_get_contents($package . '/module/sCommerceModule.php');
 $orderSave = substr($module, strpos($module, 'case "orderSave":'), strpos($module, 'case "orderDelete":') - strpos($module, 'case "orderSave":'));
 $check(preg_match('/if \(\$item\) \{\s+\$scope = EventScope::begin\(\'manager\'/', $orderSave) === 1
-    && preg_match('/\$scope->end\(\);\s+evo\(\)->invokeEvent\(\'sCommerceAfterOrderSave\', compact\(\'item\'\)\);\s+\}/', $orderSave) === 1, 'Manager save scope closes before the legacy hook, inside the found-order branch');
+    && preg_match('/\$scope->end\(\);\s+if \(\$saved\) \{\s+evo\(\)->invokeEvent\(\'sCommerceAfterOrderSave\', compact\(\'item\'\)\);\s+\}\s+\}/', $orderSave) === 1, 'Manager save scope closes before the legacy hook, inside the found-order branch');
 $check(str_contains($orderSave, "'&i=' . (\$item->id ?? 0)"), 'Unknown order id no longer dereferences null');
 $checkout = file_get_contents($package . '/src/Checkout/sCheckout.php');
 foreach (["EventScope::begin('storefront'", "EventScope::run('storefront_quick'", "EventScope::run('storefront_pay'"] as $needle) {

@@ -17,6 +17,7 @@ use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sCommerce\Models\sCategory;
 use Seiger\sCommerce\Models\sProduct;
+use Seiger\sCommerce\Services\MeasuredQuantity;
 use Seiger\sLang\Models\sLangContent;
 
 class sCommerceController
@@ -38,6 +39,9 @@ class sCommerceController
     protected static array $listCategoriesCache = [];
 
     protected $data = [];
+
+    /** @var list<string> Translation keys of settings refused by the last save. */
+    private array $settingsErrors = [];
     protected $categories = [];
     protected $productIds = [];
     protected array $categoryLangCache = [];
@@ -196,6 +200,12 @@ class sCommerceController
             }
         }
 
+        // Invalid measured quantity defaults keep their stored values.
+        if (isset($config['product']) && is_array($config['product'])) {
+            $previous = sCommerce::config('product', []);
+            $config['product'] = MeasuredQuantity::sanitizeSettings($config['product'], is_array($previous) ? $previous : [], $this->settingsErrors);
+        }
+
         // Preparation of deadlines with data
         $string = '<?php return ' . $this->dataToString($config) . ';';
 
@@ -205,6 +215,17 @@ class sCommerceController
         fclose($handle);
 
         return true;
+    }
+
+    /**
+     * Translation keys of settings refused by the last {@see self::updateFileConfigs()}.
+     *
+     * @return list<string>
+     * @since 1.5.0
+     */
+    public function settingsErrors(): array
+    {
+        return $this->settingsErrors;
     }
 
     /**

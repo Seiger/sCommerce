@@ -302,6 +302,24 @@ foreach (['uk', 'en', 'ru', 'de', 'fr', 'pl'] as $locale) {
         $check(isset($messages[$key]) && $messages[$key] !== '', "Language key $key exists in $locale");
     }
 }
+// Measured products: inventory, events and committed quantities are base units (here millimetres).
+if ($app->bound(StockProviderInterface::class)) {
+    $app->offsetUnset(StockProviderInterface::class);
+}
+$cable = $product('CABLE', 10000);
+$stockEvents = [];
+$writer->set($cable, 12500, 0, 'erp');
+$check(count($stockEvents) === 1 && $stockEvents[0]['oldQuantity'] === 10000 && $stockEvents[0]['newQuantity'] === 12500, 'Measured inventory is written and reported in base units');
+$setting(StockCommitter::MODE_ORDER_CREATED);
+$measured = ['measure' => 'length', 'base_unit' => 'mm', 'price_unit' => 'm', 'price_per' => 1, 'factor' => 1000, 'quantity_step' => 10];
+$order = $newOrder([$line($cable, 2530) + $measured + ['actual_quantity' => 2553]]);
+$check($stock($cable) === 12500 - 2553 && $state($order)['lines'] === [$cable => 2553], 'Commit takes the actual quantity of a measured line');
+$check($committer->adjust($order) === false, 'Nothing to adjust right after the commit');
+$order->status = sOrder::ORDER_STATUS_CANCELED;
+$order->save();
+$check($stock($cable) === 12500, 'Release returns the measured quantity');
+$setting(StockCommitter::MODE_NONE);
+
 $migration->down();
 $check(!$schema->hasColumn('s_orders', 'inventory_committed_at'), 'Migration rolls back');
 

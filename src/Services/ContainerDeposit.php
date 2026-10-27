@@ -50,7 +50,7 @@ final class ContainerDeposit
 
     /**
      * Deposit per unit of a product in `$currency`; the first non-negative numeric listener response wins.
-     * Always 0 while the feature is off.
+     * Always 0 while the feature is off, and for products sold by weight, length, volume or count.
      *
      * @param object $product Product model or object; `deposit` is in the product currency.
      * @param int $optionId Cart option id; 0 = none.
@@ -58,7 +58,7 @@ final class ContainerDeposit
      */
     public static function unit(object $product, int $optionId = 0, ?string $currency = null): float
     {
-        if (!self::enabled()) {
+        if (!self::enabled() || MeasuredQuantity::rules($product)->isMeasured()) {
             return 0.0;
         }
         $currency = $currency ?: sCommerce::currentCurrency();
@@ -109,6 +109,7 @@ final class ContainerDeposit
      * Recalculate the deposit of edited lines from their quantity and exchange.
      *
      * Returned containers stay returned: the exchange cannot drop the deposit below them.
+     * Measured lines never carry a deposit and are skipped.
      *
      * @param array<int, mixed> $lines Order `products` snapshot.
      * @return array<int, mixed>
@@ -118,7 +119,7 @@ final class ContainerDeposit
     {
         foreach ($lines as $index => $line) {
             $unit = is_array($line) ? (float)($line['deposit_unit'] ?? 0) : 0.0;
-            if ($unit <= 0) {
+            if ($unit <= 0 || isset($line['measure'])) {
                 continue;
             }
             $quantity = max(0, (int)($line['quantity'] ?? 0));

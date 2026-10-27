@@ -159,6 +159,14 @@ $check($save(['quantity' => 1, 'settlement' => 'cash'])['message'] === 'containe
 $check($save(['quantity' => 3, 'product' => 10, 'settlement' => 'cash', 'customer' => ['name' => 'Petro']]) === ['success' => true, 'message' => 'container_return_success']
     && sContainerReturn::query()->latest('id')->first()->amount === '750.00', 'Standalone form records the return');
 $check($save(['quantity' => 3, 'product' => 10, 'settlement' => 'cash'])['success'] && sContainerReturn::query()->where('amount', '750.00')->count() === 1, 'Resubmitted form records once');
+// Products sold by measure never carry a deposit.
+$shop->config['product.container_deposit_on'] = 1;
+$bulk = new FakeProduct(77, 'BULK-WATER', 0.9);
+$bulk->deposit = 0.5;
+$bulk->measure = 3;
+$check(ContainerDeposit::unit($bulk) === 0.0, 'Measured products have no deposit unit');
+$skipped = ContainerDeposit::applyToLines([['deposit_unit' => 0.5, 'quantity' => 2000, 'measure' => 'volume', 'deposit_amount' => 0.0]]);
+$check($skipped[0]['deposit_amount'] === 0.0 && !isset($skipped[0]['deposit_quantity']), 'Measured lines are skipped defensively');
 $check(sCommerce::supportsIntegration('container-deposit'), 'Feature key container-deposit');
 
 echo "$checks container deposit checks passed (isolated SQLite; no site database)\n";

@@ -71,9 +71,20 @@ $check($edited[2]['line_key'] === '5:3' && $edited[2]['sku'] === 'SKU-5-RED', 'S
 $check(!isset($edited[3]['line_key']) && $edited[4] === 'not a line', 'Unknown products and malformed lines stay unchanged');
 $module = file_get_contents($package . '/module/sCommerceModule.php');
 $save = substr($module, strpos($module, 'case "orderSave":'), strpos($module, 'case "orderDelete":') - strpos($module, 'case "orderSave":'));
-$check(str_contains($save, 'OrderLineIdentity::class)->fillMissing($productsData, (string)$item->currency)'), 'Manager orderSave resolves missing identity');
+$editor = file_get_contents($package . '/src/Services/OrderLineEditor.php');
+$check(str_contains($save, 'OrderLineEditor())->apply($item, $productsData)') && str_contains($editor, 'OrderLineIdentity::class)->fillMissing('), 'Manager orderSave resolves missing identity');
 $search = substr($module, strpos($module, 'case "orderSearchProducts":'), 2000);
 $check(str_contains($search, 'OrderLineIdentity::class)->snapshot('), 'Manager product search returns identity');
+
+// 5b. Lines of products sold by measure get the rule keys and the weight per price unit.
+$cable = new FakeProduct(8, 'CABLE', 1.2);
+$cable->measure = 2;
+$cable->quantity_step = 10;
+$shop->products[8] = $cable;
+$filled = app(OrderLineIdentity::class)->fillMissing([['id' => 8, 'title' => 'Cable', 'quantity' => 2530, 'measure' => 'count', 'factor' => 1]])[0];
+$check($filled['line_key'] === '8:0' && $filled['measure'] === 'length' && $filled['factor'] === 1000 && $filled['base_unit'] === 'mm'
+    && $filled['quantity_step'] === 10 && $filled['weight'] === 125 && $filled['quantity'] === 2530, 'fillMissing adds the measured keys from the product');
+$check(!isset(app(OrderLineIdentity::class)->snapshot($shop->products[5])['measure']), 'Piece snapshots have no measured keys');
 
 // 6. Old orders without the keys fall back as documented.
 $check(OrderLineIdentity::requiresShipping(['id' => 1]) && OrderLineIdentity::tracksInventory(['id' => 1]), 'Old lines are shipped and tracked');

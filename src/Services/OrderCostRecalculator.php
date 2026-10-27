@@ -28,7 +28,8 @@ final class OrderCostRecalculator
 
     /**
      * Sum of price × quantity, using `priceNumber` when present, else the formatted `price`,
-     * plus the returnable container deposits of the lines.
+     * plus the returnable container deposits of the lines. Measured lines use the billable
+     * quantity and the exact rounding of {@see MeasuredQuantity::lineSum()}.
      *
      * @param array<int, mixed> $products
      * @since 1.5.0
@@ -43,7 +44,7 @@ final class OrderCostRecalculator
             $price = isset($product['priceNumber']) && is_numeric($product['priceNumber'])
                 ? (float)$product['priceNumber']
                 : (is_numeric($product['price'] ?? null) ? (float)$product['price'] : sCommerce::convertPriceNumber($product['price'] ?? 0, $currency, $currency));
-            $total += $price * intval($product['quantity'] ?? 1);
+            $total += MeasuredQuantity::lineSum($product, $price);
         }
 
         return round($total + ContainerDeposit::total($products), 2);

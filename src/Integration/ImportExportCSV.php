@@ -8,6 +8,8 @@ use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sAttributeValue;
 use Seiger\sTask\Models\sTaskModel;
 use Seiger\sCommerce\Models\sProduct;
+use Seiger\sCommerce\Services\MeasuredQuantity;
+use Seiger\sCommerce\Services\MeasuredQuantityException;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sGallery\Facades\sGallery;
 use Seiger\sGallery\Models\sGalleryModel;
@@ -342,6 +344,9 @@ class ImportExportCSV extends BaseWorker
                                             $a[$field] = implode('||', $primaryCategories);
                                         }
                                         break;
+                                    case 'measure':
+                                        $a[$field] = sProduct::MEASURE_ALIASES[(int)($p?->measure ?? 0)] ?? MeasuredQuantity::PIECE;
+                                        break;
                                     case 'cover':
                                         $a[$field] = $this->sanitizeCsvValue($this->normalizeCsvMediaPath($p?->{$field} ?? ''));
                                         break;
@@ -674,6 +679,13 @@ class ImportExportCSV extends BaseWorker
             // 'updated_at' => __('sCommerce::global.created'),
         ];
 
+        // Sales measure; quantities and inventory of measured products are in base units (g, mm, ml, items).
+        if ($this->hasMeasuredColumns()) {
+            foreach (MeasuredQuantity::PRODUCT_COLUMNS as $column) {
+                $product[$column] = __('sCommerce::global.' . $column);
+            }
+        }
+
         // Product translations
         if ($useMultilang) {
             foreach ($this->csvLanguagesList($sCommerceController) as $lang) {
@@ -958,6 +970,9 @@ class ImportExportCSV extends BaseWorker
             $table->boolean('published')->default(1);
             $table->boolean('availability')->default(0);
             $table->integer('inventory')->default(0);
+            foreach (MeasuredQuantity::PRODUCT_COLUMNS as $column) {
+                $table->string($column, 32)->nullable();
+            }
             $table->decimal('price_regular', 10, 3)->default(0.000);
             $table->decimal('price_special', 10, 3)->nullable();
             $table->string('currency', 3)->default('UAH');
@@ -1036,6 +1051,8 @@ class ImportExportCSV extends BaseWorker
                 'published' => isset($data['published']) && $data['published'] !== '' ? (int)$data['published'] : 1,
                 'availability' => isset($data['availability']) && $data['availability'] !== '' ? (int)$data['availability'] : 0,
                 'inventory' => isset($data['inventory']) && $data['inventory'] !== '' ? (int)$data['inventory'] : 0,
+                ...array_map(static fn ($value) => is_scalar($value) ? mb_substr(trim((string)$value), 0, 32) : null,
+                    array_merge(array_fill_keys(MeasuredQuantity::PRODUCT_COLUMNS, null), array_intersect_key($data, array_flip(MeasuredQuantity::PRODUCT_COLUMNS)))),
                 'price_regular' => isset($data['price_regular']) && $data['price_regular'] !== '' ? (float)$data['price_regular'] : 0.00,
                 'price_special' => isset($data['price_special']) && $data['price_special'] !== '' ? (float)$data['price_special'] : null,
                 'currency' => $data['currency'] ?? 'UAH',
@@ -1069,6 +1086,39 @@ class ImportExportCSV extends BaseWorker
         }
 
         fclose($fh);
+    }
+
+    /**
+     * Whether `s_products` has the sales measure columns.
+     */
+    private function hasMeasuredColumns(): bool
+    {
+        return Schema::hasColumn('s_products', 'measure');
+    }
+
+    /**
+     * Validate and set the sales measure columns present in a row; missing columns keep the
+     * product's values. Inventory of a measured product is in base units.
+     *
+     * @throws \RuntimeException When the measure settings are refused.
+     */
+    private function applyMeasuredColumns(sProduct $product, array $data): void
+    {
+        $given = array_filter(array_intersect_key($data, array_flip(MeasuredQuantity::PRODUCT_COLUMNS)), static fn ($value) => $value !== null);
+        if ($given === [] || !$this->hasMeasuredColumns()) {
+            return;
+        }
+        $input = [];
+        foreach (MeasuredQuantity::PRODUCT_COLUMNS as $column) {
+            $input[$column] = $product->getAttribute($column);
+        }
+        try {
+            foreach (MeasuredQuantity::productSettings(array_replace($input, $given), $product) as $column => $value) {
+                $product->setAttribute($column, $value);
+            }
+        } catch (MeasuredQuantityException $exception) {
+            throw new \RuntimeException('Product ' . ($product->sku ?: $product->id) . ': ' . $exception->translated(), 0, $exception);
+        }
     }
 
     /**
@@ -1294,6 +1344,7 @@ class ImportExportCSV extends BaseWorker
         if (isset($data['height'])) $product->setPhysicalValue('height', $data['height']);
         if (isset($data['length'])) $product->setPhysicalValue('length', $data['length']);
         if (isset($data['volume'])) $product->setPhysicalValue('volume', $data['volume']);
+        $this->applyMeasuredColumns($product, $data);
         if (isset($data['cover'])) $product->cover = trim($data['cover'] ?? '/assets/site/noimage.png');
         if (isset($data['relevants'])) $product->relevants = json_encode(($data['relevants'] ?? []), JSON_UNESCAPED_UNICODE);
         if (isset($data['similar'])) $product->similar = json_encode(($data['similar'] ?? []), JSON_UNESCAPED_UNICODE);

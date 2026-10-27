@@ -13,6 +13,8 @@ use Seiger\sCommerce\Events\DomainEventRecorder;
 use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Events\ProductStockChanged;
 use Seiger\sCommerce\Facades\sCommerce;
+use Seiger\sCommerce\Services\MeasuredQuantity;
+use Seiger\sCommerce\Services\QuantityRules;
 use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sGallery\sGallery;
 
@@ -106,6 +108,10 @@ class sProduct extends Model
         'height' => 'decimal:4',
         'length' => 'decimal:4',
         'volume' => 'decimal:4',
+        'measure' => 'integer',
+        'quantity_step' => 'integer',
+        'quantity_min' => 'integer',
+        'quantity_tolerance' => 'integer',
     ];
 
     protected $fillable = ['uuid'];
@@ -155,6 +161,27 @@ class sProduct extends Model
     // const MODE_SUBSCRIPTION = 8; // Products with recurring billing (e.g., memberships or digital content).
     // const MODE_PREORDER = 9;     // Products not yet available but open for early purchase.
     // const MODE_CUSTOM = 10;      // Personalized or tailor-made products created upon request.
+
+    /**
+     * How a product is sold: in pieces, or by weight (grams), length (millimetres), volume
+     * (millilitres) or count (items, e.g. impressions). See {@see MeasuredQuantity}.
+     *
+     * @since 1.5.0
+     */
+    const MEASURE_PIECE = 0;
+    const MEASURE_WEIGHT = 1;
+    const MEASURE_LENGTH = 2;
+    const MEASURE_VOLUME = 3;
+    const MEASURE_COUNT = 4;
+    const MEASURE_ALIASES = [
+        self::MEASURE_WEIGHT => 'weight',
+        self::MEASURE_LENGTH => 'length',
+        self::MEASURE_VOLUME => 'volume',
+        self::MEASURE_COUNT => 'count',
+    ];
+
+    /** @var array{0: string, 1: QuantityRules}|null Rules memoized with the attributes they came from. */
+    private ?array $quantityRulesCache = null;
 
     /**
      * Return list of availability codes and labels
@@ -221,6 +248,31 @@ class sProduct extends Model
         }
 
         return $fulfilment;
+    }
+
+    /**
+     * Whether the product is sold by weight, length, volume or count.
+     *
+     * @since 1.5.0
+     */
+    public function isMeasured(): bool
+    {
+        return isset(self::MEASURE_ALIASES[(int)($this->attributes['measure'] ?? 0)]);
+    }
+
+    /**
+     * Effective quantity rules: product columns, then the site defaults. Memoized per instance.
+     *
+     * @since 1.5.0
+     */
+    public function quantityRules(): QuantityRules
+    {
+        $key = implode('|', array_map(fn ($column) => (string)($this->attributes[$column] ?? ''), [...MeasuredQuantity::PRODUCT_COLUMNS, 'mode']));
+        if ($this->quantityRulesCache === null || $this->quantityRulesCache[0] !== $key) {
+            $this->quantityRulesCache = [$key, MeasuredQuantity::resolve($this)];
+        }
+
+        return $this->quantityRulesCache[1];
     }
 
     /**
