@@ -7,7 +7,10 @@ use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sAttribute;
 use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Services\ContainerDeposit;
+use Seiger\sCommerce\Services\MeasuredQuantity;
+use Seiger\sCommerce\Services\MeasuredQuantityException;
 use Seiger\sCommerce\Services\OrderLineIdentity;
+use Seiger\sCommerce\Services\QuantityRules;
 use Seiger\sCommerce\Services\StockResolver;
 use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sCommerce\Services\sPriceResolver;
@@ -102,6 +105,11 @@ class sCart
     /**
      * Add a product to the cart.
      *
+     * Quantities are whole numbers: pieces, or base units (grams, millimetres, millilitres,
+     * items) for products sold by measure. A request `amount` in the price unit (`2.53` metres)
+     * takes precedence over `quantity` for those products; their quantity is fitted to the
+     * minimum, step and stock, and the response reports an adjustment with `quantityAdjusted`.
+     *
      * @param int $productId The ID of the product to add.
      * @param int $optionId The ID option associated with the product.
      * @param int $quantity The quantity of the product to add.
@@ -133,12 +141,29 @@ class sCart
             ];
         }
 
+        $rules = MeasuredQuantity::rules($product);
+        $adjusted = false;
+        if ($rules->isMeasured()) {
+            $requested = $quantity;
+            if (is_scalar($amount = request()->input('amount')) && trim((string)$amount) !== '') {
+                try {
+                    $requested = MeasuredQuantity::parseAmount((string)$amount, $rules);
+                } catch (MeasuredQuantityException $e) {
+                    return ['success' => false, 'trigger' => $trigger, 'message' => $e->translated()];
+                }
+            }
+            $quantity = MeasuredQuantity::normalize($requested, $rules);
+            $adjusted = $quantity !== $requested;
+        }
+
         $this->storeQuantity($productId, $optionId, $quantity);
 
         // Virtual and service lines are not counted against inventory.
         if (sCommerce::config('product.inventory_on', 0) && $this->tracksInventory($product, $optionId)) {
             $available = app(StockResolver::class)->available($product, 0, ['optionId' => $optionId, 'quantity' => $quantity]);
-            if ($available < 0) {
+            // Measured stock is capped in whole steps and must cover the minimum.
+            $capped = $rules->isMeasured() ? MeasuredQuantity::normalize($quantity, $rules, MeasuredQuantity::MODE_CLAMP, $available) : null;
+            if ($available < 0 || ($capped !== null && $capped < $rules->min)) {
                 $message = __('sCommerce::global.product_title_is_out_of_stock', ['title' => $product->title]);
                 Log::channel('scommerce')->alert('sCart - ' . $message);
 
@@ -147,6 +172,9 @@ class sCart
                     'trigger' => $trigger,
                     'message' =>  $message,
                 ];
+            } elseif ($capped !== null) {
+                $adjusted = $adjusted || $capped !== $quantity;
+                $quantity = $capped;
             } else {
                 $quantity = min($quantity, $available);
             }
@@ -163,15 +191,24 @@ class sCart
                 $message = __('sCommerce::global.product_with_title', ['title' => $product->title]) . ' ' . __('sCommerce::global.added_to_cart') . '.';
                 break;
         }
+        if ($adjusted && $trigger !== 'quantity') {
+            $message .= ' ' . __('sCommerce::global.changed_quantity') . ': ' . MeasuredQuantity::label($quantity, $rules) . '.';
+        }
 
-        return [
+        $response = [
             'success' => true,
             'trigger' => $trigger,
             'message' => $message,
             'product' => array_merge($this->getProductFields($product, $pricing = $this->resolveProductPricing($product, $optionId)),
-                $this->vatPricing($product, $pricing, $optionId), compact('quantity')),
+                $this->vatPricing($product, $pricing, $optionId), compact('quantity'),
+                MeasuredQuantity::lineFields($rules, $quantity, (string)($pricing['price'] ?? ''))),
             'miniCart' => $this->getMiniCart(),
         ];
+        if ($adjusted) {
+            $response['quantityAdjusted'] = true;
+        }
+
+        return $response;
     }
 
     /**
@@ -251,6 +288,9 @@ class sCart
      * retail excise included in the prices (`retailExciseAmount`, `sumRetailExcise`, `totalRetailExcise`).
      * Lines with a returnable container deposit carry the deposit keys of {@see ContainerDeposit};
      * `totalSum` is what the customer pays: `totalGoods` plus `totalDeposit`.
+     * Lines of products sold by measure carry their quantity in base units, the rule keys of
+     * {@see QuantityRules::lineKeys()}, `quantity_label`, `unit_price_label` and `line_weight`;
+     * their sum is rounded half up once from the unrounded price ({@see MeasuredQuantity}).
      *
      * @return array{totalSum: float, totalSumFormatted: string, totalSumNet: float, totalSumNetFormatted: string, totalSumDisplay: float, totalSumDisplayFormatted: string, totalRetailExcise: float, totalRetailExciseFormatted: string, vatDisplay: string, items: array<int, array<string, mixed>>}
      */
@@ -267,20 +307,23 @@ class sCart
         $products = sCommerce::getProducts($productIds);
 
         foreach ($products as $product) {
+            $rules = MeasuredQuantity::rules($product);
             foreach ($this->cartData[$product->id] as $optionId => $cartItem) {
-                $quantity = $this->getCartItemQuantity($cartItem);
+                $quantity = $this->getCartItemQuantity($cartItem, $rules->min);
                 $deposit = ContainerDeposit::lineFields(ContainerDeposit::unit($product, (int)$optionId, $currency), $quantity,
                     is_array($cartItem) ? (int)($cartItem['exchange'] ?? 0) : 0);
                 $pricing = $this->resolveProductPricing($product, (int)$optionId);
                 $price = (float)$pricing['priceAsFloat'];
-                $lineSum = $price * $quantity;
+                $lineSum = $rules->isMeasured()
+                    ? MeasuredQuantity::lineTotalMinor(MeasuredQuantity::scalePrice($price), $quantity, $rules->factor) / 100
+                    : $price * $quantity;
                 $sumAsFloat = round($lineSum, 3);
                 $sum = sCommerce::convertPrice($sumAsFloat);
                 $vat = $this->vatPricing($product, $pricing, (int)$optionId);
                 $sumNetAsFloat = VatDisplay::net($sumAsFloat, (float)$vat['vatRate'], (float)$vat['retailExciseRate']);
                 $sumExciseAsFloat = VatDisplay::excise($sumAsFloat, (float)$vat['retailExciseRate']);
                 $displaySumAsFloat = $vatDisplay === VatDisplay::NET ? $sumNetAsFloat : $sumAsFloat;
-                $items[] = array_merge(
+                $item = array_merge(
                     $this->getProductFields($product, $pricing),
                     app(OrderLineIdentity::class)->snapshot($product, (int)$optionId),
                     $vat,
@@ -290,6 +333,10 @@ class sCart
                         'displaySumAsFloat' => $displaySumAsFloat, 'displaySum' => sCommerce::convertPrice($displaySumAsFloat),
                         'sumRetailExciseAsFloat' => $sumExciseAsFloat, 'sumRetailExcise' => $sumExciseAsFloat > 0 ? sCommerce::convertPrice($sumExciseAsFloat) : '']
                 );
+                if ($rules->isMeasured()) {
+                    $item += MeasuredQuantity::lineFields($rules, $quantity, (string)($pricing['price'] ?? ''), (int)($item['weight'] ?? 0));
+                }
+                $items[] = $item;
                 $totalSum += $lineSum;
                 $totalNet += $sumNetAsFloat;
                 $totalExcise += $sumExciseAsFloat;
@@ -397,9 +444,12 @@ class sCart
             : $quantity;
     }
 
-    private function getCartItemQuantity(mixed $cartItem): int
+    /**
+     * Stored quantity of a cart line, at least `$min` (the minimum of a measured product).
+     */
+    private function getCartItemQuantity(mixed $cartItem, int $min = 1): int
     {
-        return is_array($cartItem) ? max(1, (int)($cartItem['quantity'] ?? 1)) : max(1, (int)$cartItem);
+        return is_array($cartItem) ? max($min, (int)($cartItem['quantity'] ?? 1)) : max($min, (int)$cartItem);
     }
 
     private function resolveProductPriceMode(object $product, int $optionId = 0): string

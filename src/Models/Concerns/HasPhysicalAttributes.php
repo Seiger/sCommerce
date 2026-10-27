@@ -189,6 +189,37 @@ trait HasPhysicalAttributes
     }
 
     /**
+     * Same as {@see self::physicalLabel()}, with the unit symbol and decimal separator of the language.
+     *
+     * @since 1.5.0
+     * @param string $alias One of the five physical attribute aliases.
+     * @param int $value Measurement in grams, millimetres or millilitres.
+     * @param string|null $locale Language; the current one when null.
+     * @return string Label such as `1 kg` or `1 кг`.
+     */
+    public static function physicalLabelLocalized(string $alias, int $value, ?string $locale = null): string
+    {
+        foreach (self::PHYSICAL_UNITS[$alias] ?? [] as [$unit, $factor]) {
+            if ($value >= $factor || $factor === 1) {
+                return \Seiger\sCommerce\Services\MeasuredQuantity::formatAmount($value, $factor, $unit, 0, $locale);
+            }
+        }
+        return (string) $value;
+    }
+
+    /**
+     * Display units of a measurement, largest first.
+     *
+     * @since 1.5.0
+     * @param string $alias `weight`, `width`, `height`, `length` or `volume`.
+     * @return list<array{0: string, 1: int}> Unit code and base units per unit; empty for other aliases.
+     */
+    public static function physicalUnits(string $alias): array
+    {
+        return self::PHYSICAL_UNITS[$alias] ?? [];
+    }
+
+    /**
      * Unit symbol in which a measurement is stored and entered.
      *
      * @since 1.4.0

@@ -61,8 +61,9 @@ final class OrderLineIdentity
     }
 
     /**
-     * Identity plus the fulfilment flags `requires_shipping` and `tracks_inventory`, and
-     * `retail_excise_rate` for products with a retail excise.
+     * Identity plus the fulfilment flags `requires_shipping` and `tracks_inventory`,
+     * `retail_excise_rate` for products with a retail excise, and the rule keys of products
+     * sold by measure ({@see QuantityRules::lineKeys()}).
      *
      * @param object $product Product model; objects without `fulfilment()` are shipped and tracked.
      * @param int $optionId Cart option id; 0 = none.
@@ -82,7 +83,7 @@ final class OrderLineIdentity
             $snapshot['retail_excise_rate'] = $exciseRate;
         }
 
-        return $snapshot;
+        return $snapshot + MeasuredQuantity::rules($product)->lineKeys();
     }
 
     /**
@@ -90,7 +91,8 @@ final class OrderLineIdentity
      *
      * Lines with a `line_key` keep their stored identity. Other lines get the current identity
      * of product `id` with their `option_id` (default 0), and its returnable container deposit in
-     * `$currency`; lines of unknown products stay unchanged.
+     * `$currency`; lines of unknown products stay unchanged. Measured lines also get the product
+     * weight per price unit and the rule keys of the product.
      *
      * @param array<int, mixed> $lines Order `products` snapshot.
      * @param string|null $currency Order currency; the current currency by default.
@@ -111,6 +113,9 @@ final class OrderLineIdentity
             $optionId = filter_var($line['option_id'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]) ?: 0;
             // Existing editable values (title, price, quantity) win; identity keys are always server-side.
             $lines[$index] = array_merge($line, $this->snapshot($product, $optionId));
+            if (isset($lines[$index]['measure']) && !isset($line['weight']) && method_exists($product, 'physicalPayload')) {
+                $lines[$index]['weight'] = (int)($product->physicalPayload()['weight'] ?? 0);
+            }
             if (!isset($line['deposit_unit'])) {
                 $lines[$index] += ContainerDeposit::lineFields(ContainerDeposit::unit($product, $optionId, $currency),
                     max(0, (int)($line['quantity'] ?? 1)), max(0, (int)($line['exchange_quantity'] ?? 0)));

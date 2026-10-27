@@ -35,9 +35,15 @@
                     <a href="{{$product['link']}}" target="_blank"><b>{{$product['title']}}</b></a>
                     @if(trim($info))<i class="fa fa-question-circle" data-tooltip="{!!$info!!}"></i>@endif
                 </td>
+                @if(isset($product['measure']))
+                    <td>{{$product['unit_price_label'] ?? $product['price']}}</td>
+                    <td>{{$product['actual_quantity_label'] ?? $product['quantity_label'] ?? $product['quantity']}}</td>
+                    <td>{{sCommerce::convertPrice(\Seiger\sCommerce\Services\MeasuredQuantity::lineSum($product, sCommerce::convertPriceNumber($product['price'], $order->currency, $order->currency)), $order->currency)}}@if(($currencies[$order->currency]['show'] ?? 0) == 0) {{$order->currency}}@endif</td>
+                @else
                 <td>{{$product['price']}}</td>
                 <td>{{$product['quantity']}}</td>
                 <td>{{sCommerce::convertPrice($product['quantity'] * sCommerce::convertPriceNumber($product['price'], $order->currency, $order->currency), $order->currency)}}@if(($currencies[$order->currency]['show'] ?? 0) == 0) {{$order->currency}}@endif</td>
+                @endif
             </tr>
         @endforeach
         </tbody>

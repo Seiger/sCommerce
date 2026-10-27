@@ -8,6 +8,10 @@ use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sOrder;
 use Seiger\sCommerce\Services\ContainerDeposit;
+use Seiger\sCommerce\Services\MeasuredQuantity;
+use Seiger\sCommerce\Services\MeasuredQuantityException;
+use Seiger\sCommerce\Services\OrderLineEditor;
+use Seiger\sCommerce\Services\QuantityRules;
 use Seiger\sCommerce\Services\OrderLineIdentity;
 use Seiger\sCommerce\Services\OrderTaxes;
 use Seiger\sCommerce\Services\OrderRepeater;
@@ -24,6 +28,8 @@ final class OrderRepeatController
      *
      * Order/payment statuses and operational metadata are never accepted from POST.
      * Lines without a `line_key` receive their identity from the current product.
+     * Measured lines are validated with the current rules of their product, because a repeat is
+     * a new order; a product whose sales measure changed since the source order is refused.
      *
      * @param Request $request Manager form with current CSRF and draft token.
      * @return JsonResponse Success redirect or a non-mutating validation/error response.
@@ -74,10 +80,21 @@ final class OrderRepeatController
             $cost = 0.0;
             foreach ($products as &$product) {
                 if (!is_array($product)) return $this->error('repeat_invalid', 422);
+                $product = array_diff_key($product, array_flip(array_merge(MeasuredQuantity::LINE_KEYS, MeasuredQuantity::ACTUAL_KEYS, MeasuredQuantity::DISPLAY_KEYS)))
+                    + array_intersect_key($this->storedLine($source, $product), array_flip(['measure']));
+                $rules = $this->currentRules($product);
+                if ($rules === false) return $this->error('repeat_measure_changed', 422);
                 $quantity = $product['quantity'] ?? null;
                 if (!(is_int($quantity) || is_string($quantity))
-                    || !($quantity = filter_var($quantity, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000000]]))) {
+                    || !($quantity = filter_var($quantity, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => $rules?->max ?? 1000000]]))) {
                     return $this->error('repeat_invalid', 422);
+                }
+                if ($rules !== null) {
+                    try {
+                        MeasuredQuantity::normalize($quantity, $rules, MeasuredQuantity::MODE_STRICT);
+                    } catch (MeasuredQuantityException $exception) {
+                        return new JsonResponse(['message' => $exception->translated()], 422);
+                    }
                 }
                 foreach (['title', 'sku', 'link', 'coverSrc'] as $key) {
                     if (!is_string($product[$key] ?? null) || strlen($product[$key]) > 10000) {
@@ -101,7 +118,13 @@ final class OrderRepeatController
                 if (!is_finite($price) || $price < 0 || $price > 9999999) return $this->error('repeat_invalid', 422);
                 $product['quantity'] = $quantity;
                 $product['price'] = $product['priceNumber'] = $price;
-                $cost += $price * $quantity;
+                unset($product['measure']);
+                if ($rules !== null) {
+                    $product = $rules->lineKeys() + $product;
+                    $product = OrderLineEditor::refreshSum(MeasuredQuantity::refreshLine($product, $source->lang ?: null), (string)$source->currency);
+                    $product['unit_price_label'] = MeasuredQuantity::unitPriceLabel(sCommerce::convertPrice($price, $source->currency), $rules, $source->lang ?: null);
+                }
+                $cost += MeasuredQuantity::lineSum($product, $price);
             }
             unset($product);
             if (!is_finite($cost) || $cost > 9999999) return $this->error('repeat_invalid', 422);
@@ -142,6 +165,40 @@ final class OrderRepeatController
         return new JsonResponse(['success' => true, 'created' => $result['created'],
             'message' => $warning ? __('sCommerce::global.bulk_menu_warning') : '',
             'url' => sCommerce::moduleUrl() . '&get=order&i=' . $result['item']->id]);
+    }
+
+    /**
+     * Stored source line with the same `line_key`, or an empty array.
+     *
+     * @return array<string, mixed>
+     */
+    private function storedLine(sOrder $source, array $line): array
+    {
+        $key = $line['line_key'] ?? null;
+        foreach (is_string($key) && $key !== '' && is_array($source->products) ? $source->products : [] as $stored) {
+            if (is_array($stored) && ($stored['line_key'] ?? null) === $key) {
+                return $stored;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Current rules of a measured line's product; null for piece lines, false when the product's
+     * measure differs from the stored line.
+     */
+    private function currentRules(array $line): QuantityRules|false|null
+    {
+        $productId = (int)($line['product_id'] ?? $line['id'] ?? 0);
+        $product = $productId > 0 ? sCommerce::getProduct($productId) : null;
+        $rules = $product && (int)($product->id ?? 0) > 0 ? MeasuredQuantity::rules($product) : MeasuredQuantity::piece();
+        $stored = is_string($line['measure'] ?? null) ? $line['measure'] : MeasuredQuantity::PIECE;
+        if ($stored !== $rules->measure && (isset($line['line_key']) || $stored !== MeasuredQuantity::PIECE)) {
+            return false;
+        }
+
+        return $rules->isMeasured() ? $rules : null;
     }
 
     /**

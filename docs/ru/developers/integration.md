@@ -302,6 +302,7 @@ class SCommerceProductController extends BaseController
 | `tracks_inventory` | bool | строка учитывается в остатках |
 | `retail_excise_rate`, `retail_excise_amount` | float | только в строках с розничным акцизом: его ставка и сумма, включённая в сумму строки, для чека |
 | `deposit_unit`, `exchange_quantity`, `deposit_quantity`, `deposit_amount`, `deposit_returnable`, `deposit_terms`, `deposit_returned_quantity` | mixed | только в строках с залогом за возвратную тару, см. [Залог за возвратную тару](payments/index.md#залог-за-возвратную-тару) |
+| `measure`, `base_unit`, `price_unit`, `price_per`, `factor`, `quantity_*`, `quantity_label`, `unit_price_label`, `line_weight`, `actual_quantity*` | mixed | только в строках товаров, продаваемых по весу, длине, объёму или количеству; тогда `quantity` указывается в базовых единицах (граммы, миллиметры, миллилитры, штуки). См. [Измеряемые количества](measured-quantities.md#строки-заказа) |
 
 Налоговые слушатели также могут добавлять `tax_code`, `unit_price_gross`, `tax_amount` и `prices_include_tax`. См. [События](events.md#строки-заказа-исполнение-и-налоги).
 

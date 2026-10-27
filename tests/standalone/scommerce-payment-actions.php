@@ -496,7 +496,8 @@ $old = [['priceNumber' => 10, 'quantity' => 2], ['price' => '5.50', 'quantity' =
 $check(OrderCostRecalculator::recalculate('35.50000', $old, [['priceNumber' => 10, 'quantity' => 3]], 'EUR') === 40.0, 'Delivery 10 kept after a product change');
 $check(OrderCostRecalculator::recalculate(20.5, $old, [['priceNumber' => 10, 'quantity' => 3]], 'EUR') === 25.0, 'A checkout discount of 5 is kept');
 $check(OrderCostRecalculator::recalculate(25.5, $old, [], 'EUR') === 0.0, 'Removing all products leaves no negative cost');
-$check(str_contains(file_get_contents($package . '/module/sCommerceModule.php'), 'OrderCostRecalculator::recalculate('), 'The order form uses the recalculator');
+$check(str_contains(file_get_contents($package . '/module/sCommerceModule.php'), 'OrderLineEditor())->apply(')
+    && str_contains(file_get_contents($package . '/src/Services/OrderLineEditor.php'), 'OrderCostRecalculator::recalculate('), 'The order form uses the recalculator');
 
 // 7. The panel offers buttons only for capable methods and permitted managers.
 $app->instance('sCommerce', new class {

@@ -201,6 +201,77 @@
         <input type="text" id="product__container_terms" name="product__container_terms" class="form-control" maxlength="255" value="{{sCommerce::config('product.container_terms', '')}}" onchange="documentDirty=true;">
     </div>
 </div>
+@php($measuredUnits = fn (string $measure) => \Seiger\sCommerce\Services\MeasuredQuantity::units($measure))
+<div class="row form-row">
+    <div class="col-auto">
+        <label>@lang('sCommerce::global.measures_settings')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.measures_settings_help')"></i>
+    </div>
+    <div class="col">
+        <table class="table table-condensed scom-table">
+            <thead>
+            <tr>
+                <th>@lang('sCommerce::global.measure')</th>
+                <th>@lang('sCommerce::global.price_unit')</th>
+                <th>@lang('sCommerce::global.price_per')</th>
+                <th>@lang('sCommerce::global.quantity_step')</th>
+                <th>@lang('sCommerce::global.quantity_min')</th>
+                <th>@lang('sCommerce::global.quantity_max')</th>
+                <th>@lang('sCommerce::global.quantity_tolerance'), ‱</th>
+                <th>@lang('sCommerce::global.quantity_input_decimals')</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach(\Seiger\sCommerce\Services\MeasuredQuantity::DEFAULTS as $measure => $builtIn)
+                @php($values = \Seiger\sCommerce\Services\MeasuredQuantity::defaults($measure))
+                @php($name = 'product__measures[' . $measure . ']')
+                <tr>
+                    <td>@lang('sCommerce::global.measure_' . $measure), {{\Seiger\sCommerce\Services\MeasuredQuantity::translate('unit_' . \Seiger\sCommerce\Services\MeasuredQuantity::BASE_UNITS[$measure]) ?: '1'}}</td>
+                    <td>
+                        <select name="{{$name}}[price_unit]" class="form-control" onchange="documentDirty=true;">
+                            @foreach($measuredUnits($measure) as [$unit, $factor])
+                                <option value="{{$unit}}" @selected($values['price_unit'] === $unit)>{{\Seiger\sCommerce\Services\MeasuredQuantity::translate('unit_' . $unit) ?: '1'}}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <select name="{{$name}}[price_per]" class="form-control" onchange="documentDirty=true;">
+                            @foreach($measure === 'count' ? \Seiger\sCommerce\Services\MeasuredQuantity::COUNT_BASES : \Seiger\sCommerce\Services\MeasuredQuantity::PRICE_BASES as $basis)
+                                <option value="{{$basis}}" @selected($values['price_per'] === $basis)>{{number_format($basis, 0, '.', ' ')}}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    @foreach(['step', 'min', 'max', 'tolerance', 'input_decimals'] as $key)
+                        <td><input type="number" name="{{$name}}[{{$key}}]" class="form-control" min="{{in_array($key, ['tolerance', 'input_decimals'], true) ? 0 : 1}}" step="1" value="{{$values[$key]}}" onchange="documentDirty=true;"></td>
+                    @endforeach
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="row form-row">
+    <div class="col-auto">
+        <label>@lang('sCommerce::global.quantity_rounding_settings')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.quantity_rounding_settings_help')"></i>
+    </div>
+    <div class="col">
+        @foreach(\Seiger\sCommerce\Services\MeasuredQuantity::DEFAULTS as $measure => $builtIn)
+            <div class="d-inline-block me-3 mb-2">
+                <b>@lang('sCommerce::global.measure_' . $measure):</b>
+                @foreach($measuredUnits($measure) as [$unit, $factor])
+                    <label class="ms-2">{{\Seiger\sCommerce\Services\MeasuredQuantity::translate('unit_' . $unit) ?: '1'}}
+                        <select name="product__quantity_rounding[{{$unit}}]" class="form-control d-inline-block" style="width: auto;" onchange="documentDirty=true;">
+                            @foreach(\Seiger\sCommerce\Services\MeasuredQuantity::ROUNDINGS as $rounding)
+                                <option value="{{$rounding}}" @selected(\Seiger\sCommerce\Services\MeasuredQuantity::rounding($unit) === $rounding)>@lang('sCommerce::global.quantity_rounding_' . $rounding)</option>
+                            @endforeach
+                        </select>
+                    </label>
+                @endforeach
+            </div>
+        @endforeach
+    </div>
+</div>
 <script>
     document.querySelectorAll('[data-feature-toggle]').forEach(function (box) {
         box.addEventListener('click', function () {

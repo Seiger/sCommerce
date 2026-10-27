@@ -27,6 +27,8 @@
         $productBack .= '&page=' . request()->page;
     }
     $productBack .= '&back=' . urlencode($productsBack);
+    $measureOn = \Illuminate\Support\Facades\Schema::hasColumn('s_products', 'measure');
+    $quantityRules = $measureOn ? \Seiger\sCommerce\Services\MeasuredQuantity::rules($item) : null;
 @endphp
 <h3>{{(int)request()->input('i', 0) == 0 ? __('sCommerce::global.new_product') : ($item->pagetitle ?? __('sCommerce::global.no_text'))}}</h3>
 <div class="split my-3"></div>
@@ -57,7 +59,7 @@
                         @endif
                         @if(sCommerce::config('product.inventory_on', 1))&emsp;
                         <i class="fas fa-warehouse" data-tooltip="@lang('sCommerce::global.inventory')">
-                            <b>{{$item->inventory ?? 0}}</b>
+                            <b>{{isset($quantityRules) && $quantityRules->isMeasured() ? \Seiger\sCommerce\Services\MeasuredQuantity::label((int)($item->inventory ?? 0), $quantityRules) : ($item->inventory ?? 0)}}</b>
                         </i>
                         @endif
                     </div>
@@ -169,7 +171,8 @@
                     <div class="row-col col-lg-3 col-md-6 col-12">
                         <div class="row form-row">
                             <div class="col-auto col-title">
-                                <label for="inventory">@lang('sCommerce::global.inventory')</label>
+                                @php($inventoryUnit = isset($quantityRules) && $quantityRules->isMeasured() ? \Seiger\sCommerce\Services\MeasuredQuantity::translate('unit_' . $quantityRules->baseUnit) : '')
+                                <label for="inventory">@if($inventoryUnit !== '')@lang('sCommerce::global.inventory_in_unit', ['unit' => $inventoryUnit])@else @lang('sCommerce::global.inventory')@endif</label>
                                 <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.inventory_help')"></i>
                             </div>
                             <div class="col">
@@ -210,6 +213,7 @@
                 </div>
             @endif
         </div>
+        @includeWhen($measureOn, 'sCommerce::partials.productMeasure', ['item' => $item])
         <div class="split my-3"></div>
         <div class="row form-row">
             <div class="row-col col-lg-3 col-md-6 col-12">

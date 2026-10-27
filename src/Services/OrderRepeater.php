@@ -33,12 +33,14 @@ final class OrderRepeater
         $products = $source->products ?? [];
         $cost = 0.0;
         foreach ($products as &$product) {
+            // The new order bills what was ordered; actual quantities belong to the source order.
+            $product = array_diff_key($product, array_flip(MeasuredQuantity::ACTUAL_KEYS), ['actual_quantity_label' => 0]);
             $product += ['title' => '', 'sku' => '', 'link' => '', 'coverSrc' => ''];
             $price = isset($product['priceNumber']) && is_numeric($product['priceNumber'])
                 ? (float) $product['priceNumber']
                 : \Seiger\sCommerce\Facades\sCommerce::convertPriceNumber($product['price'] ?? 0, $source->currency, $source->currency);
             $product['price'] = $product['priceNumber'] = $price;
-            $cost += $price * (int) ($product['quantity'] ?? 1);
+            $cost += MeasuredQuantity::lineSum($product, $price);
         }
         unset($product);
         return (new sOrder())->forceFill([

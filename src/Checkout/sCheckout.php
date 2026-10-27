@@ -17,6 +17,8 @@ use Seiger\sCommerce\Models\sPaymentMethod;
 use Seiger\sCommerce\Payment\PaymentFlow;
 use Seiger\sCommerce\Payment\PaymentSchedule;
 use Seiger\sCommerce\Services\ContainerDeposit;
+use Seiger\sCommerce\Services\MeasuredQuantity;
+use Seiger\sCommerce\Services\MeasuredQuantityException;
 use Seiger\sCommerce\Services\OrderLineIdentity;
 use Seiger\sCommerce\Services\OrderTaxes;
 use Seiger\sCommerce\Services\VatDisplay;
@@ -647,7 +649,9 @@ class sCheckout
      * The trusted checkout context is resolved before the order is built.
      *
      * @param array $data The data from the request, including productId, optionId, quantity, exchange (empty returnable
-     *                    containers handed over), phone, and/or email.
+     *                    containers handed over), phone, and/or email. For products sold by measure, `quantity` is in
+     *                    base units and an `amount` in the price unit (`2.53` metres) takes precedence; the quantity
+     *                    is fitted to the minimum and step of the product.
      * @return array An array containing the result of the operation with success status and a message.
      */
     public static function quickOrder(array $data)
@@ -715,7 +719,27 @@ class sCheckout
 
             $quantity = $data['quantity'] ?? 1;
             $optionId = max(0, (int)($data['optionId'] ?? 0));
+            $rules = MeasuredQuantity::rules($product);
+            if ($rules->isMeasured()) {
+                try {
+                    if (is_scalar($data['amount'] ?? null) && trim((string)$data['amount']) !== '') {
+                        $quantity = MeasuredQuantity::parseAmount((string)$data['amount'], $rules);
+                    }
+                } catch (MeasuredQuantityException $e) {
+                    return [
+                        'success' => false,
+                        'product' => (int)$data['productId'],
+                        'message' => $e->translated(),
+                    ];
+                }
+                $quantity = MeasuredQuantity::normalize($quantity, $rules);
+            }
             $pricing = static::resolveProductPricing($product, $optionId);
+
+            $price = (float)$pricing['priceAsFloat'];
+            $cost = $rules->isMeasured()
+                ? MeasuredQuantity::lineTotalMinor(MeasuredQuantity::scalePrice($price), $quantity, $rules->factor) / 100
+                : $price * $quantity;
 
             $productData = [
                 'id' => $product->id,
@@ -736,7 +760,18 @@ class sCheckout
                 $productData['priceMode'] = $pricing['priceMode'];
             }
             $productData = array_merge($productData, app(OrderLineIdentity::class)->snapshot($product, $optionId));
-            $productData = array_merge($productData, $product->physicalPayload());
+
+            // Units exchanged for empty returnable containers carry no new deposit.
+            $productData = array_merge($productData, ContainerDeposit::lineFields(ContainerDeposit::unit($product, $optionId), $quantity, max(0, (int)($data['exchange'] ?? 0))));
+            $cost += (float)($productData['deposit_amount'] ?? 0);
+
+            $productData = array_merge($productData, $physical = $product->physicalPayload());
+            $productData += MeasuredQuantity::lineFields($rules, $quantity, (string)($pricing['price'] ?? ''), (int)($physical['weight'] ?? 0));
+            if ($rules->isMeasured()) {
+                $productData['sumAsFloat'] = round($cost, 3);
+                $productData['sum'] = sCommerce::convertPrice($productData['sumAsFloat']);
+            }
+
             $productsData = [$productData];
         }
 

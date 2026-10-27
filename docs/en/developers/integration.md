@@ -303,6 +303,7 @@ Since 1.5.0, every new order line (storefront cart, quick order, manager editor 
 | `tracks_inventory` | bool | the line counts against inventory |
 | `retail_excise_rate`, `retail_excise_amount` | float | only on lines with a retail excise: its rate and the amount included in the line total, for the receipt |
 | `deposit_unit`, `exchange_quantity`, `deposit_quantity`, `deposit_amount`, `deposit_returnable`, `deposit_terms`, `deposit_returned_quantity` | mixed | only on lines with a returnable container deposit, see [Returnable container deposits](payments/index.md#returnable-container-deposits) |
+| `measure`, `base_unit`, `price_unit`, `price_per`, `factor`, `quantity_*`, `quantity_label`, `unit_price_label`, `line_weight`, `actual_quantity*` | mixed | only on lines of products sold by weight, length, volume or count; `quantity` is then in base units (grams, millimetres, millilitres, items). See [Measured quantities](measured-quantities.md#order-lines) |
 
 Tax listeners may also add `tax_code`, `unit_price_gross`, `tax_amount` and `prices_include_tax`. See [Events](events.md#order-lines-fulfilment-and-taxes).
 

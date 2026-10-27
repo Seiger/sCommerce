@@ -90,6 +90,7 @@ $check(sOrder::find(1)->payment_status === 3, 'Restoration keeps prior payment s
 $db->table('s_orders')->where('id',1)->update(['user_info'=>'{"first_name":"<script>alert(1)</script>","phone":"+380981111111"}', 'products'=>json_encode([['title'=>'<img src=x onerror=alert(1)>','sku'=>'SKU-1','quantity'=>2,'price'=>25]]), 'created_at'=>'2026-08-31 07:05:00']);
 $files->makeDirectory($cache);
 $db->table('s_orders')->where('id',1)->update(['delivery_info'=>json_encode(['method'=>'nova_post', 'cost'=>0, 'nova_post'=>['city'=>'Харків', 'warehouse'=>'Відділення № 2', 'city_ref'=>'private-city-uuid', 'warehouse_ref'=>'private-warehouse-uuid', 'ttn'=>'000123456789']])]);
+$db->table('s_orders')->where('id',3)->update(['products'=>json_encode([['title'=>'Cable','sku'=>'CABLE','quantity'=>2530,'price'=>1.2,'measure'=>'length','base_unit'=>'mm','price_unit'=>'m','price_per'=>1,'factor'=>1000,'quantity_step'=>10]])]);
 try {
     $response = $call(['ids'=>[3,1], 'action'=>'print']);
     $check($response->getStatusCode() === 200, 'Actual Blade print document renders');
@@ -99,6 +100,7 @@ try {
     $check(!str_contains($html,'<script>') && !str_contains($html,'<img ') && str_contains($html,'&lt;script&gt;'), 'Print escapes stored text without remote resources');
     $check(str_contains($html,'window.print()') && str_contains($response->headers->get('Cache-Control'),'no-store'), 'Print control and privacy headers');
     $check(!str_contains($html,'sCommerce::global.'), 'Print labels resolve');
+    $check(str_contains($html,'<td class="quantity">2.53 m</td>') && str_contains($html,'<td class="amount">1.20₴ UAH / m</td>') && str_contains($html,'<td class="amount">3.04₴ UAH</td>'), 'Print shows measured lines in the price unit with the exact total');
     $check(str_contains($html, 'Харків') && str_contains($html, 'Відділення № 2') && str_contains($html, '000123456789'), 'Readable address and tracking retained');
     $check(!str_contains($html, 'city_ref') && !str_contains($html, 'private-city-uuid') && !str_contains($html, 'warehouse_ref') && !str_contains($html, 'cost: 0'), 'Internal delivery metadata excluded');
     $check(str_contains($html, 'class="index">1</td>') && str_contains($html, '<colgroup>') && str_contains($html, 'class="signature"'), 'Numbered table and signature line render');

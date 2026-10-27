@@ -211,6 +211,72 @@ final class StockCommitter
     }
 
     /**
+     * Apply line changes of a locally committed order to stock: the difference between the
+     * current billable quantities and the committed ones, for changed, added and removed lines.
+     *
+     * Orders that are not committed, are cancelled or deleted, or were committed by the stock
+     * provider are left alone; the provider learns of changes from `sCommerce.OrderUpdated`.
+     * A later release restores exactly the adjusted quantities.
+     *
+     * @param sOrder|int $order Order or its id.
+     * @return bool Whether stock changed.
+     * @throws StockShortageException When a product has less inventory than an increase needs; nothing changes.
+     * @since 1.5.0
+     */
+    public function adjust(sOrder|int $order): bool
+    {
+        $orderId = $order instanceof sOrder ? (int)$order->getKey() : $order;
+        if (!self::available()) {
+            return false;
+        }
+
+        return EventScope::run(self::SOURCE, 0, static fn (): bool => DB::transaction(static function () use ($orderId): bool {
+            /** @var sOrder|null $locked */
+            $locked = sOrder::query()->whereKey($orderId)->lockForUpdate()->first();
+            if (!$locked || $locked->getAttribute(self::COLUMN) === null || (int)$locked->status === sOrder::ORDER_STATUS_CANCELED) {
+                return false;
+            }
+            $state = self::state($locked);
+            if (($state['committed_by'] ?? 'local') !== 'local' || !is_array($state['lines'] ?? null)) {
+                return false;
+            }
+            $committed = array_map('intval', $state['lines']);
+            $current = self::quantities($locked);
+            $deltas = [];
+            foreach (array_unique(array_merge(array_keys($committed), array_keys($current))) as $productId) {
+                $delta = ($current[$productId] ?? 0) - ($committed[$productId] ?? 0);
+                if ($delta !== 0) {
+                    $deltas[(int)$productId] = $delta;
+                }
+            }
+            if ($deltas === []) {
+                return false;
+            }
+            $rows = StockWriter::lock(array_keys($deltas));
+            foreach ($deltas as $productId => $delta) {
+                $row = $rows[$productId] ?? null;
+                if (!$row) {
+                    // A missing product cannot be taken or returned; keep its committed quantity.
+                    self::log('warning', 'sCommerce stock adjustment skipped a missing product', ['order_id' => $orderId, 'product_id' => $productId]);
+                    unset($deltas[$productId], $current[$productId]);
+                    if (isset($committed[$productId])) {
+                        $current[$productId] = $committed[$productId];
+                    }
+                } elseif ($delta > 0 && (int)$row->inventory < $delta) {
+                    throw new StockShortageException("Order {$orderId} needs {$delta} more of product {$productId}, {$row->inventory} in stock.");
+                }
+            }
+            foreach ($deltas as $productId => $delta) {
+                StockWriter::write($rows[$productId], (int)$rows[$productId]->inventory - $delta, null, self::STOCK_SOURCE);
+            }
+            ksort($current);
+            self::saveState($locked, ['lines' => $current, 'adjusted_at' => self::now()] + $state);
+
+            return $deltas !== [];
+        }));
+    }
+
+    /**
      * Retry missed or failed commits and releases.
      *
      * @return int Number of committed or released orders.
@@ -382,7 +448,8 @@ final class StockCommitter
     }
 
     /**
-     * Ordered quantities of lines that track inventory, by product id in id order.
+     * Billable quantities of lines that track inventory, by product id in id order: the actual
+     * quantity of a measured line when set, else the ordered one.
      *
      * @return array<int, int>
      */
@@ -394,7 +461,7 @@ final class StockCommitter
                 continue;
             }
             $productId = (int)($line['product_id'] ?? $line['id'] ?? 0);
-            $quantity = (int)($line['quantity'] ?? 0);
+            $quantity = MeasuredQuantity::effective($line);
             if ($productId > 0 && $quantity > 0) {
                 $quantities[$productId] = ($quantities[$productId] ?? 0) + $quantity;
             }

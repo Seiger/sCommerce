@@ -383,6 +383,11 @@ foreach (['uk', 'en', 'ru', 'de', 'fr', 'pl'] as $locale) {
         $check(isset($labels[$key]) && trim($labels[$key]) !== '', "Translation $locale.$key exists");
     }
 }
+// Measured lines are shipped in base units; coverage uses the actual quantity when set.
+$cut = (new sOrder())->forceFill(['products' => [['line_key' => '9:0', 'quantity' => 2530, 'actual_quantity' => 2553, 'measure' => 'length', 'factor' => 1000]]]);
+$parcel = static fn (int $quantity, string $status = 'delivered') => (new sOrderShipment())->forceFill(['status' => $status, 'items' => [['line' => 0, 'line_key' => '9:0', 'quantity' => $quantity]]]);
+$check(!OrderShipments::coverage($cut, [$parcel(2530)])['fullyDelivered'] && OrderShipments::coverage($cut, [$parcel(2530), $parcel(23)])['fullyDelivered'], 'Coverage of a measured line uses the actual quantity');
+$check(OrderShipments::coverage((new sOrder())->forceFill(['products' => [['quantity' => 2, 'actual_quantity' => 5]]]), [$parcel(2)])['fullyDelivered'], 'Piece lines ignore actual quantities');
 $check(sCommerce::supportsIntegration('shipments'), 'Feature key shipments');
 $check(!array_filter($app['log']->records, static fn ($record) => $record[0] === 'error'), 'No errors logged');
 

@@ -334,14 +334,16 @@ switch ($get) {
                     foreach ($order->products as $product) {
                         if (isset($product['id'])) {
                             $productId = (int) $product['id'];
-                            $quantity = max(1, (int) ($product['quantity'] ?? 1));
+                            // A measured line (2530 mm of cable) is one unit sold.
+                            $measured = isset($product['measure']);
+                            $quantity = $measured ? 1 : max(1, (int) ($product['quantity'] ?? 1));
                             $price = isset($product['priceNumber']) && is_numeric($product['priceNumber'])
                                 ? (float) $product['priceNumber']
                                 : sCommerce::convertPriceNumber($product['price'] ?? 0, $order->currency, $order->currency);
 
                             $productStats[$productId] = $productStats[$productId] ?? ['orders' => 0, 'revenue' => 0.0];
                             $productStats[$productId]['orders'] += $quantity;
-                            $productStats[$productId]['revenue'] += $price * $quantity;
+                            $productStats[$productId]['revenue'] += $measured ? \Seiger\sCommerce\Services\MeasuredQuantity::lineSum($product, $price) : $price * $quantity;
                         }
                     }
                 }
@@ -647,6 +649,11 @@ switch ($get) {
                     ? \Seiger\sCommerce\Services\OrderPaymentAction::issueNonce((int)$item->id, 0, \Seiger\sCommerce\Controllers\OrderShipmentController::NONCE_ACTION) : null,
             ];
         }
+        $data['actualQuantityNonce'] = null;
+        if ($item->exists && !isset($data['repeatSourceId']) && evo()->hasPermission('exec_module')
+            && collect(is_array($item->products) ? $item->products : [])->contains(static fn ($line) => is_array($line) && isset($line['measure']))) {
+            $data['actualQuantityNonce'] = \Seiger\sCommerce\Services\OrderPaymentAction::issueNonce((int)$item->id, 0, \Seiger\sCommerce\Controllers\OrderActualQuantityController::NONCE_ACTION);
+        }
         $_SESSION['itemaction'] = $item->exists ? 'Editing a Order of #' . $item->id : 'Creating an Order';
         $_SESSION['itemname'] = __('sCommerce::global.title');
         break;
@@ -675,6 +682,9 @@ switch ($get) {
     case "orderShipmentSave":
         (new \Seiger\sCommerce\Controllers\OrderShipmentController())->handle(request())->send();
         exit;
+    case "orderActualQuantitySave":
+        (new \Seiger\sCommerce\Controllers\OrderActualQuantityController())->handle(request())->send();
+        exit;
     case "orderRepeatSave":
         (new \Seiger\sCommerce\Controllers\OrderRepeatController())->handle(request())->send();
         exit;
@@ -682,6 +692,7 @@ switch ($get) {
         $requestId = request()->integer('i');
         $item = sOrder::find($requestId);
         $paymentNotice = null;
+        $quantityNotice = null;
 
         if ($item) {
             $scope = EventScope::begin('manager', (int)evo()->getLoginUserID('mgr'));
@@ -764,25 +775,20 @@ switch ($get) {
                 }
             }
 
-            // Update products if provided
+            // Update products if provided; identity, measured rules and the cost are recalculated on the server.
+            $productsChanged = false;
             if (request()->has('products_data')) {
                 $productsDataJson = request()->string('products_data')->value();
                 $productsData = json_decode($productsDataJson, true);
 
                 if (json_last_error() === JSON_ERROR_NONE && is_array($productsData)) {
-                    $productsData = \Seiger\sCommerce\Services\ContainerDeposit::applyToLines(\Seiger\sCommerce\Services\OrderTaxes::applyRetailExcise(
-                        app(\Seiger\sCommerce\Services\OrderLineIdentity::class)->fillMissing($productsData, (string)$item->currency)
-                    ));
-                    $oldProducts = $item->products;
-                    $item->products = $productsData;
+                    try {
+                        $productsChanged = (new \Seiger\sCommerce\Services\OrderLineEditor())->apply($item, $productsData);
+                    } catch (\Seiger\sCommerce\Services\MeasuredQuantityException $e) {
+                        $quantityNotice = [$e->messageKey, (string)(array_values($e->replace)[0] ?? '')];
+                    }
 
-                    // Recalculate order cost; delivery cost and other non-product amounts are kept.
-                    $item->cost = \Seiger\sCommerce\Services\OrderCostRecalculator::recalculate(
-                        $item->getOriginal('cost') ?? 0, is_array($oldProducts) ? $oldProducts : [], $productsData, (string) $item->currency
-                    );
-
-                    // Add history entry if products changed
-                    if (json_encode($oldProducts) !== json_encode($productsData)) {
+                    if ($productsChanged) {
                         $history[] = [
                             'products_updated' => true,
                             'timestamp' => now()->toDateTimeString(),
@@ -793,18 +799,35 @@ switch ($get) {
             }
 
             $item->history = $history;
-            $item->update();
+            $saved = true;
+            try {
+                // Locally committed stock follows changed, added and removed lines.
+                \Illuminate\Support\Facades\DB::transaction(function () use ($item, $productsChanged): void {
+                    $item->update();
+                    if ($productsChanged) {
+                        (new \Seiger\sCommerce\Services\StockCommitter())->adjust($item);
+                    }
+                });
+            } catch (\Seiger\sCommerce\Services\StockShortageException) {
+                $saved = false;
+                $quantityNotice = ['order_stock_shortage', ''];
+            }
 
             $_SESSION['itemaction'] = 'Saving a Order of #' . $item->id;
             $_SESSION['itemname'] = __('sCommerce::global.title');
             $scope->end();
-            evo()->invokeEvent('sCommerceAfterOrderSave', compact('item'));
+            if ($saved) {
+                evo()->invokeEvent('sCommerceAfterOrderSave', compact('item'));
+            }
         }
 
         $back = str_replace('&i=0', '&i=' . ($item->id ?? 0), (request()->back ?? '&get=orders'));
         if ($paymentNotice !== null) {
             // Flash data does not survive the EVO session proxy sync, so the notice travels in the URL.
             $back .= '&payment_notice=' . $paymentNotice;
+        }
+        if ($quantityNotice !== null) {
+            $back .= '&quantity_notice=' . urlencode($quantityNotice[0]) . '&notice_arg=' . urlencode(mb_substr($quantityNotice[1], 0, 40));
         }
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "orderDelete":
@@ -1252,6 +1275,18 @@ switch ($get) {
         $product->tmplvars = json_encode(request()->input('tmplvars', []), JSON_UNESCAPED_UNICODE);
         $product->votes = json_encode($votes, JSON_UNESCAPED_UNICODE);
         $product->mode = request()->integer('mode');
+        // Measured settings are validated together; on refusal the rest of the product is still saved.
+        // Forms without the "Sold by" block leave them unchanged.
+        $quantityNotice = null;
+        if (request()->has('measure') && Schema::hasColumn('s_products', 'measure')) {
+            try {
+                foreach (\Seiger\sCommerce\Services\MeasuredQuantity::productSettings(request()->only(\Seiger\sCommerce\Services\MeasuredQuantity::PRODUCT_COLUMNS), $product) as $column => $value) {
+                    $product->{$column} = $value;
+                }
+            } catch (\Seiger\sCommerce\Services\MeasuredQuantityException $e) {
+                $quantityNotice = $e->messageKey;
+            }
+        }
         $product->stockSource = 'manager';
         EventScope::run('manager', (int)evo()->getLoginUserID('mgr'), fn () => $product->save());
 
@@ -1317,6 +1352,9 @@ switch ($get) {
         $_SESSION['itemaction'] = 'Saving Product';
         $_SESSION['itemname'] = $product->title;
         $back = str_replace('&i=0', '&i=' . $product->id, (request()->back ?? '&get=product'));
+        if ($quantityNotice !== null) {
+            $back .= '&quantity_notice=' . urlencode($quantityNotice);
+        }
         evo()->invokeEvent('sCommerceAfterProductSave', compact('product', 'text'));
         return header('Location: ' . sCommerce::moduleUrl() . $back);
     case "productDuplicate":
@@ -2610,6 +2648,9 @@ switch ($get) {
         $_SESSION['itemaction'] = 'Saving Settings';
         session()->flash('success', __('sCommerce::global.settings_save_success'));
         $back = request()->back ?? '&get=settings';
+        if (($settingsErrors = $sCommerceController->settingsErrors()) !== []) {
+            $back .= '&quantity_notice=' . urlencode($settingsErrors[0]);
+        }
         return header('Location: ' . sCommerce::moduleUrl() . $back);
 }
 

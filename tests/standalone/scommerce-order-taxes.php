@@ -66,6 +66,15 @@ $check(!isset($order->products[0]['tax_code']) && $order->products[0]['tax_rate'
 $sources = [];
 $quick = sCheckout::quickOrder(['productId' => 2, 'quantity' => 1, 'email' => 'quick@shop.test']);
 $check($quick['success'] && $sources === ['storefront_quick'] && sOrder::query()->find($quick['order']->id)->products[0]['tax_rate'] === 23, 'Quick order taxes persisted');
+// Measured lines: listener tax data is kept, the excise uses the exact line total.
+$cable = new FakeProduct(9, 'CABLE', 1.2);
+$cable->measure = 2;
+$shop->products[9] = $cable;
+$quick = sCheckout::quickOrder(['productId' => 9, 'amount' => '2.53', 'email' => 'quick@shop.test']);
+$line = sOrder::query()->find($quick['order']->id)->products[0];
+$check($quick['success'] && $line['quantity'] === 2530 && $line['measure'] === 'length' && $line['tax_rate'] === 23 && (float)$quick['order']->cost === 3.04, 'Measured quick order keeps tax data');
+$excise = OrderTaxes::applyRetailExcise([$line + ['retail_excise_rate' => 10]]);
+$check($excise[0]['retail_excise_amount'] === Seiger\sCommerce\Services\VatDisplay::excise(3.04, 10), 'Measured excise uses the exact line total');
 $check(sCommerce::supportsIntegration('line-tax-data'), 'Feature key line-tax-data');
 
 echo "$checks order tax checks passed (isolated SQLite; no site database)\n";

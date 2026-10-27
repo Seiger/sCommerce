@@ -24,6 +24,7 @@ use Seiger\sCommerce\Models\sProduct;
 use Seiger\sCommerce\Models\sProductTranslate;
 use Seiger\sCommerce\Payment\PaymentFlow;
 use Seiger\sCommerce\Payment\PaymentSchedule;
+use Seiger\sCommerce\Services\MeasuredQuantity;
 use Seiger\sCommerce\Services\ProductListingService;
 use Seiger\sCommerce\Services\sPriceResolver;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -86,7 +87,65 @@ class sCommerce
     public static function integrationFeatures(): array
     {
         return ['order-events', 'payment-ledger-api', 'webhook-interface', 'payment-capabilities', 'payment-schedule', 'offline-settlement',
-            'line-identity', 'fulfilment-modes', 'line-tax-data', 'checkout-context', 'vat-display', 'retail-excise', 'container-deposit', 'shipments', 'stock-provider'];
+            'line-identity', 'fulfilment-modes', 'line-tax-data', 'checkout-context', 'vat-display', 'retail-excise', 'container-deposit', 'shipments', 'stock-provider',
+            'measured-quantities', 'actual-quantities'];
+    }
+
+    /**
+     * Quantity input of a product card or page.
+     *
+     * Piece products get `<input type="number" name="quantity" min="1" step="1" value="1">`.
+     * Products sold by measure get an input named `amount` in the price unit (metres, litres,
+     * kilograms) with `min`, `step` and `max` from their rules, and `data-sc-measure`,
+     * `data-sc-factor` (base units per price unit), `data-sc-step` and `data-sc-min` (base
+     * units), `data-sc-decimals` and `data-sc-unit`, which the storefront script posts as `amount`.
+     * `$attributes` add or replace attributes, e.g. `['data-sc-quantity' => $product->id]` in the cart.
+     *
+     * @param object $product Product model.
+     * @param array<string, scalar|bool|null> $attributes Extra attributes; false or null removes one.
+     * @return string HTML of the input element.
+     * @since 1.5.0
+     */
+    public static function quantityInput(object $product, array $attributes = []): string
+    {
+        $rules = MeasuredQuantity::rules($product);
+        if (!$rules->isMeasured()) {
+            $defaults = ['type' => 'number', 'name' => 'quantity', 'min' => 1, 'step' => 1, 'value' => 1];
+        } else {
+            $units = static function (int $quantity) use ($rules): string {
+                $amount = MeasuredQuantity::toPriceUnits($quantity, $rules->unitFactor);
+                return str_contains($amount, '.') ? rtrim(rtrim($amount, '0'), '.') : $amount;
+            };
+            $defaults = ['type' => 'number', 'name' => 'amount', 'inputmode' => $rules->unitFactor > 1 ? 'decimal' : 'numeric',
+                'min' => $units($rules->min), 'step' => $units($rules->step), 'max' => $units($rules->max), 'value' => $units($rules->min),
+                'data-sc-measure' => $rules->measure, 'data-sc-factor' => $rules->unitFactor, 'data-sc-step' => $rules->step,
+                'data-sc-min' => $rules->min, 'data-sc-decimals' => min($rules->inputDecimals, strlen((string)$rules->unitFactor) - 1),
+                'data-sc-unit' => MeasuredQuantity::translate('unit_' . $rules->priceUnit)];
+        }
+        $html = '<input';
+        foreach (array_merge($defaults, $attributes) as $name => $value) {
+            if ($value === null || $value === false) {
+                continue;
+            }
+            $html .= ' ' . e((string)$name) . ($value === true ? '' : '="' . e((string)$value) . '"');
+        }
+
+        return $html . '>';
+    }
+
+    /**
+     * Price of a product with its price basis in the current language: `€2.49 / 100 g`,
+     * `€1.20 / m`, `€2.50 / 1,000`; the plain price for piece products.
+     *
+     * @param object $product Product model; its formatted `price` is used.
+     * @since 1.5.0
+     */
+    public static function unitPrice(object $product): string
+    {
+        $price = $product->price ?? '';
+        $price = is_string($price) ? $price : \Seiger\sCommerce\Facades\sCommerce::convertPrice((float)$price);
+
+        return MeasuredQuantity::unitPriceLabel($price, MeasuredQuantity::rules($product));
     }
 
     /**

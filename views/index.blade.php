@@ -143,6 +143,10 @@
             @if (request()->query('payment_notice') === 'partial_use_record')
                 alertify.error(@json(__('sCommerce::global.payment_partial_use_record')));
             @endif
+            @php($quantityNotice = request()->query('quantity_notice'))
+            @if (is_string($quantityNotice) && preg_match('/\A(measured_(quantity|settings)_[a-z_]+|measured_change_refused|measured_deposit_refused|order_stock_shortage)\z/', $quantityNotice) && __('sCommerce::global.' . $quantityNotice) !== 'sCommerce::global.' . $quantityNotice)
+                alertify.error({!! json_encode(e(__('sCommerce::global.' . $quantityNotice, array_fill_keys(['min', 'max', 'step', 'decimals'], mb_substr(is_string(request()->query('notice_arg')) ? request()->query('notice_arg') : '', 0, 40))))) !!});
+            @endif
         });
 
         {{-- Enable table sorting --}}

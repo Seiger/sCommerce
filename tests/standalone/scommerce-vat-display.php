@@ -94,7 +94,8 @@ $check((float)$order->cost === 269.3 && $lines[3]['retail_excise_rate'] === 5 &&
 $edited = Seiger\sCommerce\Services\OrderTaxes::applyRetailExcise([array_replace($lines[3], ['quantity' => 3]), $lines[2]]);
 $check($edited[0]['retail_excise_amount'] === 18.45 && !isset($edited[1]['retail_excise_amount']), 'Manager quantity edits recalculate the excise');
 $module = file_get_contents($package . '/module/sCommerceModule.php');
-$check(str_contains($module, 'OrderTaxes::applyRetailExcise(') && str_contains(file_get_contents($package . '/src/Controllers/OrderRepeatController.php'), 'OrderTaxes::applyRetailExcise('),
+$check(str_contains($module, 'OrderLineEditor())->apply(') && str_contains(file_get_contents($package . '/src/Services/OrderLineEditor.php'), 'OrderTaxes::applyRetailExcise(')
+    && str_contains(file_get_contents($package . '/src/Controllers/OrderRepeatController.php'), 'OrderTaxes::applyRetailExcise('),
     'Manager and repeat saves recalculate the excise');
 $check(str_contains(file_get_contents($package . '/views/ordersPrint.blade.php'), "retail_excise_included"), 'Print document shows the excise');
 $check(sCommerce::supportsIntegration('retail-excise'), 'Feature key retail-excise');
