@@ -13,8 +13,7 @@ use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sCommerce\Services\sPriceResolver;
 
 /**
- * Build cart payloads from current product pricing, attributes and delivery measurements.
- * Physical values are read explicitly from attributes, never legacy columns; unreadable ones are left out.
+ * Build cart payloads from configured product fields, pricing and displayed attributes.
  */
 class sCart
 {
@@ -362,7 +361,7 @@ class sCart
 
         $productFields = array_merge($product->only($this->productDetails), $pricing);
 
-        return array_merge($productFields, $attributes, $product->physicalPayload());
+        return array_merge($productFields, $attributes);
     }
 
     /**

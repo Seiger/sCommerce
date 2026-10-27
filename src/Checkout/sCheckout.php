@@ -54,7 +54,7 @@ class sCheckout
     }
 
     /**
-     * Generate validation rules for the checkout process.
+     * Build standard checkout rules and let delivery methods and plugins customize them.
      *
      * This method dynamically generates validation rules for the checkout process
      * based on the provided order data. It includes base validation rules for user,
@@ -62,10 +62,12 @@ class sCheckout
      * delivery method. When no cart line needs shipping, the delivery rules are dropped.
      * Plugins can then add, replace, or remove rules through
      * the sCommerce.CheckoutValidationRules event. Its payload contains
-     * the input data and the rules array passed by reference.
+     * the input data, rules array passed by reference and the checkout context.
      *
      * @param array $data The input data for the checkout process.
      *                    Example: ['delivery' => ['method' => 'courier', ...], ...].
+     * @param string $context default uses the full form; quick uses quick-order input fields.
+     *                        Other contexts start with checkout rules and may be customized by plugins.
      * @return array An associative array of validation rules, where the key is the
      *               field name, and the value is the validation rule.
      *
@@ -81,46 +83,66 @@ class sCheckout
      *     ...
      * ]
      */
-    public function getValidationRules(array $data): array
+    public function getValidationRules(array $data, string $context = 'default'): array
     {
-        $deliveryMethods = array_keys($this->deliveryMethods);
-        $paymentMethods = array_keys($this->paymentMethods);
+        switch ($context) {
+            case 'quick':
+                $rules = [
+                    'product' => 'nullable|integer|exists:products,id,' . ((int)($data['productId'] ?? 0) === 0 ? '0' : null),
+                    'quantity' => 'nullable|integer|min:1',
+                    'phone' => 'nullable|string|max:20',
+                    'email' => 'nullable|email|max:255',
+                ];
+                break;
 
-        $rules = [
-            'user.first_name' => 'required|string|max:255',
-            'user.middle_name' => 'nullable|string|max:255',
-            'user.last_name' => 'nullable|string|max:255',
-            'user.email' => 'required|email|max:255',
-            'user.phone' => 'nullable|string|max:20|regex:/^\+?[1-9]\d{7,14}$/',
-            'user.vat' => 'sometimes|string|max:32',
-            'user.address.country' => 'sometimes|string|max:255',
-            'user.address.state' => 'sometimes|string|max:255',
-            'user.address.city' => 'sometimes|string|max:255',
-            'user.address.street' => 'sometimes|string|max:255',
-            'user.address.zip' => 'sometimes|string|max:10',
-            'delivery.method' => 'required|string|in:' . implode(',', $deliveryMethods),
-            'payment.method' => 'required|string|in:' . implode(',', $paymentMethods),
-            'comment' => 'nullable|string|max:1000',
-            'do_not_call' => 'nullable|boolean',
-            'delivery.courier.recipient_region' => 'sometimes|string|max:255',
-            'delivery.courier.recipient_city' => 'sometimes|string|max:255',
-            'delivery.courier.recipient_street' => 'sometimes|string|max:255',
-            'delivery.courier.recipient_build' => 'sometimes|string|max:10',
-            'delivery.courier.recipient_room' => 'sometimes|string|max:10',
-            'delivery.courier.recipient_zip' => 'sometimes|string|max:10',
-            'user.recipient_person' => 'nullable|string|max:255',
-            'user.recipient_phone' => 'nullable|string|max:20|regex:/^\+?[1-9]\d{7,14}$/',
-        ];
+            case 'default':
+            default:
+                $deliveryMethods = array_keys($this->deliveryMethods);
+                $paymentMethods = array_keys($this->paymentMethods);
 
-        if (!$this->requiresDelivery()) {
-            unset($rules['delivery.method']);
-        } elseif (!empty($data['delivery']['method']) && isset($this->deliveryMethods[$data['delivery']['method']])) {
-            $deliveryMethod = $this->deliveryMethods[$data['delivery']['method']];
-            $rules = array_merge($rules, $deliveryMethod->getValidationRules());
+                $rules = [
+                    'user.first_name' => 'required|string|max:255',
+                    'user.middle_name' => 'nullable|string|max:255',
+                    'user.last_name' => 'nullable|string|max:255',
+                    'user.email' => 'required|email|max:255',
+                    'user.phone' => 'nullable|string|max:20|regex:/^\+?[1-9]\d{7,14}$/',
+                    'user.vat' => 'sometimes|string|max:32',
+                    'user.address.country' => 'sometimes|string|max:255',
+                    'user.address.state' => 'sometimes|string|max:255',
+                    'user.address.city' => 'sometimes|string|max:255',
+                    'user.address.street' => 'sometimes|string|max:255',
+                    'user.address.zip' => 'sometimes|string|max:10',
+                    'delivery.method' => 'required|string|in:' . implode(',', $deliveryMethods),
+                    'payment.method' => 'required|string|in:' . implode(',', $paymentMethods),
+                    'comment' => 'nullable|string|max:1000',
+                    'do_not_call' => 'nullable|boolean',
+                    'delivery.courier.recipient_region' => 'sometimes|string|max:255',
+                    'delivery.courier.recipient_city' => 'sometimes|string|max:255',
+                    'delivery.courier.recipient_street' => 'sometimes|string|max:255',
+                    'delivery.courier.recipient_build' => 'sometimes|string|max:10',
+                    'delivery.courier.recipient_room' => 'sometimes|string|max:10',
+                    'delivery.courier.recipient_zip' => 'sometimes|string|max:10',
+                    'user.recipient_person' => 'nullable|string|max:255',
+                    'user.recipient_phone' => 'nullable|string|max:20|regex:/^\+?[1-9]\d{7,14}$/',
+                ];
+
+                if (!$this->requiresDelivery()) {
+                    unset($rules['delivery.method']);
+                } elseif (!empty($data['delivery']['method']) && isset($this->deliveryMethods[$data['delivery']['method']])) {
+                    $deliveryMethod = $this->deliveryMethods[$data['delivery']['method']];
+                    $rules = array_merge($rules, $deliveryMethod->getValidationRules());
+                }
+
+                if (sCommerce::config('basic.payments_on', 1) != 1) {
+                    unset($rules['payment.method']);
+                }
+                break;
         }
 
-        Event::dispatch('sCommerce.CheckoutValidationRules', [['data' => $data, 'rules' => &$rules]]);
+        $rules['products'] = ['array'];
+        $rules['products.*.quantity'] = ['required', 'integer', 'min:1'];
 
+        Event::dispatch('sCommerce.CheckoutValidationRules', [['data' => $data, 'rules' => &$rules, 'context' => $context]]);
         return $rules;
     }
 
@@ -452,7 +474,7 @@ class sCheckout
      * Process the order and optionally trigger payment handling.
      *
      * Flow:
-     * 1. Resolve the trusted checkout context; a refused context stops before any side effect.
+     * 1. Validate the order with getValidationRules(), then resolve the trusted checkout context.
      * 2. Validate delivery/payment methods if they are enabled. A cart without shipped lines
      *    needs no delivery method and stores `delivery_info = {method: '', required: false, cost: 0}`.
      * 3. Save the order to the database.
@@ -478,6 +500,7 @@ class sCheckout
             if (empty($this->orderData['products'])) {
                 throw new \Exception("Invalid products in Order.");
             }
+            Validator::make($this->orderData, $this->getValidationRules($this->orderData))->validate();
 
             $this->checkoutContext = CheckoutContext::resolve($this->orderData, 'storefront', self::trustedActorId());
 
@@ -615,10 +638,12 @@ class sCheckout
     }
 
     /**
-     * Process the quick order.
+     * Process a quick order with one validation of input and prepared product lines.
      *
      * This method validates the input data, creates a new order for a quick purchase,
      * and saves it in the database. If product is 0, it will fetch products from the cart.
+     * Quantities remain uncast for validation; integer conversion and single-product totals
+     * (including container deposits) are calculated only after the validator accepts them.
      * The trusted checkout context is resolved before the order is built.
      *
      * @param array $data The data from the request, including productId, optionId, quantity, exchange (empty returnable
@@ -627,22 +652,8 @@ class sCheckout
      */
     public static function quickOrder(array $data)
     {
-        $validator = Validator::make($data, [
-            'product' => 'nullable|integer|exists:products,id,' . ((int)$data['productId'] == 0 ? '0' : null),
-            'quantity' => 'nullable|integer|min:1',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return [
-                'success' => false,
-                'product' => (int)$data['productId'],
-                'message' => 'Invalid data provided.',
-                'errors' => $validator->errors(),
-            ];
-        }
-
+        // Product lines are built by the server below, never accepted from the request.
+        unset($data['products']);
         $product = sCommerce::getProduct($data['productId']);
         $userId = evo()->getLoginUserID('web') ?: evo()->getLoginUserID('mgr'); // Checking if the user is authorized
         $user = evo()->getUserInfo($userId ?: 0) ?: [];
@@ -702,11 +713,9 @@ class sCheckout
                 ];
             }
 
-            $quantity = isset($data['quantity']) && $data['quantity'] > 0 ? (int) $data['quantity'] : 1;
+            $quantity = $data['quantity'] ?? 1;
             $optionId = max(0, (int)($data['optionId'] ?? 0));
             $pricing = static::resolveProductPricing($product, $optionId);
-            $price = (float)$pricing['priceAsFloat'];
-            $cost = $price * $quantity;
 
             $productData = [
                 'id' => $product->id,
@@ -727,12 +736,26 @@ class sCheckout
                 $productData['priceMode'] = $pricing['priceMode'];
             }
             $productData = array_merge($productData, app(OrderLineIdentity::class)->snapshot($product, $optionId));
-            // Units exchanged for empty returnable containers carry no new deposit.
-            $productData = array_merge($productData, ContainerDeposit::lineFields(ContainerDeposit::unit($product, $optionId), $quantity, max(0, (int)($data['exchange'] ?? 0))));
-            $cost += (float)($productData['deposit_amount'] ?? 0);
-
             $productData = array_merge($productData, $product->physicalPayload());
             $productsData = [$productData];
+        }
+
+        $validationData = array_replace($data, ['products' => $productsData, 'user' => $userData]);
+        $validator = Validator::make($validationData, app(static::class)->getValidationRules($validationData, 'quick'));
+        if ($validator->fails()) {
+            return ['success' => false, 'message' => $validator->errors()->first(),
+                'errors' => $validator->errors(), 'error_code' => 'checkout_validation'];
+        }
+
+        if (!empty($data['productId']) && $data['productId'] != 0) {
+            $quantity = (int) $quantity;
+            $productsData[0]['quantity'] = $quantity;
+            $cost = (float) $pricing['priceAsFloat'] * $quantity;
+            // Calculate deposit amounts only after the raw quantity has passed validation.
+            $productsData[0] = array_merge($productsData[0], ContainerDeposit::lineFields(
+                ContainerDeposit::unit($product, $optionId), $quantity, max(0, (int)($data['exchange'] ?? 0))
+            ));
+            $cost += (float) ($productsData[0]['deposit_amount'] ?? 0);
         }
 
         do {
