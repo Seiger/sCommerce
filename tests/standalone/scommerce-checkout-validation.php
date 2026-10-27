@@ -66,6 +66,8 @@ $result = sCheckout::quickOrder(['productId' => 1, 'quantity' => '3', 'phone' =>
 $check($result['success'] && count($seen) === $seenBefore + 1, 'Valid string quantity is validated once');
 $check($result['order']->products[0]['quantity'] === 3 && (float) $result['order']->cost === 30.0, 'Accepted quantity becomes integer before totals and persistence');
 $_SESSION['sCart'] = [1 => [0 => 3]];
+// Product quick orders resolve the cart facade for stock checks; a request starts with the session cart.
+Illuminate\Support\Facades\Facade::clearResolvedInstance('sCart');
 $seenBefore = count($seen);
 $result = sCheckout::quickOrder(['productId' => 0, 'phone' => '123456789']);
 $check($result['success'] && count($seen) === $seenBefore + 1, 'Cart quick checkout also validates once');

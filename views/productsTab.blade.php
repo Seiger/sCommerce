@@ -90,6 +90,9 @@
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price') <i class="fas fa-sort" style="color: #036efe;"></i></button>
                 </th>
             @endif
+            @if (sCommerce::config('products.show_field_price_net', 1) && \Seiger\sCommerce\Services\VatDisplay::enabled())
+                <th>@lang('sCommerce::global.vat_display_net')</th>
+            @endif
             @if (sCommerce::config('products.show_field_price_special', 1) && sCommerce::config('product.show_field_price_special', 1))
                 <th class="sorting @if($order == 'price_special') sorted @endif" data-order="price_special">
                     <button class="seiger-sort-btn" style="padding:0;displai: inline;border: none;background: transparent;">@lang('sCommerce::global.price_special') <i class="fas fa-sort" style="color: #036efe;"></i></button>
@@ -171,6 +174,15 @@
                             {{$price ?? $item->priceTo($item->currency)}}
                         @else
                             {{sCommerce::getCurrencies([$item->currency])->first()['symbol']}}{{$price ?? $item->priceTo($item->currency)}}
+                        @endif
+                    </td>
+                @endif
+                @if (sCommerce::config('products.show_field_price_net', 1) && \Seiger\sCommerce\Services\VatDisplay::enabled())
+                    <td>
+                        @if(sCommerce::config('basic.price_symbol', 1))
+                            {{$item->priceNetTo($item->currency)}}
+                        @else
+                            {{sCommerce::getCurrencies([$item->currency])->first()['symbol']}}{{$item->priceNetTo($item->currency)}}
                         @endif
                     </td>
                 @endif

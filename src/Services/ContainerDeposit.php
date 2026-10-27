@@ -49,6 +49,17 @@ final class ContainerDeposit
     }
 
     /**
+     * Whether customers may declare empty containers they exchange (`product.container_exchange_on`).
+     * The declaration waives the deposit before anyone has seen the containers, so it is off by default.
+     *
+     * @since 1.5.0
+     */
+    public static function exchangeEnabled(): bool
+    {
+        return self::enabled() && (int)sCommerce::config('product.container_exchange_on', 0) === 1;
+    }
+
+    /**
      * Deposit per unit of a product in `$currency`; the first non-negative numeric listener response wins.
      * Always 0 while the feature is off, and for products sold by weight, length, volume or count.
      *

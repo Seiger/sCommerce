@@ -83,7 +83,7 @@ class CustomDelivery extends BaseDeliveryMethod
 
     public function calculateCost(array $order): float
     {
-        return 50.00; // Fixed cost or custom calculation
+        return 50.00; // In getCostCurrency(): the currency of the method's settings row
     }
 
     public function defineFields(): array

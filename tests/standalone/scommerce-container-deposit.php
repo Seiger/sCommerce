@@ -65,6 +65,14 @@ $result = $checkout((new sCart())->getMiniCart()['items'], ['cost' => 370])->pro
 $first = sOrder::query()->find($result['order']->id);
 $check($result['success'] && (float)$first->cost === 370.0 && $first->products[0]['deposit_amount'] === 250 && $first->products[0]['deposit_returnable'] === true, 'First purchase pays 370');
 
+// Customer declarations waive the deposit unseen: off unless the shop allows them.
+$_SESSION['sCart'] = [10 => [0 => ['quantity' => 1, 'exchange' => 1]]];
+$check((new sCart())->setContainerExchange(10, 0, 1)['success'] === false && (new sCart())->getMiniCart()['totalSum'] === 370.0
+    && sCheckout::quickOrder(['productId' => 10, 'quantity' => 1, 'exchange' => 1, 'email' => 'quick@shop.test'])['order']->products[0]['deposit_amount'] === 250,
+    'Without container_exchange_on, declared exchanges are ignored');
+$check(str_contains(file_get_contents($package . '/src/Http/routes.php'), 'ContainerDeposit::exchangeEnabled()'), 'The exchange route needs container_exchange_on');
+$shop->config['product.container_exchange_on'] = 1;
+
 // Next purchase with an exchange: no new deposit.
 $_SESSION['sCart'] = [10 => [0 => 1]];
 $exchange = (new sCart())->setContainerExchange(10, 0, 5);

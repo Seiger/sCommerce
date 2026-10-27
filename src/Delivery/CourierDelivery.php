@@ -83,20 +83,22 @@ class CourierDelivery extends BaseDeliveryMethod
      * Calculate the cost of delivery based on the order data.
      *
      * Calculates the total cost by adding a base cost and an extra cost depending on the city.
+     * Cities match case-insensitively in any script; the cost is in {@see getCostCurrency()}.
      *
      * @param array $orderData The order data, including user and address information.
      * @return float The calculated delivery cost.
      */
     public function calculateCost(array $order): float
     {
-        $baseCost = floatval($this->method->cost ?? 0);
-        $distanceCost = 0;
+        $baseCost = max(0.0, floatval($this->method->cost ?? 0));
+        $distanceCost = 0.0;
         $city = $order['delivery']['courier']['city'] ?? $order['user']['address']['city'] ?? '';
+        $key = static fn ($value): string => is_scalar($value) ? mb_strtolower(trim((string)$value)) : '';
 
-        if (!empty($city)) {
-            $city = strtolower(trim($city));
-            $citySettings = collect($this->getSettings()['cities'] ?? [])->firstWhere('city', strtolower($city));
-            $distanceCost = $citySettings['extra_cost'] ?? 0;
+        if ($key($city) !== '') {
+            $citySettings = collect($this->getSettings()['cities'] ?? [])
+                ->first(static fn ($row) => is_array($row) && $key($row['city'] ?? '') === $key($city));
+            $distanceCost = max(0.0, floatval($citySettings['extra_cost'] ?? 0));
         }
 
         return $baseCost + $distanceCost;

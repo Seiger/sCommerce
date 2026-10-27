@@ -82,7 +82,10 @@ Settings (**Settings → Product**):
 
 - **Prices without VAT** (`product.vat_display_on`, off by default) switches the feature on. While it is off, the settings below are hidden, prices are always shown with VAT, the display keys equal the charged prices and `scommerce/vat-display` answers `404`;
 - **VAT rate, %** (`product.vat_rate`, default `0`): the rate included in product prices. With `0`, the net price equals the gross price;
-- **Prices shown** (`product.vat_display`, `gross` or `net`, default `gross`): the default for visitors who have not chosen.
+- **Storefront prices by default** (`product.vat_display`, `gross` or `net`, default `gross`): the default for visitors who have not chosen, e.g. `net` for a B2B shop. It affects only the storefront;
+- **Without VAT** in **Presentation of the list of products** (`products.show_field_price_net`, on by default): a manager product list column with the price without VAT and the included retail excise (`sProduct::priceNetTo()`), shown while prices without VAT are on.
+
+Defaults of products sold by measure and the rounding to the step per unit have their own **Measured quantities** block on the same settings page.
 
 The net price is `round(gross / (1 + rate / 100), 2)`. Templates read these values:
 
@@ -192,6 +195,23 @@ server product lines. Submitted quantities stay uncast in both input and lines;
 integer conversion, single-product totals and deposits follow successful validation. Request-supplied `products` are ignored and replaced with
 the actual product or cart lines; partial forms without products skip that rule.
 The package contains no project-specific minimum attribute or policy class.
+
+Since 1.5.0 the storefront is checked before an order is saved:
+
+- `processOrder()` re-prices the lines it kept since `initCheckout()` with current prices, publication,
+  stock and currency. When anything differs it stores the current lines and fails with
+  `error_code` `cart_changed` and the new `products` and `cost`; the customer confirms the order again.
+  Lines above stock fail with `out_of_stock`, in quick orders too.
+- The delivery cost is recalculated on every `setOrderData()` and again in `processOrder()`, and
+  converted from the method's cost currency into the order currency. A failed attempt leaves the
+  checkout data as it was, so a retry never adds the delivery twice.
+- Unpublished products cannot be added to the cart or ordered. Quick orders without a `productId`
+  order the cart; any other value than a whole number is an unknown product. Piece quantities stop at
+  1,000,000, and a negative price from a listener never lowers a total.
+- The `scommerce/process-order` and `scommerce/quick-order` routes return the order as
+  `sOrder::toCustomerArray()` (no manager notes, history or `meta`) and allow `orders.rate_limit`
+  orders per IP address in 10 minutes (default 10, 0 = no limit, **Settings → Cart and orders**);
+  above it they answer `429` with `error_code` `rate_limited`.
 
 These three events use the exact names documented on this page, without the `evolution.` prefix. The previous price-event names `evolution.sCommerceResolveProductPriceMode` and `evolution.sCommerceResolveProductPrice` are no longer dispatched; update project listeners and sPricing together with sCommerce.
 

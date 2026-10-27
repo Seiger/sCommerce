@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCheckout;
 use Seiger\sCommerce\Facades\sWishlist;
+use Seiger\sCommerce\Models\sOrder;
+use Seiger\sCommerce\Services\StorefrontGuard;
 use Seiger\sCommerce\sCommerce;
 
 Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(function () {
@@ -20,10 +22,20 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         sCheckout::setOrderData(request()->all()),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
     );
-    $processOrderHandler = fn() => tap(
-        sCheckout::processOrder(),
-        fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
-    );
+    // Orders are limited per client, and the customer gets the order without manager notes, history or meta.
+    $placeOrder = static function (callable $place) {
+        if (!StorefrontGuard::orderAllowed()) {
+            return response()->json(['success' => false, 'message' => __('sCommerce::global.order_rate_limited'), 'error_code' => 'rate_limited'], 429);
+        }
+        $result = $place();
+        if (($result['order'] ?? null) instanceof sOrder) {
+            StorefrontGuard::orderPlaced();
+            $result['order'] = $result['order']->toCustomerArray();
+        }
+
+        return $result;
+    };
+    $processOrderHandler = fn() => $placeOrder(static fn () => sCheckout::processOrder());
     $payOrderHandler = function ($method = null) {
         $result = sCheckout::payOrder($method, request()->all());
         if (request()->header('Accept') && strpos(request()->header('Accept'), 'application/json') !== false) {
@@ -33,10 +45,7 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         $_SESSION['payOrderResponse'] = $result;
         return back();
     };
-    $quickOrderHandler = fn() => tap(
-        sCheckout::quickOrder(request()->all()),
-        fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)
-    );
+    $quickOrderHandler = fn() => $placeOrder(static fn () => sCheckout::quickOrder(request()->all()));
     // Display only: show prices with (gross) or without (net) VAT to this visitor.
     $vatDisplayHandler = function () {
         if (!\Seiger\sCommerce\Services\VatDisplay::enabled()) {
@@ -51,9 +60,9 @@ Route::middleware('web')->prefix('scommerce/')->name('sCommerce.')->group(functi
         return response()->json(['success' => true, 'vatDisplay' => sCart::getVatDisplay(), 'miniCart' => sCart::getMiniCart()]);
     };
     // Empty returnable containers the customer hands over for a cart line (no new deposit for them).
-    $containerExchangeHandler = fn() => \Seiger\sCommerce\Services\ContainerDeposit::enabled()
+    $containerExchangeHandler = fn() => \Seiger\sCommerce\Services\ContainerDeposit::exchangeEnabled()
         ? tap(sCart::setContainerExchange(), fn($result) => response()->json($result, $result['success'] === true ? 200 : 422))
-        : response()->json(['success' => false, 'message' => 'Container deposits are not enabled.'], 404);
+        : response()->json(['success' => false, 'message' => 'Container exchanges are not enabled.'], 404);
     $wishlistHandler = fn() => tap(
         sWishlist::updateWishlist(request()->all()),
         fn($result) => response()->json($result, $result['success'] === true ? 200 : 422)

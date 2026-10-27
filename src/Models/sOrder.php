@@ -261,6 +261,21 @@ class sOrder extends Model
         return OrderReferenceFormatter::orderNumber($this->reference ?? null);
     }
 
+    /** Attributes the storefront may show the customer; manager notes, history and `meta` stay internal. */
+    public const CUSTOMER_KEYS = ['id', 'uuid', 'identifier', 'reference', 'user_info', 'delivery_info', 'payment_info', 'products',
+        'cost', 'currency', 'status', 'payment_status', 'is_quick', 'comment', 'totals', 'created_at'];
+
+    /**
+     * The order as the storefront returns it to the customer who placed it.
+     *
+     * @return array<string, mixed>
+     * @since 1.5.0
+     */
+    public function toCustomerArray(): array
+    {
+        return ['order_number' => $this->order_number] + array_intersect_key($this->toArray(), array_flip(self::CUSTOMER_KEYS));
+    }
+
     /**
      * Orders of the live environment: everything except trusted test checkouts.
      *

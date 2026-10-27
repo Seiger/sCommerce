@@ -34,6 +34,19 @@ abstract class BaseDeliveryMethod implements DeliveryMethodInterface
     }
 
     /**
+     * Currency of {@see calculateCost()}: the currency of the method's settings row, else the main shop currency.
+     * Checkout converts the cost into the order currency.
+     *
+     * @since 1.5.0
+     */
+    public function getCostCurrency(): string
+    {
+        $currency = strtoupper(trim((string)($this->method->currency ?? '')));
+
+        return $currency !== '' ? $currency : strtoupper(trim((string)\Seiger\sCommerce\Facades\sCommerce::config('basic.main_currency', 'USD')));
+    }
+
+    /**
      * Get the localized title for the delivery method.
      *
      * @param string|null $lang The language code (e.g., 'en', 'uk'). If null, the app's current language is used.

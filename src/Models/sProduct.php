@@ -831,6 +831,19 @@ class sProduct extends Model
     }
 
     /**
+     * The price of the manager product list ({@see activePricingPriceToNumber()} or {@see priceToNumber()})
+     * without VAT and the included retail excise, formatted in `$currency`.
+     *
+     * @since 1.5.0
+     */
+    public function priceNetTo(string $currency): string
+    {
+        $gross = $this->activePricingPriceToNumber($currency, 'price') ?? $this->priceToNumber($currency);
+
+        return $this->formatPriceValue(VatDisplay::net($gross, VatDisplay::rate($this), VatDisplay::exciseRate($this)), $currency);
+    }
+
+    /**
      * Convert the effective storefront price to a number in a specified currency.
      *
      * A request-scoped resolved price is reused when available; otherwise the

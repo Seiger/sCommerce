@@ -83,7 +83,7 @@ class CustomDelivery extends BaseDeliveryMethod
 
     public function calculateCost(array $order): float
     {
-        return 50.00; // Фіксована вартість або власний розрахунок
+        return 50.00; // У валюті getCostCurrency(): валюта рядка налаштувань способу
     }
 
     public function defineFields(): array
