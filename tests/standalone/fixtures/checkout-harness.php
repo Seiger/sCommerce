@@ -38,6 +38,8 @@ final class FakeProduct
     public float $oldPrice = 0.0;
     public float $deposit = 0.0;
     public string $currency = 'EUR';
+    public array $attributes = [];
+
     /** Quantity columns of products sold by measure; 0 / null = piece and site defaults. */
     public int $measure = 0;
     public ?string $price_unit = null;
@@ -66,7 +68,15 @@ final class FakeProduct
     {
         return ['weight' => $this->weight, 'width' => 0, 'height' => 0, 'length' => 0, 'volume' => 0];
     }
-    public function attribute(string $alias) { return null; }
+    /**
+     * Provide synthetic attributes without requiring a product database.
+     *
+     * @param string $alias Requested product attribute.
+     * @return object|null Synthetic attribute value or an absent attribute.
+     */
+    public function attribute(string $alias) {
+        return array_key_exists($alias, $this->attributes) ? (object) ['type' => 0, 'value' => $this->attributes[$alias]] : null;
+    }
     public function toArray(): array { return get_object_vars($this); }
     public function fulfilment(int $optionId = 0): array
     {
@@ -229,7 +239,7 @@ $checkout = static function (array $products, array $extra = []): sCheckout {
             'products' => $products,
             'cost' => $cost,
             'currency' => 'EUR',
-            'user' => ['id' => 0, 'email' => 'customer@shop.test'],
+            'user' => ['id' => 0, 'first_name' => 'Customer', 'email' => 'customer@shop.test'],
             'payment' => ['method' => 'card'],
         ], $extra);
     }, $checkout, sCheckout::class)();
@@ -240,4 +250,6 @@ $cartLines = static function (array $cart): array {
     $_SESSION['sCart'] = $cart;
     return (new sCart())->getMiniCart()['items'];
 };
+// The provider registers checkout as a singleton; final quick validation reuses it.
+$app->singleton(sCheckout::class, static fn () => (new ReflectionClass(sCheckout::class))->newInstanceWithoutConstructor());
 $_SESSION = [];

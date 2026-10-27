@@ -53,3 +53,7 @@ measured-quantity vectors in `fixtures/measured-quantities.json` are shared by t
 
 Physical attribute checks run the actual fresh installation and additive upgrade migration,
 verify positive legacy values are consumed and zeroed atomically on save, and exercise decimal attribute, copy and delivery flows.
+
+```bash
+php tests/standalone/scommerce-checkout-validation.php
+```
