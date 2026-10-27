@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Seiger\sCommerce\Cart\CartLineParts;
 use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCommerce;
@@ -826,6 +827,13 @@ class sCheckout
                 $productData['sum'] = sCommerce::convertPrice($productData['sumAsFloat']);
             }
             $productsData = [$productData];
+            // A split entry, e.g. by stock lots, is priced part by part like the cart.
+            if (CartLineParts::resolve($product, $optionId, $quantity, $pricing, sCommerce::currentCurrency()) !== null) {
+                $exchange = ContainerDeposit::exchangeEnabled() ? max(0, (int)($data['exchange'] ?? 0)) : 0;
+                $cart = sCart::getCartFor([$productId => [$optionId => $exchange > 0 ? ['quantity' => $quantity, 'exchange' => $exchange] : $quantity]]);
+                $productsData = array_map(static fn (array $line) => $line + $physical, $cart['items']);
+                $cost = $cart['totalSum'];
+            }
         } elseif (($shortages = sCart::shortages()) !== []) {
             return self::outOfStock($shortages);
         }
@@ -1020,16 +1028,24 @@ class sCheckout
      */
     private function refreshProducts(): ?array
     {
+        $lineKey = static fn (array $line, int $productId, int $optionId): string => is_string($line['line_key'] ?? null) ? $line['line_key'] : $productId . ':' . $optionId;
         $cartData = [];
         $stored = [];
         foreach ($this->orderData['products'] as $line) {
             $productId = is_array($line) ? (int)($line['product_id'] ?? $line['id'] ?? 0) : 0;
             $optionId = is_array($line) ? (int)($line['option_id'] ?? 0) : 0;
             $quantity = is_array($line) ? (int)($line['quantity'] ?? 0) : 0;
-            $stored[] = [$productId, $optionId, $quantity];
+            $stored[] = [is_array($line) ? $lineKey($line, $productId, $optionId) : '', $quantity];
             if ($productId > 0 && $quantity > 0) {
-                $exchange = (int)($line['exchange_quantity'] ?? 0);
-                $cartData[$productId][$optionId] = $exchange > 0 ? ['quantity' => $quantity, 'exchange' => $exchange] : $quantity;
+                // Parts of a split cart entry add up to the entry again.
+                $entry = $cartData[$productId][$optionId] ?? ['quantity' => 0, 'exchange' => 0];
+                $cartData[$productId][$optionId] = ['quantity' => $entry['quantity'] + $quantity,
+                    'exchange' => $entry['exchange'] + (int)($line['exchange_quantity'] ?? 0)];
+            }
+        }
+        foreach ($cartData as $productId => $entries) {
+            foreach ($entries as $optionId => $entry) {
+                $cartData[$productId][$optionId] = $entry['exchange'] > 0 ? $entry : $entry['quantity'];
             }
         }
 
@@ -1038,7 +1054,8 @@ class sCheckout
         }
 
         $cart = sCart::getCartFor($cartData);
-        $current = array_map(static fn (array $line) => [(int)$line['product_id'], (int)$line['option_id'], (int)$line['quantity']], $cart['items']);
+        // A changed split, e.g. a stock lot sold out meanwhile, changes the line keys.
+        $current = array_map(static fn (array $line) => [$lineKey($line, (int)$line['product_id'], (int)$line['option_id']), (int)$line['quantity']], $cart['items']);
         sort($stored);
         sort($current);
         $currency = sCommerce::currentCurrency();
@@ -1254,9 +1271,9 @@ class sCheckout
         if ($canStore) {
             CheckoutContext::apply($order, $context);
         }
-        // VAT display values depend on the visitor's mode; they are not order data.
+        // VAT display values depend on the visitor's mode and the cart entry quantity is a cart control; they are not order data.
         if (is_array($order->products)) {
-            $display = array_flip(VatDisplay::keys());
+            $display = array_flip([...VatDisplay::keys(), CartLineParts::CART_QUANTITY]);
             $order->products = OrderTaxes::applyRetailExcise(array_map(static fn ($line) => is_array($line) ? array_diff_key($line, $display) : $line, $order->products));
         }
 

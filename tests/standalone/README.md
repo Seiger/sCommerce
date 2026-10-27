@@ -31,6 +31,7 @@ php tests/standalone/scommerce-shipments.php
 php tests/standalone/scommerce-stock.php
 php tests/standalone/scommerce-measured-quantities.php
 php tests/standalone/scommerce-actual-quantities.php
+php tests/standalone/scommerce-line-parts.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs

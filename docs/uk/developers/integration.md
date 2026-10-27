@@ -291,7 +291,7 @@ class SCommerceProductController extends BaseController
 
 | Ключ | Тип | Значення |
 |---|---|---|
-| `line_key` | string | `"{productId}:{optionId}"`, наприклад `"5:3"` |
+| `line_key` | string | `"{productId}:{optionId}"`, наприклад `"5:3"`; рядки розділеної позиції кошика додають ключ частини: `"5:0:lot-11"` |
 | `product_id` | int | id товару (збігається з `id`) |
 | `option_id` | int | id опції кошика; `0` — опції немає |
 | `sku` | string | фактичний SKU; дорівнює `product_sku`, якщо слухач `sCommerce.ResolveLineIdentity` не задав SKU варіанта |
@@ -303,6 +303,7 @@ class SCommerceProductController extends BaseController
 | `retail_excise_rate`, `retail_excise_amount` | float | лише в рядках із роздрібним акцизом: його ставка та сума, включена в суму рядка, для чека |
 | `deposit_unit`, `exchange_quantity`, `deposit_quantity`, `deposit_amount`, `deposit_returnable`, `deposit_terms`, `deposit_returned_quantity` | mixed | лише в рядках із заставною вартістю зворотної тари, див. [Заставна вартість зворотної тари](payments/index.md#заставна-вартість-зворотної-тари) |
 | `measure`, `base_unit`, `price_unit`, `price_per`, `factor`, `quantity_*`, `quantity_label`, `unit_price_label`, `line_weight`, `actual_quantity*` | mixed | лише в рядках товарів, що продаються на вагу, за довжиною, об’ємом або кількістю; тоді `quantity` вказується в базових одиницях (грами, міліметри, мілілітри, штуки). Див. [Вимірювані кількості](measured-quantities.md#рядки-замовлення) |
+| `part_key`, `part_label`, `allocation` | string, string, array | лише в рядках позиції кошика, розділеної слухачем `sCommerce.SplitCartLine`, наприклад за партіями залишків: ключ частини, її мітка та розподіл слухача. Див. [Розділення рядків кошика](events.md#розділення-рядків-кошика) |
 
 Податкові слухачі також можуть додавати `tax_code`, `unit_price_gross`, `tax_amount` і `prices_include_tax`. Див. [Події](events.md#рядки-замовлення-виконання-та-податки).
 

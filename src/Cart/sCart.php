@@ -304,6 +304,9 @@ class sCart
      * Lines of products sold by measure carry their quantity in base units, the rule keys of
      * {@see QuantityRules::lineKeys()}, `quantity_label`, `unit_price_label` and `line_weight`;
      * their sum is rounded half up once from the unrounded price ({@see MeasuredQuantity}).
+     * A cart entry split by a `sCommerce.SplitCartLine` listener gives one item per part, each with its
+     * own quantity and price and the keys of {@see CartLineParts::apply()}; `cart_quantity` is the
+     * quantity of the whole entry.
      *
      * @return array{totalSum: float, totalSumFormatted: string, totalSumNet: float, totalSumNetFormatted: string, totalSumDisplay: float, totalSumDisplayFormatted: string, totalRetailExcise: float, totalRetailExciseFormatted: string, vatDisplay: string, items: array<int, array<string, mixed>>}
      */
@@ -339,40 +342,48 @@ class sCart
             }
             $rules = MeasuredQuantity::rules($product);
             foreach ($cartData[$product->id] as $optionId => $cartItem) {
-                $quantity = $this->getCartItemQuantity($cartItem, $rules->min, $rules->max);
-                $deposit = ContainerDeposit::lineFields(ContainerDeposit::unit($product, (int)$optionId, $currency), $quantity,
-                    $exchangeEnabled && is_array($cartItem) ? (int)($cartItem['exchange'] ?? 0) : 0);
-                $pricing = $this->resolveProductPricing($product, (int)$optionId);
-                // A negative price from a listener never lowers the order total.
-                $price = max(0.0, (float)$pricing['priceAsFloat']);
-                $lineSum = $rules->isMeasured()
-                    ? MeasuredQuantity::lineTotalMinor(MeasuredQuantity::scalePrice($price), $quantity, $rules->factor) / 100
-                    : $price * $quantity;
-                $sumAsFloat = round($lineSum, 3);
-                $sum = sCommerce::convertPrice($sumAsFloat);
-                $vat = $this->vatPricing($product, $pricing, (int)$optionId);
-                $sumNetAsFloat = VatDisplay::net($sumAsFloat, (float)$vat['vatRate'], (float)$vat['retailExciseRate']);
-                $sumExciseAsFloat = VatDisplay::excise($sumAsFloat, (float)$vat['retailExciseRate']);
-                $displaySumAsFloat = $vatDisplay === VatDisplay::NET ? $sumNetAsFloat : $sumAsFloat;
-                $item = array_merge(
-                    $this->getProductFields($product, $pricing),
-                    app(OrderLineIdentity::class)->snapshot($product, (int)$optionId),
-                    $vat,
-                    $deposit,
-                    compact('quantity', 'sumAsFloat', 'sum'),
-                    ['sumNetAsFloat' => $sumNetAsFloat, 'sumNet' => sCommerce::convertPrice($sumNetAsFloat),
-                        'displaySumAsFloat' => $displaySumAsFloat, 'displaySum' => sCommerce::convertPrice($displaySumAsFloat),
-                        'sumRetailExciseAsFloat' => $sumExciseAsFloat, 'sumRetailExcise' => $sumExciseAsFloat > 0 ? sCommerce::convertPrice($sumExciseAsFloat) : '']
-                );
-                if ($rules->isMeasured()) {
-                    // Physical fields stay out of the cart payload; only the line weight is derived from them.
-                    $item += MeasuredQuantity::lineFields($rules, $quantity, (string)($pricing['price'] ?? ''), (int)($product->physicalPayload()['weight'] ?? 0));
+                $cartQuantity = $this->getCartItemQuantity($cartItem, $rules->min, $rules->max);
+                $exchange = $exchangeEnabled && is_array($cartItem) ? (int)($cartItem['exchange'] ?? 0) : 0;
+                $entryPricing = $this->resolveProductPricing($product, (int)$optionId);
+                $parts = CartLineParts::resolve($product, (int)$optionId, $cartQuantity, $entryPricing, $currency);
+                foreach ($parts ?? [null] as $part) {
+                    $quantity = $part['quantity'] ?? $cartQuantity;
+                    $pricing = $part ? CartLineParts::pricing($entryPricing, $part, $currency) : $entryPricing;
+                    // Declared container exchanges fill the parts in order.
+                    $partExchange = min($exchange, $quantity);
+                    $exchange -= $partExchange;
+                    $deposit = ContainerDeposit::lineFields(ContainerDeposit::unit($product, (int)$optionId, $currency), $quantity, $partExchange);
+                    // A negative price from a listener never lowers the order total.
+                    $price = max(0.0, (float)$pricing['priceAsFloat']);
+                    $lineSum = $rules->isMeasured()
+                        ? MeasuredQuantity::lineTotalMinor(MeasuredQuantity::scalePrice($price), $quantity, $rules->factor) / 100
+                        : $price * $quantity;
+                    $sumAsFloat = round($lineSum, 3);
+                    $sum = sCommerce::convertPrice($sumAsFloat);
+                    $vat = $this->vatPricing($product, $pricing, (int)$optionId);
+                    $sumNetAsFloat = VatDisplay::net($sumAsFloat, (float)$vat['vatRate'], (float)$vat['retailExciseRate']);
+                    $sumExciseAsFloat = VatDisplay::excise($sumAsFloat, (float)$vat['retailExciseRate']);
+                    $displaySumAsFloat = $vatDisplay === VatDisplay::NET ? $sumNetAsFloat : $sumAsFloat;
+                    $item = array_merge(
+                        $this->getProductFields($product, $pricing),
+                        app(OrderLineIdentity::class)->snapshot($product, (int)$optionId),
+                        $vat,
+                        $deposit,
+                        compact('quantity', 'sumAsFloat', 'sum'),
+                        ['sumNetAsFloat' => $sumNetAsFloat, 'sumNet' => sCommerce::convertPrice($sumNetAsFloat),
+                            'displaySumAsFloat' => $displaySumAsFloat, 'displaySum' => sCommerce::convertPrice($displaySumAsFloat),
+                            'sumRetailExciseAsFloat' => $sumExciseAsFloat, 'sumRetailExcise' => $sumExciseAsFloat > 0 ? sCommerce::convertPrice($sumExciseAsFloat) : '']
+                    );
+                    if ($rules->isMeasured()) {
+                        // Physical fields stay out of the cart payload; only the line weight is derived from them.
+                        $item += MeasuredQuantity::lineFields($rules, $quantity, (string)($pricing['price'] ?? ''), (int)($product->physicalPayload()['weight'] ?? 0));
+                    }
+                    $items[] = $part ? CartLineParts::apply($item, $part, $cartQuantity) : $item;
+                    $totalSum += $lineSum;
+                    $totalNet += $sumNetAsFloat;
+                    $totalExcise += $sumExciseAsFloat;
+                    $totalDeposit += (float)($deposit['deposit_amount'] ?? 0);
                 }
-                $items[] = $item;
-                $totalSum += $lineSum;
-                $totalNet += $sumNetAsFloat;
-                $totalExcise += $sumExciseAsFloat;
-                $totalDeposit += (float)($deposit['deposit_amount'] ?? 0);
             }
         }
         $totalDeposit = round($totalDeposit, 2);

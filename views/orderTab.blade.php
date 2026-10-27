@@ -197,8 +197,8 @@
                 $lineRules = \Seiger\sCommerce\Services\MeasuredQuantity::fromLine(is_array($product) ? $product : []);
                 $linePrice = $lineRules->isMeasured() ? sCommerce::convertPriceNumber($product['price'], $item->currency, $item->currency) : 0.0;
             @endphp
-            @foreach($product as $p)
-                @if(is_array($p) && isset($p['title']))
+            @foreach($product as $optionKey => $p)
+                @if($optionKey !== 'allocation' && is_array($p) && isset($p['title']))
                     @php
                         $info .= '<br><b>' . htmlentities($p['title']) . ':</b> ' . htmlentities($p['label'] ?? '');
                     @endphp
@@ -209,6 +209,7 @@
                     <img src="{{$product['coverSrc']}}" class="product-thumbnail">
                     <a @if(trim($product['link'])) href="{{$product['link']}}" @endif target="_blank"><b>{{$product['title']}}</b></a>
                     @if(trim($info)){!!$info!!}@endif
+                    @if(is_string($product['part_label'] ?? null) && $product['part_label'] !== '')<div class="small" data-product-part>{{$product['part_label']}}</div>@endif
                     @if((float)($product['deposit_unit'] ?? 0) > 0)
                         <div class="small" data-product-deposit>
                             @lang('sCommerce::global.container_deposit'): {{(int)($product['deposit_quantity'] ?? 0)}} × {{sCommerce::convertPrice((float)$product['deposit_unit'], $item->currency)}} = {{sCommerce::convertPrice((float)($product['deposit_amount'] ?? 0), $item->currency)}}

@@ -33,8 +33,8 @@ final class OrderRepeater
         $products = $source->products ?? [];
         $cost = 0.0;
         foreach ($products as &$product) {
-            // The new order bills what was ordered; actual quantities belong to the source order.
-            $product = array_diff_key($product, array_flip(MeasuredQuantity::ACTUAL_KEYS), ['actual_quantity_label' => 0]);
+            // The new order bills what was ordered; actual quantities and stock allocations belong to the source order.
+            $product = array_diff_key($product, array_flip(MeasuredQuantity::ACTUAL_KEYS), ['actual_quantity_label' => 0, 'allocation' => 0]);
             $product += ['title' => '', 'sku' => '', 'link' => '', 'coverSrc' => ''];
             $price = isset($product['priceNumber']) && is_numeric($product['priceNumber'])
                 ? (float) $product['priceNumber']

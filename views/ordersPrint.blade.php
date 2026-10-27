@@ -106,9 +106,10 @@ p { margin:0; overflow-wrap:anywhere; }
                     $lineRules = isset($product['measure']) ? \Seiger\sCommerce\Services\MeasuredQuantity::fromLine($product) : null;
                 @endphp
                 <tr><td class="index">{{$index + 1}}</td><td>{{$text($product['sku'] ?? '')}}</td><td class="item-title">{{$text($product['title'] ?? '')}}
-                    @foreach($product as $option)
-                        @if(is_array($option) && isset($option['title']))<p class="option">{{$text($option['title'])}}: {{$text($option['label'] ?? '')}}</p>@endif
+                    @foreach($product as $optionKey => $option)
+                        @if($optionKey !== 'allocation' && is_array($option) && isset($option['title']))<p class="option">{{$text($option['title'])}}: {{$text($option['label'] ?? '')}}</p>@endif
                     @endforeach
+                    @if(is_string($product['part_label'] ?? null) && $product['part_label'] !== '')<p class="option part">{{$text($product['part_label'])}}</p>@endif
                     @if((float)($product['deposit_unit'] ?? 0) > 0 && (int)($product['deposit_quantity'] ?? 0) > 0)<p class="option deposit">@lang('sCommerce::global.container_deposit'): {{(int)$product['deposit_quantity']}} × {{$money((float)$product['deposit_unit'], $order->currency)}}</p>@endif
                 </td>@if($lineRules)<td class="quantity">{{\Seiger\sCommerce\Services\MeasuredQuantity::label(\Seiger\sCommerce\Services\MeasuredQuantity::effective($product), $lineRules)}}</td><td class="amount">{{\Seiger\sCommerce\Services\MeasuredQuantity::unitPriceLabel($money($price, $order->currency), $lineRules)}}</td><td class="amount">{{$money(\Seiger\sCommerce\Services\MeasuredQuantity::lineSum($product, $price), $order->currency)}}</td>@else<td class="quantity">{{$quantity}}</td><td class="amount">{{$money($price, $order->currency)}}</td><td class="amount">{{$money($price * $quantity, $order->currency)}}</td>@endif</tr>
             @endforeach
