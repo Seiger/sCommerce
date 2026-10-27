@@ -174,6 +174,8 @@ return array_replace($labels, [
     "test_orders" => "Testbestellungen",
     "mode_virtual" => "Virtuell",
     "mode_service" => "Dienstleistung",
+    "move_down" => "Nach unten verschieben",
+    "move_up" => "Nach oben verschieben",
     "vat_display" => "Shop-Preise standardmäßig",
     "vat_display_gross" => "Inkl. MwSt.",
     "vat_display_help" => "Wie Shop-Preise Besuchern angezeigt werden, die noch nicht umgeschaltet haben, z. B. ohne MwSt. für einen B2B-Shop. Besucher können die Anzeige umschalten; Listener von sCommerce.ResolveVatDisplay können pro Kunde entscheiden. Der berechnete Preis enthält immer die MwSt.",
@@ -339,4 +341,5 @@ return array_replace($labels, [
     "actual_quantity_unavailable" => "Ist-Mengen erfordern die neuesten sCommerce-Migrationen.",
     "actual_quantity_stock" => "Nicht genügend Bestand für die Ist-Menge.",
     "permission_order_actual_over_tolerance" => "Toleranz der Ist-Menge überschreiten",
+    "currency_already_added" => "Diese Währung ist bereits in der Liste.",
 ]);

@@ -106,6 +106,43 @@
     #form .scommerce-general-settings-section--currency #available_currencies > :last-child .card {
         margin-bottom:0;
     }
+    #available_currencies .scommerce-currency-handle {
+        display:flex;
+        align-items:center;
+        cursor:grab;
+        touch-action:none;
+        user-select:none;
+    }
+    #available_currencies .scommerce-currency-handle .close-icon {
+        margin-left:auto;
+    }
+    #available_currencies .scommerce-currency-move {
+        display:inline-flex;
+        flex-direction:column;
+    }
+    #available_currencies .scommerce-currency-move button {
+        display:block;
+        padding:0 4px;
+        border:0;
+        background:none;
+        color:inherit;
+        font-size:14px;
+        line-height:9px;
+        cursor:pointer;
+    }
+    #available_currencies .scommerce-currency-move button:hover {
+        color:#036efe;
+    }
+    #available_currencies.is-sorting .card-block {
+        display:none;
+    }
+    #form #available_currencies.is-sorting .card {
+        margin-bottom:8px;
+    }
+    #available_currencies.is-sorting .is-dragging .card-header {
+        background:#b9d3fb !important;
+        cursor:grabbing;
+    }
     /* Currency cards fill the block width without Bootstrap gutters. */
     #form .scommerce-general-settings-section--currency :is(#available_currencies, #available_currencies > [class*="col-"]),
     #form .scommerce-general-settings-section--currency .col-12:has(> #available_currencies) {

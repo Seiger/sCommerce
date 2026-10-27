@@ -174,6 +174,8 @@ return array_replace($labels, [
     "test_orders" => "Zamówienia testowe",
     "mode_virtual" => "Wirtualny",
     "mode_service" => "Usługa",
+    "move_down" => "Przenieś w dół",
+    "move_up" => "Przenieś w górę",
     "vat_display" => "Domyślne ceny w sklepie",
     "vat_display_gross" => "Z VAT",
     "vat_display_help" => "Jak ceny w sklepie są pokazywane odwiedzającym, którzy jeszcze nie przełączyli wyświetlania, np. bez VAT w sklepie B2B. Odwiedzający mogą je przełączyć; słuchacze sCommerce.ResolveVatDisplay mogą decydować dla każdego klienta. Pobierana cena zawsze zawiera VAT.",
@@ -339,4 +341,5 @@ return array_replace($labels, [
     "actual_quantity_unavailable" => "Ilości rzeczywiste wymagają najnowszych migracji sCommerce.",
     "actual_quantity_stock" => "Za mały stan magazynowy dla rzeczywistej ilości.",
     "permission_order_actual_over_tolerance" => "Przekraczanie tolerancji rzeczywistej ilości",
+    "currency_already_added" => "Ta waluta jest już na liście.",
 ]);

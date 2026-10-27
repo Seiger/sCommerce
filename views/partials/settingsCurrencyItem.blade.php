@@ -1,9 +1,12 @@
-<div class="col-sm-12">
+<div class="col-sm-12 scommerce-currency-item">
     <div class="card">
         <input type="hidden" name="basic__available_currencies[]" value="{{$alpha ?? ''}}">
-        <div class="card-header" style="background: #CECECF;">
-            <i style="cursor:pointer;" class="fas fa-sort"></i>&emsp; {{$alpha ?? ''}} ({!!$symbol ?? ''!!}) - {{$name ?? ''}}
-            <span class="close-icon" onclick="deleteItem(this.closest('.card'))"><i class="fa fa-times"></i></span>
+        <div class="card-header scommerce-currency-handle" style="background: #CECECF;">
+            <span class="scommerce-currency-move">
+                <button type="button" data-currency-move="-1" title="@lang('sCommerce::global.move_up')" aria-label="@lang('sCommerce::global.move_up')"><i class="fas fa-caret-up"></i></button>
+                <button type="button" data-currency-move="1" title="@lang('sCommerce::global.move_down')" aria-label="@lang('sCommerce::global.move_down')"><i class="fas fa-caret-down"></i></button>
+            </span>&emsp; {{$alpha ?? ''}} ({!!$symbol ?? ''!!}) - {{$name ?? ''}}
+            <span class="close-icon" onclick="deleteItem(this.closest('.scommerce-currency-item'))"><i class="fa fa-times"></i></span>
         </div>
         <div class="card-block">
             <div class="userstable">

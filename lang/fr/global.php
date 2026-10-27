@@ -174,6 +174,8 @@ return array_replace($labels, [
     "test_orders" => "Commandes de test",
     "mode_virtual" => "Virtuel",
     "mode_service" => "Service",
+    "move_down" => "Déplacer vers le bas",
+    "move_up" => "Déplacer vers le haut",
     "vat_display" => "Prix de la boutique par défaut",
     "vat_display_gross" => "TTC",
     "vat_display_help" => "Affichage des prix de la boutique pour les visiteurs qui ne l’ont pas encore changé, par exemple HT pour une boutique B2B. Les visiteurs peuvent le changer ; les écouteurs de sCommerce.ResolveVatDisplay peuvent décider pour chaque client. Le prix facturé inclut toujours la TVA.",
@@ -339,4 +341,5 @@ return array_replace($labels, [
     "actual_quantity_unavailable" => "Les quantités réelles nécessitent les dernières migrations sCommerce.",
     "actual_quantity_stock" => "Stock insuffisant pour la quantité réelle.",
     "permission_order_actual_over_tolerance" => "Dépasser la tolérance de quantité réelle",
+    "currency_already_added" => "Cette devise est déjà dans la liste.",
 ]);
