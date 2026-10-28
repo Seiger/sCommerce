@@ -433,6 +433,8 @@ class sCart
      * Get details of a product by its ID with selected fields.
      *
      * This method retrieves detailed information about a product from the database.
+     * Physical values come from the product attribute API so cart and order snapshots
+     * retain delivery dimensions and measured-line weight after column migration.
      *
      * @param object $product The product.
      * @throws \UnexpectedValueException If the returned object is not a product.
@@ -449,7 +451,7 @@ class sCart
             }
         }
 
-        $productFields = array_merge($product->only($this->productDetails), $pricing);
+        $productFields = array_merge($product->only($this->productDetails), $pricing, $product->physicalPayload());
 
         return array_merge($productFields, $attributes);
     }

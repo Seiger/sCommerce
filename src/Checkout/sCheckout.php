@@ -665,8 +665,9 @@ class sCheckout
      *
      * This method validates the input data, creates a new order for a quick purchase,
      * and saves it in the database. If product is 0, it will fetch products from the cart.
-     * Quantities remain uncast for validation; integer conversion and single-product totals
+     * Piece quantities remain uncast for validation; integer conversion and single-product totals
      * (including container deposits) are calculated only after the validator accepts them.
+     * Measured lines retain base-unit normalization and scaled-price totals after validation.
      * The trusted checkout context is resolved before the order is built.
      *
      * @param array $data The data from the request, including productId, optionId, quantity, exchange (empty returnable
@@ -783,7 +784,6 @@ class sCheckout
             }
             $productData = array_merge($productData, app(OrderLineIdentity::class)->snapshot($product, $optionId));
             $productData = array_merge($productData, $physical = $product->physicalPayload());
-
             $productsData = [$productData];
         }
 
@@ -796,7 +796,7 @@ class sCheckout
 
         if ($productId > 0) {
             // Quantity-dependent totals are calculated only after the raw quantity has passed validation.
-            $quantity = (int) $quantity;
+
             if ($rules->isMeasured()) {
                 $quantity = MeasuredQuantity::normalize($quantity, $rules);
             } elseif ($quantity > $rules->max) {
