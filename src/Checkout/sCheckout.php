@@ -644,8 +644,9 @@ class sCheckout
      *
      * This method validates the input data, creates a new order for a quick purchase,
      * and saves it in the database. If product is 0, it will fetch products from the cart.
-     * Quantities remain uncast for validation; integer conversion and single-product totals
+     * Piece quantities remain uncast for validation; integer conversion and single-product totals
      * (including container deposits) are calculated only after the validator accepts them.
+     * Measured lines retain base-unit normalization and scaled-price totals after validation.
      * The trusted checkout context is resolved before the order is built.
      *
      * @param array $data The data from the request, including productId, optionId, quantity, exchange (empty returnable
@@ -736,11 +737,6 @@ class sCheckout
             }
             $pricing = static::resolveProductPricing($product, $optionId);
 
-            $price = (float)$pricing['priceAsFloat'];
-            $cost = $rules->isMeasured()
-                ? MeasuredQuantity::lineTotalMinor(MeasuredQuantity::scalePrice($price), $quantity, $rules->factor) / 100
-                : $price * $quantity;
-
             $productData = [
                 'id' => $product->id,
                 'title' => $product->title,
@@ -761,17 +757,7 @@ class sCheckout
             }
             $productData = array_merge($productData, app(OrderLineIdentity::class)->snapshot($product, $optionId));
 
-            // Units exchanged for empty returnable containers carry no new deposit.
-            $productData = array_merge($productData, ContainerDeposit::lineFields(ContainerDeposit::unit($product, $optionId), $quantity, max(0, (int)($data['exchange'] ?? 0))));
-            $cost += (float)($productData['deposit_amount'] ?? 0);
-
             $productData = array_merge($productData, $physical = $product->physicalPayload());
-            $productData += MeasuredQuantity::lineFields($rules, $quantity, (string)($pricing['price'] ?? ''), (int)($physical['weight'] ?? 0));
-            if ($rules->isMeasured()) {
-                $productData['sumAsFloat'] = round($cost, 3);
-                $productData['sum'] = sCommerce::convertPrice($productData['sumAsFloat']);
-            }
-
             $productsData = [$productData];
         }
 
@@ -785,12 +771,22 @@ class sCheckout
         if (!empty($data['productId']) && $data['productId'] != 0) {
             $quantity = (int) $quantity;
             $productsData[0]['quantity'] = $quantity;
-            $cost = (float) $pricing['priceAsFloat'] * $quantity;
+            $price = (float) $pricing['priceAsFloat'];
+            $cost = $rules->isMeasured()
+                ? MeasuredQuantity::lineTotalMinor(MeasuredQuantity::scalePrice($price), $quantity, $rules->factor) / 100
+                : $price * $quantity;
             // Calculate deposit amounts only after the raw quantity has passed validation.
             $productsData[0] = array_merge($productsData[0], ContainerDeposit::lineFields(
                 ContainerDeposit::unit($product, $optionId), $quantity, max(0, (int)($data['exchange'] ?? 0))
             ));
             $cost += (float) ($productsData[0]['deposit_amount'] ?? 0);
+            $productsData[0] += MeasuredQuantity::lineFields(
+                $rules, $quantity, (string)($pricing['price'] ?? ''), (int)($physical['weight'] ?? 0)
+            );
+            if ($rules->isMeasured()) {
+                $productsData[0]['sumAsFloat'] = round($cost, 3);
+                $productsData[0]['sum'] = sCommerce::convertPrice($productsData[0]['sumAsFloat']);
+            }
         }
 
         do {
