@@ -49,9 +49,16 @@ Event::listen('evolution.OnPageNotFound', function() {
 });
 
 /**
- * Remember advertising tags (gclid, UTM) from the landing URL until checkout
+ * Remember advertising tags (gclid, UTM) from the landing URL until checkout.
+ *
+ * CAPTCHA and other API entrypoints can emit this event without an HTTP request
+ * binding. They must not resolve the request or initialize marketing services.
  */
 Event::listen('evolution.OnWebPageInit', function() {
+    if (!app()->bound('request')) {
+        return;
+    }
+
     sCommerce::captureMarketingTags(request()->query());
 });
 
