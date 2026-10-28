@@ -19,6 +19,13 @@
     <input type="number" class="form-control" id="orders__reference_pad_left" name="orders__reference[pad_left]" value="{{sCommerce::config('orders.reference.pad_left', 0)}}" min="0" onchange="documentDirty=true;">
     <small class="scommerce-checkout-settings-help">@lang('sCommerce::global.orders_reference_pad_left_help')</small>
 </div>
+<div class="scommerce-checkout-settings-field">
+    <label for="orders__rate_limit">
+        @lang('sCommerce::global.orders_rate_limit')
+    </label>
+    <input type="number" class="form-control" id="orders__rate_limit" name="orders__rate_limit" value="{{(int)sCommerce::config('orders.rate_limit', 10)}}" min="0" onchange="documentDirty=true;">
+    <small class="scommerce-checkout-settings-help">@lang('sCommerce::global.orders_rate_limit_help')</small>
+</div>
 <div class="scommerce-checkout-settings-field scommerce-checkout-settings-field--wide">
     <label for="orders__marketing_fields">
         @lang('sCommerce::global.orders_marketing_fields')

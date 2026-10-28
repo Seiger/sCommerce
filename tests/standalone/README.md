@@ -31,12 +31,15 @@ php tests/standalone/scommerce-shipments.php
 php tests/standalone/scommerce-stock.php
 php tests/standalone/scommerce-measured-quantities.php
 php tests/standalone/scommerce-actual-quantities.php
+php tests/standalone/scommerce-line-parts.php
+php tests/standalone/scommerce-currency-settings.php
 node tests/standalone/scommerce-bulk-status.mjs
 node tests/standalone/scommerce-bulk-export.mjs
 node tests/standalone/scommerce-review.mjs
 node tests/standalone/scommerce-repeat.mjs
 node tests/standalone/scommerce-payment-actions.mjs
 node tests/standalone/scommerce-measured-quantities.mjs
+node tests/standalone/scommerce-currency-settings.mjs
 ```
 
 `scommerce-payment-ledger.php` also runs against a disposable MySQL/MariaDB or PostgreSQL database when

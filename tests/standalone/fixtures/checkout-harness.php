@@ -49,6 +49,8 @@ final class FakeProduct
     public ?int $quantity_tolerance = null;
     public ?string $quantity_rounding = null;
     public int $weight = 125;
+    /** Publication flag of real products; null = an object without one, which counts as published. */
+    public ?int $published = null;
 
     public function __construct(public int $id, public string $sku, public float $price = 10.0, public int $mode = sProduct::MODE_SIMPLE,
                                 public ?string $gtin = null, public int $inventory = 100, public string $title = '')
@@ -135,12 +137,16 @@ $shop = new class {
     public array $products = [];
     /** @var list<array{0: list<string>, 1: string}> */
     public array $mails = [];
+    public string $currency = 'EUR';
+    /** @var array<string, float> Exchange rates as `FROM_TO`; unknown pairs convert 1:1. */
+    public array $rates = [];
     public function config($key, $default = null) { return array_key_exists($key, $this->config) ? $this->config[$key] : (str_starts_with($key, 'notifications.') ? 0 : $default); }
     public function getProduct($id, $lang = null) { return $this->products[(int)$id] ?? null; }
     public function getProducts($ids) { return collect(array_values(array_intersect_key($this->products, array_flip($ids)))); }
-    public function currentCurrency() { return 'EUR'; }
-    public function convertPrice($value, $currency = null, $display = null) { return number_format((float)$value, 2, '.', '') . ' EUR'; }
-    public function convertPriceNumber($value, $from = null, $to = null) { return (float)$value; }
+    public function currentCurrency() { return $this->currency; }
+    public function getCurrencyFormat($currency) { return ['exp' => 2, 'decimals' => '.', 'thousands' => ' ', 'show' => 1, 'symbol' => strtoupper("$currency") . ' ', 'position' => 'before']; }
+    public function convertPrice($value, $currency = null, $display = null) { return number_format((float)$value, 2, '.', '') . ' ' . $this->currency; }
+    public function convertPriceNumber($value, $from = null, $to = null) { return (float)$value * ($this->rates[strtoupper("$from") . '_' . strtoupper("$to")] ?? 1.0); }
     public function resolveProductPricing($product, $currency = null) { return app(sPriceResolver::class)->resolve($product, $currency); }
     public function adminNotificationEmails() { return ['admin@shop.test']; }
     public function notifyEmail($to, $template, $data = []) { $this->mails[] = [array_values((array)$to), $template]; }
@@ -163,6 +169,11 @@ $app->instance(OrderReferenceGenerator::class, new class extends OrderReferenceG
     public function generate(?int $orderId = null): string { return ''; }
 });
 $app->instance('db.transactions', new DatabaseTransactionsManager());
+// In-memory cache store for the storefront order limit.
+$app->instance('cache', new class {
+    private ?Illuminate\Cache\Repository $store = null;
+    public function store($name = null) { return $this->store ??= new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()); }
+});
 $db = new Capsule($app);
 $db->addConnection(['driver' => 'sqlite', 'database' => ':memory:', 'foreign_key_constraints' => true]);
 $db->setEventDispatcher(new Dispatcher($app));

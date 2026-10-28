@@ -86,7 +86,8 @@ $check($line['quantity'] === 2530 && $line['actual_quantity'] === 2553 && $line[
 $check($line['actual_quantity_label'] === '2.553 m' && $line['quantity_label'] === '2.53 m' && $line['sumAsFloat'] === 3.06 && $line['line_weight'] === 319
     && $line['retail_excise_amount'] === Seiger\sCommerce\Services\VatDisplay::excise(3.06, 5), 'Sum, excise and weight follow the actual quantity');
 $check((float)$updated->cost === 3.06 + 25.0 + 5.0, 'Cost follows; the delivery is kept');
-$entry = end($updated->history);
+$history = $updated->history;
+$entry = end($history);
 $check(($entry['actual_quantity_set'] ?? null) === ['line_key' => '10:0', 'old' => null, 'new' => 2553, 'ordered' => 2530, 'source' => 'manager', 'over_tolerance' => false]
     && $entry['user_id'] === 7, 'History entry with the old and new values');
 $orderUpdates = array_values(array_filter($events, static fn ($event) => $event[0] === 'sCommerce.OrderUpdated'));
@@ -97,7 +98,7 @@ $check($service->set($order, '10:0', 2533, 'erp', 0, 'erp-1')->products[0]['actu
 $check($service->set($order, '10:0', 2656, 'manager', 7, 'op-2')->products[0]['actual_quantity'] === 2656, 'Up to the tolerance');
 $check($refused(fn () => $service->set($order, '10:0', 2657, 'manager', 7, 'op-3'), 'actual_quantity_tolerance_exceeded'), 'Above the tolerance is refused');
 $over = $service->set($order, '10:0', 2800, 'manager', 7, 'op-4', true);
-$check($over->products[0]['actual_quantity'] === 2800 && end($over->history)['actual_quantity_set']['over_tolerance'] === true, 'Allowed when the customer agreed');
+$check($over->products[0]['actual_quantity'] === 2800 && ($over->history[array_key_last($over->history)]['actual_quantity_set']['over_tolerance'] ?? null) === true, 'Allowed when the customer agreed');
 $check($service->set($order, '10:0', 1200, 'manager', 7, 'op-5')->products[0]['actual_quantity'] === 1200, 'Below is always allowed');
 
 // 3. Idempotency by operation key.

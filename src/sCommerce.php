@@ -88,7 +88,7 @@ class sCommerce
     {
         return ['order-events', 'payment-ledger-api', 'webhook-interface', 'payment-capabilities', 'payment-schedule', 'offline-settlement',
             'line-identity', 'fulfilment-modes', 'line-tax-data', 'checkout-context', 'vat-display', 'retail-excise', 'container-deposit', 'shipments', 'stock-provider',
-            'measured-quantities', 'actual-quantities'];
+            'measured-quantities', 'actual-quantities', 'line-parts'];
     }
 
     /**

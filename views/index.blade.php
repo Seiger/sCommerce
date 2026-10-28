@@ -230,7 +230,6 @@
 
         {{-- Delete Item --}}
         document.addEventListener("click", function(e) {
-            console.log("clicked" , e.target);
             const target = e.target.closest("[data-delete]");
             if (!target) return;
 

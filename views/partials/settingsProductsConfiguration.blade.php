@@ -29,6 +29,16 @@
         <input type="hidden" id="products__show_field_price" name="products__show_field_price" value="{{sCommerce::config('products.show_field_price', 1)}}" onchange="documentDirty=true;">
     </div>
 </div>
+<div class="row form-row" data-feature="vat_display_on" @style(['display:none' => sCommerce::config('product.vat_display_on', 0) != 1])>
+    <div class="col-auto">
+        <label for="products__show_field_price_net" class="warning">@lang('sCommerce::global.vat_display_net')</label>
+        <i class="fa fa-question-circle" data-tooltip="@lang('sCommerce::global.show_field_price_net_help')"></i>
+    </div>
+    <div class="col">
+        <input type="checkbox" class="form-checkbox form-control" onchange="documentDirty=true;" onclick="changestate(document.form.products__show_field_price_net);" @if(sCommerce::config('products.show_field_price_net', 1) == 1) checked @endif>
+        <input type="hidden" id="products__show_field_price_net" name="products__show_field_price_net" value="{{sCommerce::config('products.show_field_price_net', 1)}}" onchange="documentDirty=true;">
+    </div>
+</div>
 <div class="row form-row">
     <div class="col-auto">
         <label for="products__show_field_price_special" class="warning">@lang('sCommerce::global.price_special')</label>

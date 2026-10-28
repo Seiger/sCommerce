@@ -73,7 +73,20 @@ $app->instance('translator', new Translator($loader, 'en'));
 $app->instance('validator', new Illuminate\Validation\Factory($app['translator'], $app));
 $app->instance('sCommerce', new class {
     public function config($key, $default = null) { return match ($key) { 'basic.deliveries_on' => 0, 'basic.payments_on' => 1, default => str_starts_with($key, 'notifications.') ? 0 : $default }; }
+    public function currentCurrency() { return 'EUR'; }
 });
+// Checkout re-prices its lines from the catalog: one service, priced like the checkout under test.
+$catalog = new class {
+    public float $price = 100.0;
+    public function shortages(?array $cartData = null): array { return []; }
+    public function getCartFor(array $cartData): array
+    {
+        $quantity = (int)($cartData[1][0] ?? 0);
+        $items = $quantity > 0 ? [['id' => 1, 'product_id' => 1, 'option_id' => 0, 'title' => 'Service', 'quantity' => $quantity, 'price' => $this->price]] : [];
+        return ['items' => $items, 'totalSum' => $this->price * $quantity];
+    }
+};
+$app->instance('sCart', $catalog);
 $app->instance(OrderReferenceGenerator::class, new class extends OrderReferenceGenerator {
     public function generate(?int $orderId = null): string { return ''; }
 });
@@ -142,6 +155,7 @@ $checkout = static function (string $method = 'instpsp', float $cost = 100): sCh
     $checkout = (new ReflectionClass(sCheckout::class))->newInstanceWithoutConstructor();
     $checkout->registerPaymentMethod(new InstallmentPsp());
     $checkout->registerPaymentMethod(new FullCostPsp());
+    $GLOBALS['catalog']->price = $cost;
     Closure::bind(function () use ($method, $cost): void {
         $this->orderData = [
             'products' => [['id' => 1, 'title' => 'Service', 'quantity' => 1, 'price' => $cost]],

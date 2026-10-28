@@ -1126,7 +1126,7 @@ Since 1.5.0, a product can carry a returnable container deposit, for example a w
 
 ### Checkout and exchange
 
-The customer declares how many empty containers they hand over. Post `productId`, `optionId` and `quantity` to `scommerce/container-exchange` (route `sCommerce.containerExchange`) or call `sCart::setContainerExchange($productId, $optionId, $count)`; quick orders accept `exchange`. The count is capped at the line quantity. sCommerce keeps no balance of containers per customer: when the courier finds a different number, the manager changes **Exchanged containers** on the order line, and the deposit and the order cost are recalculated.
+The customer declares how many empty containers they hand over. Such a declaration waives the deposit before anyone has seen the containers, so it needs **Customers declare exchanged containers** (`product.container_exchange_on`, off by default); otherwise the route answers `404`, `setContainerExchange()` fails and declared exchanges are ignored. Post `productId`, `optionId` and `quantity` to `scommerce/container-exchange` (route `sCommerce.containerExchange`) or call `sCart::setContainerExchange($productId, $optionId, $count)`; quick orders accept `exchange`. The count is capped at the line quantity. sCommerce keeps no balance of containers per customer: when the courier finds a different number, the manager changes **Exchanged containers** on the order line, and the deposit and the order cost are recalculated.
 
 Cart lines and order lines with a deposit store:
 

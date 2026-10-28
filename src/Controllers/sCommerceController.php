@@ -163,6 +163,10 @@ class sCommerceController
             }
         }
 
+        if (array_key_exists('basic__available_currencies', $all)) {
+            $all['basic__available_currencies'] = static::uniqueCurrencyCodes($all['basic__available_currencies']);
+        }
+
         if (isset($all['orders__marketing_fields'])) {
             $all['orders__marketing_fields'] = trim(preg_replace('/["\\\\$\[\]{}]/', '', str_replace(["\r\n", "\r", "\n"], '||', (string)$all['orders__marketing_fields'])), '| ');
         }
@@ -215,6 +219,25 @@ class sCommerceController
         fclose($handle);
 
         return true;
+    }
+
+    /**
+     * Available currency codes in submitted order, without blanks and repeats.
+     *
+     * @param mixed $codes
+     * @return list<string>
+     * @since 1.5.0
+     */
+    public static function uniqueCurrencyCodes(mixed $codes): array
+    {
+        $unique = [];
+        foreach ((array)$codes as $code) {
+            $code = is_scalar($code) ? trim((string)$code) : '';
+            if ($code !== '' && !in_array($code, $unique, true)) {
+                $unique[] = $code;
+            }
+        }
+        return $unique;
     }
 
     /**

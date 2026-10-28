@@ -135,6 +135,8 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - [x] Stock Integration (external stock provider, stock write API, optional stock reduction on orders).
     - [x] sCommerce.ResolveProductStock.
     - [x] sCommerce.ProductStockChanged.
+- [x] Split Cart Lines (one product sold from stock lots at different prices, e.g. older excise lots first or perishables close to expiry at a markdown, with a stock allocation per order line).
+    - [x] sCommerce.SplitCartLine.
 - [x] JavaScript Callbacks.
     - [x] sCommerce.onAddedToCart.
     - [x] sCommerce.onRemovedFromCart.

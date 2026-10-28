@@ -30,8 +30,8 @@
         <tbody>
         @foreach($order->products as $product)
             @php($info = '')
-            @foreach($product as $p)
-                @if(is_array($p) && isset($p['title']))
+            @foreach($product as $optionKey => $p)
+                @if($optionKey !== 'allocation' && is_array($p) && isset($p['title']))
                     @php($info .= '<b>' . htmlentities($p['title']) . ':</b> ' . htmlentities($p['label'] ?? '') . '<br>')
                 @endif
             @endforeach
@@ -39,6 +39,7 @@
                 <td>
                     <img src="{{$product['coverSrc']}}" style="width: 75px;">
                     <a href="{{$product['link']}}" target="_blank"><b>{{$product['title']}}</b></a>
+                    @if(is_string($product['part_label'] ?? null) && $product['part_label'] !== '')<br><small>{{$product['part_label']}}</small>@endif
                     @if(trim($info))<i class="fa fa-question-circle" data-tooltip="{!!$info!!}"></i>@endif
                 </td>
                 @if(isset($product['measure']))

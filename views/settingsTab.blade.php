@@ -62,7 +62,7 @@
     .row.form-row:has(input.form-checkbox[type="checkbox"]) label {
         margin:0;
     }
-    #form :is(.scommerce-general-settings-section--base, .scommerce-products-settings-section--functionality)
+    #form :is(.scommerce-general-settings-section--base, .scommerce-general-settings-section--currency, .scommerce-products-settings-section--functionality, .scommerce-products-settings-section--measured)
     .row.form-row:not(:has(input.form-checkbox[type="checkbox"])) {
         display:grid;
         grid-template-columns:minmax(0,1fr);
@@ -70,7 +70,7 @@
         margin:0 0 14px;
         padding:0;
     }
-    #form :is(.scommerce-general-settings-section--base, .scommerce-products-settings-section--functionality)
+    #form :is(.scommerce-general-settings-section--base, .scommerce-general-settings-section--currency, .scommerce-products-settings-section--functionality, .scommerce-products-settings-section--measured)
     .row.form-row:not(:has(input.form-checkbox[type="checkbox"])) > .col-auto {
         display:flex;
         align-items:center;
@@ -81,7 +81,7 @@
         margin:0;
         padding:0;
     }
-    #form :is(.scommerce-general-settings-section--base, .scommerce-products-settings-section--functionality)
+    #form :is(.scommerce-general-settings-section--base, .scommerce-general-settings-section--currency, .scommerce-products-settings-section--functionality, .scommerce-products-settings-section--measured)
     .row.form-row:not(:has(input.form-checkbox[type="checkbox"])) > .col {
         width:100%;
         min-width:0;
@@ -89,11 +89,65 @@
         margin:0;
         padding:0;
     }
-    #form :is(.scommerce-general-settings-section--base, .scommerce-products-settings-section--functionality)
+    #form :is(.scommerce-general-settings-section--base, .scommerce-general-settings-section--currency, .scommerce-products-settings-section--functionality, .scommerce-products-settings-section--measured)
     .row.form-row:not(:has(input.form-checkbox[type="checkbox"])) > .col > .form-control {
         width:100%;
         max-width:100%;
         min-height:38px;
+    }
+    /* The last row ends at the block padding instead of adding its own gap. */
+    #form :is(.scommerce-general-settings-section, .scommerce-products-settings-section) .row.form-row:last-child,
+    #form :is(.scommerce-general-settings-section, .scommerce-products-settings-section) .row.form-row:last-child:not(:has(input.form-checkbox[type="checkbox"])) {
+        margin-bottom:0;
+    }
+    #form .scommerce-general-settings-section--currency #available_currencies .card {
+        margin:0 0 18px;
+    }
+    #form .scommerce-general-settings-section--currency #available_currencies > :last-child .card {
+        margin-bottom:0;
+    }
+    #available_currencies .scommerce-currency-handle {
+        display:flex;
+        align-items:center;
+        cursor:grab;
+        touch-action:none;
+        user-select:none;
+    }
+    #available_currencies .scommerce-currency-handle .close-icon {
+        margin-left:auto;
+    }
+    #available_currencies .scommerce-currency-move {
+        display:inline-flex;
+        flex-direction:column;
+    }
+    #available_currencies .scommerce-currency-move button {
+        display:block;
+        padding:0 4px;
+        border:0;
+        background:none;
+        color:inherit;
+        font-size:14px;
+        line-height:9px;
+        cursor:pointer;
+    }
+    #available_currencies .scommerce-currency-move button:hover {
+        color:#036efe;
+    }
+    #available_currencies.is-sorting .card-block {
+        display:none;
+    }
+    #form #available_currencies.is-sorting .card {
+        margin-bottom:8px;
+    }
+    #available_currencies.is-sorting .is-dragging .card-header {
+        background:#b9d3fb !important;
+        cursor:grabbing;
+    }
+    /* Currency cards fill the block width without Bootstrap gutters. */
+    #form .scommerce-general-settings-section--currency :is(#available_currencies, #available_currencies > [class*="col-"]),
+    #form .scommerce-general-settings-section--currency .col-12:has(> #available_currencies) {
+        padding-left:0;
+        padding-right:0;
     }
     #form .scommerce-menu-order-control {
         display:flex;

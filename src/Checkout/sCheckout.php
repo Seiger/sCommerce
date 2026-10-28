@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Seiger\sCommerce\Cart\CartLineParts;
 use Seiger\sCommerce\Events\EventScope;
 use Seiger\sCommerce\Facades\sCart;
 use Seiger\sCommerce\Facades\sCommerce;
@@ -21,6 +22,7 @@ use Seiger\sCommerce\Services\MeasuredQuantity;
 use Seiger\sCommerce\Services\MeasuredQuantityException;
 use Seiger\sCommerce\Services\OrderLineIdentity;
 use Seiger\sCommerce\Services\OrderTaxes;
+use Seiger\sCommerce\Services\StorefrontGuard;
 use Seiger\sCommerce\Services\VatDisplay;
 use Seiger\sCommerce\Services\sPriceResolver;
 use View;
@@ -460,11 +462,9 @@ class sCheckout
 
         $this->orderData = array_replace_recursive($this->orderData, $resultData);
 
-        if ($this->requiresDelivery()) {
-            if (!empty($validatedData['delivery']['method']) && isset($this->deliveryMethods[$this->orderData['delivery']['method']])) {
-                $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method']];
-                $this->orderData['delivery']['cost'] = $deliveryMethod->calculateCost($this->orderData);
-            }
+        // Recalculated on every change, so an address changed after the method keeps no stale cost.
+        if (($deliveryMethod = $this->selectedDeliveryMethod()) !== null) {
+            $this->orderData['delivery']['cost'] = $this->deliveryCost($deliveryMethod);
         }
 
         $_SESSION['sCheckout'] = $this->orderData;
@@ -498,11 +498,27 @@ class sCheckout
     {
         // One scope: the order and its payment_info update produce a single OrderCreated.
         $scope = EventScope::begin('storefront', (int)($this->orderData['user']['id'] ?? 0));
+        // A failed attempt leaves the checkout as it was, so a retry never adds the delivery twice.
+        $initial = $this->orderData;
+        $hadSession = isset($_SESSION) && array_key_exists('sCheckout', $_SESSION);
+        $initialSession = $_SESSION['sCheckout'] ?? null;
+        $rollback = function () use ($initial, $hadSession, $initialSession): void {
+            $this->orderData = $initial;
+            if ($hadSession) {
+                $_SESSION['sCheckout'] = $initialSession;
+            } else {
+                unset($_SESSION['sCheckout']);
+            }
+        };
         try {
-            if (empty($this->orderData['products'])) {
+            if (empty($this->orderData['products']) || !is_array($this->orderData['products'])) {
                 throw new \Exception("Invalid products in Order.");
             }
             Validator::make($this->orderData, $this->getValidationRules($this->orderData))->validate();
+
+            if (($changed = $this->refreshProducts()) !== null) {
+                return $changed;
+            }
 
             $this->checkoutContext = CheckoutContext::resolve($this->orderData, 'storefront', self::trustedActorId());
 
@@ -511,13 +527,15 @@ class sCheckout
             $paymentSuccess = true;
 
             if ($this->requiresDelivery()) {
-                $deliveryMethod = $this->deliveryMethods[$this->orderData['delivery']['method'] ?? ''] ?? null;
+                $deliveryMethod = $this->selectedDeliveryMethod();
 
                 if (!$deliveryMethod) {
-                    throw new \Exception('Invalid delivery method ' . ($this->orderData['delivery']['method'] ?? '') . '.');
+                    throw new \Exception('Invalid delivery method.');
                 }
 
-                $this->orderData['cost'] += $this->orderData['delivery']['cost'] ?? 0;
+                // Never the cost stored in the session: the address or currency may have changed since.
+                $this->orderData['delivery']['cost'] = $this->deliveryCost($deliveryMethod);
+                $this->orderData['cost'] += $this->orderData['delivery']['cost'];
             } elseif (sCommerce::config('basic.deliveries_on', 1) == 1) {
                 $this->orderData['delivery'] = ['method' => '', 'required' => false, 'cost' => 0];
             }
@@ -528,6 +546,7 @@ class sCheckout
                 if (!$paymentMethod || !$paymentMethod->validatePayment($this->orderData)) {
                     evo()->logEvent(0, 3, 'Payment method ' . $this->orderData['payment']['method'] . ' is Invalid or not available. Please check your API credentials.', 'sCommerce: Payment ' . $this->orderData['payment']['method'] . ' Failed');
                     Log::channel('scommerce')->error("Order processing failed: Payment method {$this->orderData['payment']['method']} is Invalid or not available. Please check your API credentials.", ['order_data' => $this->orderData]);
+                    $rollback();
 
                     return [
                         'success' => false,
@@ -620,12 +639,14 @@ class sCheckout
 
             return $response;
         } catch (CheckoutContextException $e) {
+            $rollback();
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
                 'error_code' => 0,
             ];
         } catch (\Exception $e) {
+            $rollback();
             evo()->logEvent(0, 3, $e->getMessage(), 'sCommerce: Order Processing Failed');
             Log::channel('scommerce')->error("Order processing failed: {$e->getMessage()}", ['order_data' => $this->orderData, 'error' => $e->getTraceAsString()]);
 
@@ -659,7 +680,12 @@ class sCheckout
     {
         // Product lines are built by the server below, never accepted from the request.
         unset($data['products']);
-        $product = sCommerce::getProduct($data['productId']);
+        // No product id means the cart; anything but a whole number is an unknown product.
+        $rawProductId = $data['productId'] ?? 0;
+        $productId = is_int($rawProductId) || (is_string($rawProductId) && ctype_digit(trim($rawProductId))) ? (int)$rawProductId
+            : (in_array($rawProductId, [null, ''], true) ? 0 : -1);
+        $data['productId'] = $productId;
+        $product = $productId > 0 ? sCommerce::getProduct($productId) : null;
         $userId = evo()->getLoginUserID('web') ?: evo()->getLoginUserID('mgr'); // Checking if the user is authorized
         $user = evo()->getUserInfo($userId ?: 0) ?: [];
         $user = array_merge($user, evo()->getUserSettings());
@@ -683,7 +709,9 @@ class sCheckout
         if (empty($userData['phone']) && empty($userData['email'])) {
             return [
                 'success' => false,
-                'product' => $product?->toArray() ?? [],
+                // Never the product row: it holds wholesale prices, stock and unpublished products.
+                'product' => StorefrontGuard::purchasable($product)
+                    ? ['id' => (int)$product->id, 'title' => (string)($product->title ?? ''), 'link' => (string)($product->link ?? '')] : [],
                 'message' => 'Either phone number or email is required.',
                 'errors' => ['User is undefined'],
             ];
@@ -694,12 +722,12 @@ class sCheckout
         } catch (CheckoutContextException $e) {
             return [
                 'success' => false,
-                'product' => (int)$data['productId'],
+                'product' => max(0, $productId),
                 'message' => $e->getMessage(),
             ];
         }
 
-        if (empty($data['productId']) || $data['productId'] == 0) {
+        if ($productId === 0) {
             $cartData = sCart::getMiniCart();
             if (empty($cartData['items'])) {
                 return [
@@ -711,7 +739,7 @@ class sCheckout
             $productsData = $cartData['items'];
             $cost = $cartData['totalSum'];
         } else {
-            if (!$product) {
+            if (!StorefrontGuard::purchasable($product)) {
                 return [
                     'success' => false,
                     'message' => 'Product not found.',
@@ -724,16 +752,15 @@ class sCheckout
             if ($rules->isMeasured()) {
                 try {
                     if (is_scalar($data['amount'] ?? null) && trim((string)$data['amount']) !== '') {
-                        $quantity = MeasuredQuantity::parseAmount((string)$data['amount'], $rules);
+                        $quantity = MeasuredQuantity::normalize(MeasuredQuantity::parseAmount((string)$data['amount'], $rules), $rules);
                     }
                 } catch (MeasuredQuantityException $e) {
                     return [
                         'success' => false,
-                        'product' => (int)$data['productId'],
+                        'product' => max(0, $productId),
                         'message' => $e->translated(),
                     ];
                 }
-                $quantity = MeasuredQuantity::normalize($quantity, $rules);
             }
             $pricing = static::resolveProductPricing($product, $optionId);
 
@@ -756,7 +783,6 @@ class sCheckout
                 $productData['priceMode'] = $pricing['priceMode'];
             }
             $productData = array_merge($productData, app(OrderLineIdentity::class)->snapshot($product, $optionId));
-
             $productData = array_merge($productData, $physical = $product->physicalPayload());
             $productsData = [$productData];
         }
@@ -768,25 +794,48 @@ class sCheckout
                 'errors' => $validator->errors(), 'error_code' => 'checkout_validation'];
         }
 
-        if (!empty($data['productId']) && $data['productId'] != 0) {
-            $quantity = (int) $quantity;
-            $productsData[0]['quantity'] = $quantity;
-            $price = (float) $pricing['priceAsFloat'];
+        if ($productId > 0) {
+            // Quantity-dependent totals are calculated only after the raw quantity has passed validation.
+
+            if ($rules->isMeasured()) {
+                $quantity = MeasuredQuantity::normalize($quantity, $rules);
+            } elseif ($quantity > $rules->max) {
+                return ['success' => false, 'message' => __('sCommerce::global.quantity_too_large', ['max' => $rules->max]),
+                    'error_code' => 'checkout_validation'];
+            }
+            if (($shortages = sCart::shortages([$productId => [$optionId => $quantity]])) !== []) {
+                return self::outOfStock($shortages);
+            }
+            $productData = $productsData[0];
+            $productData['quantity'] = $quantity;
+            // A negative price from a listener never lowers the order total.
+            $price = max(0.0, (float) $pricing['priceAsFloat']);
             $cost = $rules->isMeasured()
                 ? MeasuredQuantity::lineTotalMinor(MeasuredQuantity::scalePrice($price), $quantity, $rules->factor) / 100
                 : $price * $quantity;
-            // Calculate deposit amounts only after the raw quantity has passed validation.
-            $productsData[0] = array_merge($productsData[0], ContainerDeposit::lineFields(
-                ContainerDeposit::unit($product, $optionId), $quantity, max(0, (int)($data['exchange'] ?? 0))
+
+            // Units exchanged for empty returnable containers carry no new deposit.
+            $productData = array_merge($productData, ContainerDeposit::lineFields(
+                ContainerDeposit::unit($product, $optionId), $quantity,
+                ContainerDeposit::exchangeEnabled() ? max(0, (int)($data['exchange'] ?? 0)) : 0
             ));
-            $cost += (float) ($productsData[0]['deposit_amount'] ?? 0);
-            $productsData[0] += MeasuredQuantity::lineFields(
-                $rules, $quantity, (string)($pricing['price'] ?? ''), (int)($physical['weight'] ?? 0)
-            );
+            $cost += (float) ($productData['deposit_amount'] ?? 0);
+
+            $productData += MeasuredQuantity::lineFields($rules, $quantity, (string)($pricing['price'] ?? ''), (int)($physical['weight'] ?? 0));
             if ($rules->isMeasured()) {
-                $productsData[0]['sumAsFloat'] = round($cost, 3);
-                $productsData[0]['sum'] = sCommerce::convertPrice($productsData[0]['sumAsFloat']);
+                $productData['sumAsFloat'] = round($cost, 3);
+                $productData['sum'] = sCommerce::convertPrice($productData['sumAsFloat']);
             }
+            $productsData = [$productData];
+            // A split entry, e.g. by stock lots, is priced part by part like the cart.
+            if (CartLineParts::resolve($product, $optionId, $quantity, $pricing, sCommerce::currentCurrency()) !== null) {
+                $exchange = ContainerDeposit::exchangeEnabled() ? max(0, (int)($data['exchange'] ?? 0)) : 0;
+                $cart = sCart::getCartFor([$productId => [$optionId => $exchange > 0 ? ['quantity' => $quantity, 'exchange' => $exchange] : $quantity]]);
+                $productsData = array_map(static fn (array $line) => $line + $physical, $cart['items']);
+                $cost = $cart['totalSum'];
+            }
+        } elseif (($shortages = sCart::shortages()) !== []) {
+            return self::outOfStock($shortages);
         }
 
         do {
@@ -835,7 +884,7 @@ class sCheckout
         } catch (\InvalidArgumentException|CheckoutContextException $e) {
             return [
                 'success' => false,
-                'product' => (int)$data['productId'],
+                'product' => max(0, $productId),
                 'message' => $e->getMessage(),
             ];
         }
@@ -850,7 +899,7 @@ class sCheckout
             });
         });
 
-        if ($data['productId'] == 0) {
+        if ($productId === 0) {
             unset($_SESSION['sCheckout'], $_SESSION['sCart']);
         }
 
@@ -966,6 +1015,109 @@ class sCheckout
     public function registerPaymentMethod(PaymentMethodInterface $method): void
     {
         $this->paymentMethods[$method->getIdentifier()] = $method;
+    }
+
+    /**
+     * Re-price the checkout lines with current prices, publication and stock before the order is saved.
+     *
+     * The checkout keeps the lines priced when it started. When a line, its quantity, the currency
+     * or the total differs from the current catalog, the lines are replaced with current ones and
+     * the attempt fails with `cart_changed`, so the customer confirms the new total.
+     *
+     * @return array<string, mixed>|null Failure response, or null when the order may be saved.
+     */
+    private function refreshProducts(): ?array
+    {
+        $lineKey = static fn (array $line, int $productId, int $optionId): string => is_string($line['line_key'] ?? null) ? $line['line_key'] : $productId . ':' . $optionId;
+        $cartData = [];
+        $stored = [];
+        foreach ($this->orderData['products'] as $line) {
+            $productId = is_array($line) ? (int)($line['product_id'] ?? $line['id'] ?? 0) : 0;
+            $optionId = is_array($line) ? (int)($line['option_id'] ?? 0) : 0;
+            $quantity = is_array($line) ? (int)($line['quantity'] ?? 0) : 0;
+            $stored[] = [is_array($line) ? $lineKey($line, $productId, $optionId) : '', $quantity];
+            if ($productId > 0 && $quantity > 0) {
+                // Parts of a split cart entry add up to the entry again.
+                $entry = $cartData[$productId][$optionId] ?? ['quantity' => 0, 'exchange' => 0];
+                $cartData[$productId][$optionId] = ['quantity' => $entry['quantity'] + $quantity,
+                    'exchange' => $entry['exchange'] + (int)($line['exchange_quantity'] ?? 0)];
+            }
+        }
+        foreach ($cartData as $productId => $entries) {
+            foreach ($entries as $optionId => $entry) {
+                $cartData[$productId][$optionId] = $entry['exchange'] > 0 ? $entry : $entry['quantity'];
+            }
+        }
+
+        if (($shortages = sCart::shortages($cartData)) !== []) {
+            return self::outOfStock($shortages);
+        }
+
+        $cart = sCart::getCartFor($cartData);
+        // A changed split, e.g. a stock lot sold out meanwhile, changes the line keys.
+        $current = array_map(static fn (array $line) => [$lineKey($line, (int)$line['product_id'], (int)$line['option_id']), (int)$line['quantity']], $cart['items']);
+        sort($stored);
+        sort($current);
+        $currency = sCommerce::currentCurrency();
+        if ($current !== $stored || ($this->orderData['currency'] ?? $currency) !== $currency
+            || abs((float)$cart['totalSum'] - (float)($this->orderData['cost'] ?? 0)) >= 0.005) {
+            $this->orderData['products'] = $cart['items'];
+            $this->orderData['cost'] = $cart['totalSum'];
+            $this->orderData['currency'] = $currency;
+            $_SESSION['sCheckout'] = $this->orderData;
+
+            return [
+                'success' => false,
+                'message' => __('sCommerce::global.checkout_cart_changed'),
+                'error_code' => 'cart_changed',
+                'products' => $cart['items'],
+                'cost' => $cart['totalSum'],
+            ];
+        }
+        $this->orderData['products'] = $cart['items'];
+
+        return null;
+    }
+
+    /**
+     * Delivery method chosen in the checkout data while a delivery is needed.
+     */
+    private function selectedDeliveryMethod(): ?DeliveryMethodInterface
+    {
+        $method = $this->orderData['delivery']['method'] ?? null;
+
+        return $this->requiresDelivery() && is_string($method) ? ($this->deliveryMethods[$method] ?? null) : null;
+    }
+
+    /**
+     * Delivery cost in the order currency. A method states its cost in the currency of its settings row
+     * (`getCostCurrency()`), else in the main shop currency. Negative and non-finite costs count as 0.
+     */
+    private function deliveryCost(DeliveryMethodInterface $method): float
+    {
+        $cost = (float)$method->calculateCost($this->orderData);
+        if (!is_finite($cost) || $cost <= 0) {
+            return 0.0;
+        }
+        $from = method_exists($method, 'getCostCurrency') ? strtoupper(trim((string)$method->getCostCurrency())) : '';
+        $from = $from !== '' ? $from : strtoupper(trim((string)sCommerce::config('basic.main_currency', 'USD')));
+        $to = strtoupper(trim((string)($this->orderData['currency'] ?? ''))) ?: sCommerce::currentCurrency();
+
+        return round($from === $to ? $cost : (float)sCommerce::convertPriceNumber($cost, $from, $to), 2);
+    }
+
+    /**
+     * Failure response for lines with less stock than ordered.
+     *
+     * @param list<string> $titles Product titles.
+     */
+    private static function outOfStock(array $titles): array
+    {
+        return [
+            'success' => false,
+            'message' => __('sCommerce::global.product_title_is_out_of_stock', ['title' => implode(', ', $titles)]),
+            'error_code' => 'out_of_stock',
+        ];
     }
 
     /**
@@ -1119,9 +1271,9 @@ class sCheckout
         if ($canStore) {
             CheckoutContext::apply($order, $context);
         }
-        // VAT display values depend on the visitor's mode; they are not order data.
+        // VAT display values depend on the visitor's mode and the cart entry quantity is a cart control; they are not order data.
         if (is_array($order->products)) {
-            $display = array_flip(VatDisplay::keys());
+            $display = array_flip([...VatDisplay::keys(), CartLineParts::CART_QUANTITY]);
             $order->products = OrderTaxes::applyRetailExcise(array_map(static fn ($line) => is_array($line) ? array_diff_key($line, $display) : $line, $order->products));
         }
 

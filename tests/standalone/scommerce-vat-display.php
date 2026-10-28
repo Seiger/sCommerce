@@ -114,6 +114,27 @@ $settings = file_get_contents($package . '/views/partials/settingsProductConfigu
 $check(str_contains($settings, 'data-feature-toggle="vat_display_on"') && str_contains($settings, 'data-feature-toggle="retail_excise_on"')
     && str_contains($settings, 'data-feature="vat_display_on"'), 'Settings show the fields of enabled features only');
 $check(str_contains(file_get_contents($package . '/src/Services/ProductListingService.php'), 'VatDisplay::pricing('), 'Listing cards carry the display values');
+
+// Manager product list: the price without VAT and the included excise, a column of its own.
+$shop->config['product.vat_rate'] = 23;
+$shop->config['product.retail_excise_on'] = 1;
+$listed = (new sProduct())->forceFill(['id' => 77, 'sku' => 'BEER', 'currency' => 'EUR', 'price_regular' => 129.15, 'price_special' => 0]);
+$check($listed->priceNetTo('EUR') === 'EUR 100.00', 'List price without VAT and excise');
+$listed->sku = 'MUG';
+$check($listed->priceNetTo('EUR') === 'EUR 105.00', 'List price without VAT');
+$list = file_get_contents($package . '/views/partials/settingsProductsConfiguration.blade.php');
+$tab = file_get_contents($package . '/views/productsTab.blade.php');
+$netRow = substr($list, strpos($list, '<label for="products__show_field_price_net"') - 200, 200);
+$check(str_contains($netRow, 'data-feature="vat_display_on"')
+    && substr_count($tab, "config('products.show_field_price_net', 1) && \Seiger\sCommerce\Services\VatDisplay::enabled()") === 2
+    && str_contains($tab, '$item->priceNetTo($item->currency)'), 'Product list column without VAT, only while prices without VAT are on');
+$section = file_get_contents($package . '/views/partials/settingsProductsSectionConfiguration.blade.php');
+$measured = file_get_contents($package . '/views/partials/settingsMeasuredQuantitiesConfiguration.blade.php');
+$column = substr($section, strpos($section, 'scommerce-products-settings-column">'));
+$check(str_contains($column, "@include('sCommerce::partials.settingsProductsConfiguration')") && str_contains($column, "@include('sCommerce::partials.settingsMeasuredQuantitiesConfiguration')")
+    && str_contains($section, "@lang('sCommerce::global.measures_settings')") && str_contains($measured, "@lang('sCommerce::global.quantity_rounding_settings')")
+    && str_contains(file_get_contents($package . '/views/settingsTab.blade.php'), '.scommerce-products-settings-section--measured)')
+    && !str_contains($settings, 'product__measures[') && !str_contains($settings, 'product__quantity_rounding['), 'Measured quantities: a block at the end of the second column, labels above the controls');
 $check(sCommerce::supportsIntegration('vat-display'), 'Feature key vat-display');
 
 echo "$checks VAT display checks passed (isolated SQLite; no site database)\n";

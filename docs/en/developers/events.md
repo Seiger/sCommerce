@@ -82,7 +82,10 @@ Settings (**Settings → Product**):
 
 - **Prices without VAT** (`product.vat_display_on`, off by default) switches the feature on. While it is off, the settings below are hidden, prices are always shown with VAT, the display keys equal the charged prices and `scommerce/vat-display` answers `404`;
 - **VAT rate, %** (`product.vat_rate`, default `0`): the rate included in product prices. With `0`, the net price equals the gross price;
-- **Prices shown** (`product.vat_display`, `gross` or `net`, default `gross`): the default for visitors who have not chosen.
+- **Storefront prices by default** (`product.vat_display`, `gross` or `net`, default `gross`): the default for visitors who have not chosen, e.g. `net` for a B2B shop. It affects only the storefront;
+- **Without VAT** in **Presentation of the list of products** (`products.show_field_price_net`, on by default): a manager product list column with the price without VAT and the included retail excise (`sProduct::priceNetTo()`), shown while prices without VAT are on.
+
+Defaults of products sold by measure and the rounding to the step per unit have their own **Measured quantities** block on the same settings page.
 
 The net price is `round(gross / (1 + rate / 100), 2)`. Templates read these values:
 
@@ -192,6 +195,23 @@ server product lines. Submitted quantities stay uncast in both input and lines;
 integer conversion, single-product totals and deposits follow successful validation. Request-supplied `products` are ignored and replaced with
 the actual product or cart lines; partial forms without products skip that rule.
 The package contains no project-specific minimum attribute or policy class.
+
+Since 1.5.0 the storefront is checked before an order is saved:
+
+- `processOrder()` re-prices the lines it kept since `initCheckout()` with current prices, publication,
+  stock and currency. When anything differs it stores the current lines and fails with
+  `error_code` `cart_changed` and the new `products` and `cost`; the customer confirms the order again.
+  Lines above stock fail with `out_of_stock`, in quick orders too.
+- The delivery cost is recalculated on every `setOrderData()` and again in `processOrder()`, and
+  converted from the method's cost currency into the order currency. A failed attempt leaves the
+  checkout data as it was, so a retry never adds the delivery twice.
+- Unpublished products cannot be added to the cart or ordered. Quick orders without a `productId`
+  order the cart; any other value than a whole number is an unknown product. Piece quantities stop at
+  1,000,000, and a negative price from a listener never lowers a total.
+- The `scommerce/process-order` and `scommerce/quick-order` routes return the order as
+  `sOrder::toCustomerArray()` (no manager notes, history or `meta`) and allow `orders.rate_limit`
+  orders per IP address in 10 minutes (default 10, 0 = no limit, **Settings → Cart and orders**);
+  above it they answer `429` with `error_code` `rate_limited`.
 
 These three events use the exact names documented on this page, without the `evolution.` prefix. The previous price-event names `evolution.sCommerceResolveProductPriceMode` and `evolution.sCommerceResolveProductPrice` are no longer dispatched; update project listeners and sPricing together with sCommerce.
 
@@ -567,6 +587,80 @@ For products sold by weight, length, volume or count, all stock quantities (inve
 Since 1.5.0, when a manager changes the products of an order whose stock sCommerce reduced locally, the stock follows in the same request: `StockCommitter::adjust($order)` takes or returns the difference for changed, added and removed lines, for piece and measured products alike. Actual quantities of measured lines adjust stock the same way. When a product has too little stock for an increase, the edit is not saved. Orders committed by a stock provider are not adjusted locally; the provider sees `sCommerce.OrderUpdated`. A later return restores exactly the adjusted quantities. Before 1.5.0 manager edits did not change reduced stock.
 
 `sCommerce::supportsIntegration('stock-provider')` reports support.
+
+## Split cart lines
+
+### sCommerce.SplitCartLine
+
+Since 1.5.0, a listener can sell one cart entry (a product with an option and a quantity) as several order lines with different prices. sCommerce itself has no stock lots; this event lets a lot package or an ERP adapter apply its own rules. Typical cases:
+
+- Excise goods with a price fixed per lot: the units of the older lot are sold at its price before the next lot opens.
+- Perishables: units of a lot close to its expiry date and time are sold first at a markdown price, the rest of the same entry at the regular price.
+- Goods that must come from one batch, such as tiles of one shade: the listener names the batch on the line.
+
+The cart, the checkout and the single-product quick order dispatch the event for every entry after its price is resolved. The payload contains `product`, `optionId`, `quantity` (base units for products sold by measure), `currency` and `pricing` (the resolved price of the entry, see [sCommerce.ResolveProductPrice](#scommerceresolveproductprice)). The first listener that returns an array decides; return `null` to leave the entry as one line.
+
+The response is a list of parts whose quantities add up to the entry quantity:
+
+| Key | Required | Meaning |
+|---|---|---|
+| `key` | yes | Unique within the entry: 1 to 40 letters, digits, `.`, `_` or `-`, for example `lot-11` |
+| `quantity` | yes | Positive integer |
+| `priceAsFloat` | no | Unit price in `currency`; without it the part has the price of the entry |
+| `oldPriceAsFloat` | no | Crossed-out price of a markdown; only together with `priceAsFloat`, default none |
+| `label` | no | Text up to 255 characters for the customer and the manager, for example `Best before 27.10 18:00` |
+| `allocation` | no | JSON-encodable array stored on the order line as it is, for example the lot ids and quantities |
+
+Any other response, such as quantities with a different sum, a duplicate key or a negative price, throws `UnexpectedValueException`, so a listener error is never sold at a wrong price.
+
+```php
+use Illuminate\Support\Facades\Event;
+use Seiger\sCommerce\Cart\CartLineParts;
+
+Event::listen(CartLineParts::EVENT, function (array $payload) {
+    $lots = MyLots::sellable($payload['product']->id); // oldest first, each with id, quantity, price, markdown
+    if ($lots === []) {
+        return null;
+    }
+    $parts = [];
+    $left = $payload['quantity'];
+    foreach ($lots as $lot) {
+        $units = min($left, $lot->quantity);
+        if ($units > 0) {
+            $parts[] = array_filter([
+                'key' => 'lot-' . $lot->id,
+                'quantity' => $units,
+                'priceAsFloat' => $lot->markdown ?? $lot->price,
+                'oldPriceAsFloat' => $lot->markdown !== null ? $payload['pricing']['priceAsFloat'] : null,
+                'label' => $lot->markdown !== null ? 'Best before ' . $lot->expiresAt->format('d.m H:i') : null,
+                'allocation' => ['lots' => [['id' => $lot->id, 'quantity' => $units]]],
+            ], static fn ($value) => $value !== null);
+            $left -= $units;
+        }
+    }
+
+    return $parts;
+});
+```
+
+Each part becomes one cart and order line:
+
+- Its `line_key` is `{productId}:{optionId}:{key}`, for example `5:0:lot-11`.
+- Its price, sum, VAT and deposit keys are calculated for the part. Declared container exchanges fill the parts in order.
+- It carries `part_key`, `part_label` (when given) and `allocation` (when given). Order emails, the manager order screen and the print form show `part_label` under the product title.
+- In the cart only, `cart_quantity` is the quantity of the whole entry. A quantity control of a split line must send this entry quantity, because `sCart::addProduct()` sets the quantity of the entry, not of one part. `cart_quantity` is not stored on orders.
+
+The checkout prices its lines again before saving the order. When the split changed meanwhile, for example a lot sold out, the line keys or prices differ, and the customer gets `cart_changed` with the new lines and total.
+
+The listener also has to make the rest of the lot rules consistent:
+
+- **Stock.** Make `sCommerce.ResolveProductStock` or a stock provider return what can be sold.
+- **Catalog price.** Make `sCommerce.ResolveProductPrice` return the price of the first unit, for product cards.
+- **Committing stock.** Lot stock is committed by a `StockProviderInterface`, which reads `allocation` from the order lines. sCommerce does not interpret allocations. Its local stock reduction counts the parts of a product together, as before.
+
+Part keys stay on the server: when a manager saves an order, lines keep the `part_key`, `part_label` and `allocation` stored under their `line_key`, and lines added in the manager have none. A manager who changes the quantity of a split line changes the line, not its allocation; the stock provider sees `sCommerce.OrderUpdated`. Repeated orders keep the stored prices and labels but drop `allocation`.
+
+`sCommerce::supportsIntegration('line-parts')` reports support.
 
 ## Additional manager and frontend events
 

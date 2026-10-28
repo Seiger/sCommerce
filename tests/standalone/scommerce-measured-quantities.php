@@ -266,6 +266,13 @@ $check($quick['success'] && (float)$quick['order']->cost === 3.04 && $quickLine[
     && $quickLine['quantity_label'] === '2.53 m' && $quickLine['sumAsFloat'] === 3.04 && $quickLine['line_weight'] === 316, 'Quick order line and cost');
 $quick = sCheckout::quickOrder(['productId' => 10, 'quantity' => 2533, 'email' => 'quick@shop.test']);
 $check($quick['order']->products[0]['quantity'] === 2540, 'Quick order fits the step');
+$check((float)$quick['order']->cost === 3.05 && $quick['order']->products[0]['sumAsFloat'] === 3.05, 'Quick order cost follows the measured total, not price times base units');
+$ordersBefore = sOrder::count();
+foreach (['abc', [], '1.5', 0, -5] as $rawQuantity) {
+    $quick = sCheckout::quickOrder(['productId' => 10, 'quantity' => $rawQuantity, 'email' => 'quick@shop.test']);
+    $check($quick['success'] === false && ($quick['error_code'] ?? '') === 'checkout_validation', 'Invalid raw measured quantity is refused by validation');
+}
+$check(sOrder::count() === $ordersBefore, 'Refused measured quick orders are not persisted');
 $events = [];
 $_SESSION['sCart'] = [10 => [0 => 2530], 11 => [0 => 1]];
 $mini = (new sCart())->getMiniCart();

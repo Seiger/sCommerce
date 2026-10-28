@@ -1,14 +1,15 @@
 <?php namespace Seiger\sCommerce\Services;
 
+use Seiger\sCommerce\Cart\CartLineParts;
 use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Models\sOrder;
 
 /**
  * Apply the products a manager edited in the order form.
  *
- * The browser posts the whole `products` list. Identity, measured rules and actual quantities
- * stay server-side: lines with a stored `line_key` keep their stored keys, other lines get them
- * from the current product. Measured quantities are validated strictly; nothing is rounded.
+ * The browser posts the whole `products` list. Identity, measured rules, actual quantities and
+ * the part keys of split cart entries ({@see CartLineParts}) stay server-side: lines with a stored
+ * `line_key` keep their stored keys, other lines get them from the current product. Measured quantities are validated strictly; nothing is rounded.
  * Delivery cost and other non-product amounts of the order cost are kept.
  *
  * @since 1.5.0
@@ -28,7 +29,8 @@ final class OrderLineEditor
     {
         $stored = is_array($order->products) ? $order->products : [];
         $currency = (string)$order->currency;
-        $lines = app(OrderLineIdentity::class)->fillMissing(MeasuredQuantity::restoreStoredRules($stored, $edited), $currency);
+        $edited = CartLineParts::restoreStored($stored, MeasuredQuantity::restoreStoredRules($stored, $edited));
+        $lines = app(OrderLineIdentity::class)->fillMissing($edited, $currency);
         foreach ($lines as $index => $line) {
             if (!is_array($line) || !isset($line['measure'])) {
                 continue;
