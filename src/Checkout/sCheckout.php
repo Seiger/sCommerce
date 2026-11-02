@@ -802,6 +802,8 @@ class sCheckout
             } elseif ($quantity > $rules->max) {
                 return ['success' => false, 'message' => __('sCommerce::global.quantity_too_large', ['max' => $rules->max]),
                     'error_code' => 'checkout_validation'];
+            } else {
+                $quantity = (int) $quantity;
             }
             if (($shortages = sCart::shortages([$productId => [$optionId => $quantity]])) !== []) {
                 return self::outOfStock($shortages);
