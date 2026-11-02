@@ -64,6 +64,8 @@ foreach (['1.5', 1.5, 'abc', [], 0, -1, '999999999999999999999999'] as $rawQuant
 $seenBefore = count($seen);
 $result = sCheckout::quickOrder(['productId' => 1, 'quantity' => '3', 'phone' => '123456789']);
 $check($result['success'] && count($seen) === $seenBefore + 1, 'Valid string quantity is validated once');
+$payload = $seen[array_key_last($seen)];
+$check($payload['data']['quantity'] === '3' && $payload['data']['products'][0]['quantity'] === '3', 'Valid string quantity remains raw for validation plugins');
 $check($result['order']->products[0]['quantity'] === 3 && (float) $result['order']->cost === 30.0, 'Accepted quantity becomes integer before totals and persistence');
 $_SESSION['sCart'] = [1 => [0 => 3]];
 // Product quick orders resolve the cart facade for stock checks; a request starts with the session cart.
