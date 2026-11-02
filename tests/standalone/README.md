@@ -1,5 +1,14 @@
 # Isolated sCommerce regression checks
 
+The not-found listener checks need only PHP, without CMS dependencies. Run each
+scenario in a separate process because Manager/API mode constants are immutable:
+
+```sh
+for scenario in missing manager api product language empty unknown forwarded error-page unauthorized-page; do
+    php tests/standalone/scommerce-not-found-request.php "$scenario" || exit 1
+done
+```
+
 Run from the package root with PHP 8.4, SQLite and the dependencies of a compatible
 Evolution CMS installation. The CMS is not bootstrapped; database checks use in-memory SQLite.
 

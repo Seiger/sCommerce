@@ -10,11 +10,27 @@ use Seiger\sCommerce\Facades\sCommerce;
 use Seiger\sCommerce\Facades\sFilter;
 
 /**
- * Catch the Product by alias
+ * Resolve storefront product aliases only when an HTTP request is available.
+ *
+ * Legacy Manager/API entrypoints can dispatch OnPageNotFound before binding
+ * the request service. Their error handling must not enter storefront routing.
  */
 Event::listen('evolution.OnPageNotFound', function() {
+    if (
+        (defined('IN_MANAGER_MODE') && IN_MANAGER_MODE)
+        || (defined('EVO_API_MODE') && EVO_API_MODE)
+        || !app()->bound('request')
+    ) {
+        return;
+    }
+
+    // An internal forward has already resolved this request.
+    if (evo()->documentMethod === 'id') {
+        return;
+    }
+
     $aliasArr = request()->segments();
-    if ($aliasArr[0] === evo()->getConfig('lang', 'base')) {
+    if (($aliasArr[0] ?? null) === evo()->getConfig('lang', 'base')) {
         unset($aliasArr[0]);
     }
     $alias = implode('/', $aliasArr);
@@ -63,9 +79,18 @@ Event::listen('evolution.OnWebPageInit', function() {
 });
 
 /**
- * Get document fields and add to array of resource fields
+ * Project product fields onto storefront documents while preserving error responses.
+ *
+ * A stale product placeholder must not replace an internally forwarded 404/401 page.
  */
 Event::listen('evolution.OnBeforeLoadDocumentObject', function($params) {
+    // Never replace an error response with the product that failed to render.
+    if (evo()->documentMethod === 'id' && in_array((int)evo()->documentIdentifier, [
+        (int)evo()->getConfig('error_page'), (int)evo()->getConfig('unauthorized_page'),
+    ], true)) {
+        return;
+    }
+
     $requestId = (int)evo()->getPlaceholder('product');
 
     if ($requestId) {
