@@ -24,6 +24,7 @@
 [![Stars](https://img.shields.io/packagist/stars/Seiger/scommerce)](https://packagist.org/packages/seiger/scommerce)
 [![Total Downloads](https://img.shields.io/packagist/dt/seiger/scommerce)](https://packagist.org/packages/seiger/scommerce)
 [![Liberapay](https://img.shields.io/liberapay/patrons/seigerkornelyuk.svg?logo=liberapay)](https://packagist.org/packages/seiger/scommerce)
+![Made in Ukraine](https://img.shields.io/badge/made_in-Ukraine-ffd700.svg?labelColor=0057b7)
 
 # Welcome to sCommerce!
 

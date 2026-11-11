@@ -7,6 +7,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -402,33 +403,38 @@ class sCommerce
     }
 
     /**
-     * Retrieves the currencies from cache or includes them from a config file if not found.
+     * Return the shared currency directory, optionally filtered by currency codes.
      *
-     * @param array|null $where An optional array of criteria to filter the currencies.
-     * @return Collection The currencies retrieved from cache or an empty collection if not found.
+     * On a shared-cache miss, load the ISO directory and invoke each registered
+     * sCommerce.ResolveCurrencies listener with ['currencies' => Collection]. Each
+     * listener receives the previous result and may return a Collection or null.
+     * Apply project currencies.<alpha> settings after all listeners, then cache the
+     * complete list for 2,629,743 seconds. Filtering never changes the cached list.
+     *
+     * Listener developers own the correctness of custom rows and must return data
+     * independent of the current user or session. After changing listener data or
+     * settings, use system cache cleanup; this instance retains its in-memory list
+     * for the remainder of the request. This method does not configure exchange rates.
+     *
+     * @param list<string>|null $where ISO or custom codes; null or [] returns the full directory.
+     * @return Collection<int, array<string, mixed>> Currency rows after listener and project overrides.
+     * @since 1.5.0 Supports the cached sCommerce.ResolveCurrencies extension event.
      */
     public function getCurrencies(?array $where = null): Collection
     {
-        if (!$this->currencies) {
-            $this->currencies = Cache::remember('currencies', 2629743, function () {
-                $reflector = new \ReflectionClass(self::class);
-                $list = include dirname($reflector->getFileName(), 2) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'currencies.php';
-                return $list->map(function ($item) {
-                    if ($this->config('currencies.'.$item['alpha'])) {
-                        $item = array_merge($item, $this->config('currencies.'.$item['alpha']));
-                    }
-                    return $item;
-                });
-            });
-        }
+        $this->currencies ??= Cache::remember('currencies', 2629743, static function () {
+            $list = include __DIR__ . '/../config/currencies.php';
+            foreach (Event::getListeners('sCommerce.ResolveCurrencies') as $listener) {
+                $list = $listener('sCommerce.ResolveCurrencies', [['currencies' => $list]]) ?? $list;
+            }
 
-        $currencies = $this->currencies;
+            return $list->map(static fn (array $item): array => array_merge(
+                $item,
+                self::config('currencies.' . $item['alpha'], []) ?: [],
+            ))->values();
+        });
 
-        if ($where) {
-            $currencies = $this->currencies->whereIn('alpha', $where)->values();
-        }
-
-        return $currencies ?? collect([]);
+        return $where ? $this->currencies->whereIn('alpha', $where)->values() : $this->currencies;
     }
 
     /**

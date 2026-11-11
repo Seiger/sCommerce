@@ -678,3 +678,44 @@ sCommerce.onUpdatedCart = (data) => console.log(data);
 sCommerce.onFastOrder = (data) => console.log(data);
 sCommerce.onWishlist = (data) => console.log(data);
 ```
+
+## sCommerce.ResolveCurrencies
+
+Extend, replace or filter the shared currency directory without editing `config/currencies.php`.
+On a cache miss, sCommerce loads the ISO directory, calls each listener in registration order,
+applies project `sCommerce.currencies.<alpha>` settings and caches the full list
+for approximately one month. Each listener receives `['currencies' => Collection]` containing the previous
+listener's result and may return a replacement Collection or null. The optional `getCurrencies($where)`
+filter runs after caching.
+
+Example listener implementation that adds a custom currency:
+
+```php
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Event;
+// Register in the project service provider before the first currency lookup.
+Event::listen('sCommerce.ResolveCurrencies', static function (array $payload): Collection {
+    return $payload['currencies']->concat([[
+        'name' => 'Euro Walraven',
+        'alpha' => 'EUR_WAL',
+        'numeric' => null,
+        'symbol' => '€',
+        'position' => 'before',
+        'show' => 1,
+        'thousands' => '&nbsp;',
+        'decimals' => '.',
+        'exp' => 2,
+        'country' => [],
+    ]]);
+});
+```
+
+Settings also apply to custom rows: for example `currencies.EUR_WAL.symbol` can override the listener's symbol.
+Listeners run only when rebuilding the shared cache and must not depend on users, sessions or requests.
+Do not clear the cache on every request or inside the listener. Register listeners before any currency lookup.
+After updating listener data, project settings or listener code, use the system cache cleanup.
+The next request rebuilds the directory; an already-loaded instance keeps its in-memory list until the request ends.
+
+This hook extends the directory only. API payload validation, sPricing storage and conversion must separately
+support custom codes before importing prices in them. Clear the existing currency cache after installing this hook
+so a previously cached list does not bypass listeners.

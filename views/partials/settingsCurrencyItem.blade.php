@@ -5,7 +5,7 @@
             <span class="scommerce-currency-move">
                 <button type="button" data-currency-move="-1" title="@lang('sCommerce::global.move_up')" aria-label="@lang('sCommerce::global.move_up')"><i class="fas fa-caret-up"></i></button>
                 <button type="button" data-currency-move="1" title="@lang('sCommerce::global.move_down')" aria-label="@lang('sCommerce::global.move_down')"><i class="fas fa-caret-down"></i></button>
-            </span>&emsp; {{$alpha ?? ''}} ({!!$symbol ?? ''!!}) - {{$name ?? ''}}
+            </span>&emsp; {{$alpha ?? ''}} ({!!$symbol ?? ''!!}) - {{$name ?? ''}}@if(filled($numeric ?? null)) ({{ $numeric }})@endif
             <span class="close-icon" onclick="deleteItem(this.closest('.scommerce-currency-item'))"><i class="fa fa-times"></i></span>
         </div>
         <div class="card-block">

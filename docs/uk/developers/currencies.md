@@ -83,3 +83,54 @@ echo $product->priceTo('EUR');
 ## Курси валют
 
 Доступні та основну валюту задають у налаштуваннях. Вкладка Валюти з’являється, коли ввімкнено понад одну валюту. A → B — окремий множник конвертації: дозволені 50.55 і 0.012345. Зворотну пару задайте явно; автоматичного завантаження курсів немає. Значення зберігаються в core/custom/config/seiger/settings/sCommerceCurrencies.php. Для відсутньої пари типовий курс — 1; явно заданий нуль не слід трактувати як гарантоване 1:1. Кількість знаків у відображенні ціни налаштовується окремо від точності курсу.
+
+
+## Перемикач валюти на сайті
+
+Увімкніть валюти в налаштуваннях Commerce і задайте курси для потрібних пар. Для відсутнього курсу використовується `1`. `getCurrencies()` повертає довідник валют; для перемикача використовуйте список магазину `basic.available_currencies`.
+
+Додайте цей POST-маршрут у файл маршрутів вашого проєкту, який завантажує його service provider. `/shop/currency` — маршрут проєкту; sCommerce його не реєструє. Middleware `web` забезпечує CSRF-захист форми. Зберігайте вибір у `$_SESSION`, звідки його читає sCommerce:
+
+```php
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Seiger\sCommerce\Facades\sCommerce;
+
+Route::middleware('web')->post('/shop/currency', function (Request $request) {
+    $data = $request->validate([
+        'currency' => ['required', 'string'],
+    ]);
+
+    $currency = strtoupper(trim($data['currency']));
+    $allowed = (array) sCommerce::config('basic.available_currencies', []);
+
+    abort_unless(in_array($currency, $allowed, true), 422);
+
+    $_SESSION['currency'] = $currency;
+
+    return back();
+})->name('shop.currency');
+```
+
+Додайте перемикач у Blade-шаблон:
+
+```blade
+<form method="POST" action="{{ route('shop.currency') }}">
+    @csrf
+
+    <select name="currency" onchange="this.form.submit()">
+        @foreach((array) sCommerce::config('basic.available_currencies', []) as $code)
+            <option value="{{ $code }}"
+                @selected(sCommerce::currentCurrency() === $code)>
+                {{ $code }}
+            </option>
+        @endforeach
+    </select>
+
+    <button type="submit">Змінити валюту</button>
+</form>
+```
+
+Маршрут перевіряє код за списком увімкнених валют магазину, зберігає його на поточну сесію й повертає відвідувача назад. sCommerce спочатку читає сесію, потім cookie `currency`, а за відсутності вибору використовує `basic.main_currency`. Цей приклад не створює постійного cookie.
+
+Залиште перенаправлення: `currentCurrency()` кешує валюту на час поточного запиту. Наступний запит показує ціни й перераховує суми кошика в обраній валюті. Для AJAX-реалізації перезавантажте сторінку після успішного запису замість формування цін у тому самому запиті. Розміщуйте перемикач до оформлення замовлення; валюту вже створеного замовлення він не змінює.

@@ -31,7 +31,7 @@
         <select name="select_available_currencies" class="form-control niceSelect2SearchCurrencies">
             <option value=""></option>
             @foreach(sCommerce::getCurrencies() as $currency)
-                <option value="{{$currency['alpha']}}">{{$currency['alpha']}} ({{$currency['symbol']}}) - {{$currency['name']}}</option>
+                <option value="{{$currency['alpha']}}">{{$currency['alpha']}} ({{$currency['symbol']}}) - {{$currency['name']}}@if(filled($currency['numeric'] ?? null)) ({{ $currency['numeric'] }})@endif</option>
             @endforeach
         </select>
     </div>
