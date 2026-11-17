@@ -6,8 +6,11 @@ use Seiger\sCommerce\Cart\sCart;
 use Seiger\sCommerce\Checkout\sCheckout;
 use Seiger\sCommerce\Events\DomainEventRecorder;
 use Seiger\sCommerce\Filter\sFilter;
+use Seiger\sCommerce\Services\ProductGalleryPolicy;
 use Seiger\sCommerce\Services\sPriceResolver;
 use Seiger\sCommerce\Wishlist\sWishlist;
+use Seiger\sGallery\Services\GalleryAccess;
+use Seiger\sGallery\Services\GallerySettings;
 
 /**
  * sCommerceServiceProvider - Service Provider for sCommerce package
@@ -29,6 +32,7 @@ class sCommerceServiceProvider extends ServiceProvider
      * This method is called after all service providers have been registered.
      * It sets up routes, views, translations, migrations, and registers
      * core sCommerce services as singletons in the application container.
+     * It also registers the default access policy for product galleries.
      *
      * @return void
      */
@@ -45,6 +49,8 @@ class sCommerceServiceProvider extends ServiceProvider
 
         // Add custom routes for package
         $this->loadRoutes();
+
+        $this->registerProductGalleryPolicy();
 
         // Views
         $this->loadViews();
@@ -116,6 +122,29 @@ class sCommerceServiceProvider extends ServiceProvider
             ]);
         }
 
+    }
+
+    /**
+     * Supply the product policy to sGallery when the installed version supports it.
+     * Site policies take precedence, including an explicit opt-out.
+     *
+     * @since 1.5.0
+     */
+    protected function registerProductGalleryPolicy(): void
+    {
+        if (!class_exists(GalleryAccess::class)) {
+            return;
+        }
+
+        $config = $this->app['config'];
+        $settings = $config->get('seiger.settings.sGallery') ?? GallerySettings::defaults();
+        $policies = $settings['itemPolicies'] ?? [];
+        if (!is_array($policies) || array_key_exists('product', $policies)) {
+            return;
+        }
+
+        $settings['itemPolicies']['product'] = [ProductGalleryPolicy::class, 'allows'];
+        $config->set('seiger.settings.sGallery', $settings);
     }
 
     /**
