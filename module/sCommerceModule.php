@@ -6,6 +6,7 @@
 use EvolutionCMS\Facades\ManagerTheme;
 use EvolutionCMS\Models\SiteContent;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
@@ -2638,6 +2639,10 @@ switch ($get) {
         $_SESSION['itemaction'] = 'Editing Settings';
         break;
     case "settingsSave":
+        if (!evo()->hasPermission('settings')) {
+            throw new HttpResponseException(response('', 403));
+        }
+
         $sCommerceController->updateDBConfigs();
         $sCommerceController->updateFileConfigs();
         evo()->invokeEvent('sCommerceManagerSettingsSaveEvent', [
