@@ -176,19 +176,22 @@ class sCommerce
     {
         $lang = !$lang ? evo()->getLocale() : $lang;
         $this->sort = empty($this->sort) ? [$this->controller->validateSort()] : $this->sort;
+        $categoryId = $this->getCategoryId();
+        $positions = DB::table('s_product_category');
+        $categoryColumn = $positions->getGrammar()->wrap('s_product_category.category');
 
         $query = sProduct::lang($lang)->withCount(['activeReviews as published_reviews_count'])
             ->addSelect(['position' =>
-                DB::table('s_product_category')
+                $positions
                     ->select('position')
                     ->whereColumn('s_product_category.product', 's_products.id')
-                    ->where(function($subQuery) {
+                    ->where(function ($subQuery) use ($categoryId) {
                         $subQuery
-                            ->where('s_product_category.category', $this->getCategoryId())
+                            ->where('s_product_category.category', $categoryId)
                             ->orWhere('s_product_category.scope', 'primary');
                     })
-                    // Prefer the row of the current category (manual order from admin) over the primary one
-                    ->orderByRaw('(' . DB::getTablePrefix() . 's_product_category.category = ' . (int)$this->getCategoryId() . ') desc')
+                    // Prefer the position set in the current category over the primary category position.
+                    ->orderByRaw("($categoryColumn = ?) desc", [$categoryId])
                     ->limit(1)
             ])
             ->whereIn('id', $productIds)
