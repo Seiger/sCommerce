@@ -187,6 +187,8 @@ class sCommerce
                             ->where('s_product_category.category', $this->getCategoryId())
                             ->orWhere('s_product_category.scope', 'primary');
                     })
+                    // Prefer the row of the current category (manual order from admin) over the primary one
+                    ->orderByRaw('(' . DB::getTablePrefix() . 's_product_category.category = ' . (int)$this->getCategoryId() . ') desc')
                     ->limit(1)
             ])
             ->whereIn('id', $productIds)
