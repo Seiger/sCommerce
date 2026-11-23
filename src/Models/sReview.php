@@ -1,11 +1,10 @@
 <?php namespace Seiger\sCommerce\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Class sReview
+ * Store product reviews and rank text matches using bound search values.
  *
  * @package Seiger\sCommerce
  */
@@ -27,7 +26,7 @@ class sReview extends Model
     }
 
     /**
-     * Apply search filters to the query
+     * Filter and rank reviews without interpolating search values into SQL.
      *
      * @param \Illuminate\Database\Eloquent\Builder $builder The query builder object
      *
@@ -46,11 +45,20 @@ class sReview extends Model
                 ->filter(fn($word) => mb_strlen($word) > 2);
 
             $select = collect([0]);
+            $bindings = [];
 
-            $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$search->implode(' ')}%' THEN 10 ELSE 0 END)")); // Generate Exact match points source
-            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate Partial match points source
+            foreach ($fields as $field) {
+                $select->push('(CASE WHEN ' . $builder->getGrammar()->wrap($field) . ' LIKE ? THEN 10 ELSE 0 END)');
+                $bindings[] = '%' . $search->implode(' ') . '%';
+            }
+            foreach ($search as $word) {
+                foreach ($fields as $field) {
+                    $select->push('(CASE WHEN ' . $builder->getGrammar()->wrap($field) . ' LIKE ? THEN 1 ELSE 0 END)');
+                    $bindings[] = "%{$word}%";
+                }
+            }
 
-            return $builder->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
+            return $builder->addSelect('*')->selectRaw('(' . $select->implode(' + ') . ') as points', $bindings)
                 ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
                 ->orderByDesc('points');
         }

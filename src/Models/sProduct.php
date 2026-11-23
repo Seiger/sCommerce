@@ -358,7 +358,10 @@ class sProduct extends Model
     }
 
     /**
-     * Apply search filters to the query
+     * Filter and rank product matches with bound search values.
+     *
+     * Keep the exact-phrase and word weights while treating punctuation in
+     * user input as data in both the score expression and the WHERE clause.
      *
      * @since 1.0.12
      * @param \Illuminate\Database\Eloquent\Builder $builder The query builder object
@@ -389,11 +392,20 @@ class sProduct extends Model
             $searchPhrase = $search->implode(' ');
 
             $select = collect([0]);
+            $bindings = [];
 
-            $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$searchPhrase}%' THEN 10 ELSE 0 END)")); // Generate Exact match points source
-            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN ".$builder->getGrammar()->wrap($field)." LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate Partial match points source
+            foreach ($fields as $field) {
+                $select->push('(CASE WHEN ' . $builder->getGrammar()->wrap($field) . ' LIKE ? THEN 10 ELSE 0 END)');
+                $bindings[] = "%{$searchPhrase}%";
+            }
+            foreach ($search as $word) {
+                foreach ($fields as $field) {
+                    $select->push('(CASE WHEN ' . $builder->getGrammar()->wrap($field) . ' LIKE ? THEN 1 ELSE 0 END)');
+                    $bindings[] = "%{$word}%";
+                }
+            }
 
-            $s = $builder->addSelect(DB::Raw('(' . $select->implode(' + ') . ') as points'));
+            $s = $builder->selectRaw('(' . $select->implode(' + ') . ') as points', $bindings);
             $s->when($search->count(), function ($query) use ($fields, $search, $searchMode, $searchPhrase) {
                 if ($searchMode === 'focused') {
                     $query->where(function ($query) use ($fields, $searchPhrase) {
