@@ -80,7 +80,7 @@ class sAttribute extends Model
     }
 
     /**
-     * Apply search filters to the query
+     * Filter and rank attributes using bound word patterns.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query The query builder object
      *
@@ -99,10 +99,16 @@ class sAttribute extends Model
                 ->filter(fn($word) => mb_strlen($word) > 2);
 
             $select = collect([0]);
+            $bindings = [];
 
-            $search->map(fn($word) => $fields->map(fn($field) => $select->push("(CASE WHEN \"{$field}\" LIKE '%{$word}%' THEN 1 ELSE 0 END)"))); // Generate points source
+            foreach ($search as $word) {
+                foreach ($fields as $field) {
+                    $select->push('(CASE WHEN ' . $query->getGrammar()->wrap($field) . ' LIKE ? THEN 1 ELSE 0 END)');
+                    $bindings[] = "%{$word}%";
+                }
+            }
 
-            return $query->addSelect('*', DB::Raw('(' . $select->implode(' + ') . ') as points'))
+            return $query->addSelect('*')->selectRaw('(' . $select->implode(' + ') . ') as points', $bindings)
                 ->when($search->count(), fn($query) => $query->where(fn($query) => $search->map(fn($word) => $fields->map(fn($field) => $query->orWhere($field, 'like', "%{$word}%")))))
                 ->orderByDesc('points');
         }
