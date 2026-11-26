@@ -131,7 +131,7 @@ class LegacyShop extends sCommerce
 }
 
 // The complete webhook example from the English docs is the fixture, so it is syntax-checked and exercised.
-$docs = file_get_contents($package . '/docs/en/developers/payments/index.md');
+$docs = str_replace("\r\n", "\n", file_get_contents($package . '/docs/en/developers/payments/index.md'));
 preg_match_all('/```php\n(.*?)```/s', $docs, $blocks);
 $example = current(array_filter($blocks[1], static fn ($block) => str_contains($block, 'class ExamplePspPayment')));
 $check(is_string($example) && str_starts_with($example, '<?php namespace EvolutionCMS\Main\Payment;'), 'Docs contain the webhook example');

@@ -74,8 +74,9 @@ class sFilter
     /**
      * Retrieves filters associated with a specific category.
      *
-     * This method generates a collection of filters based on attributes
-     * and their corresponding values for the products within the specified category.
+     * Aggregate distinct product counts once for filter attributes in the current
+     * product selection. Build category filters from these counts, retaining selected
+     * values even when their count is zero. Price ranges use their separate query.
      *
      * @param int|null $category The ID of the category for which filters are retrieved.
      * @param string|null $lang  The language locale for the filters.
@@ -107,43 +108,18 @@ class sFilter
 
         $categoryParentsIds = $this->controller->categoryParentsIds($category);
 
-        // OPTIMIZATION: Split into two queries to avoid complex JOIN with whereIn
-        // Step 1: Get unique attribute/value/valueid combinations for products
-        $uniqueAttributes = DB::table('s_product_attribute_values as pav')
+        // Aggregate only filter attributes, without rebuilding the same groups as OR predicates.
+        $valuesQuery = DB::table('s_product_attribute_values as pav')
             ->select('pav.attribute', 'pav.value', 'pav.valueid')
             ->join('s_attributes as sa', function ($join) {
                 $join->on('pav.attribute', '=', 'sa.id')
                     ->where('sa.asfilter', '=', 1);
             })
             ->whereIn('pav.product', $productIds)
-            ->groupBy('pav.attribute', 'pav.value', 'pav.valueid')
+            ->groupBy('pav.attribute', 'pav.value', 'pav.valueid');
+        $values = $valuesQuery
+            ->selectRaw('COUNT(DISTINCT ' . $valuesQuery->getGrammar()->wrap('pav.product') . ') as count')
             ->get();
-
-        // Step 2: Count products for each combination
-        if ($uniqueAttributes->isEmpty()) {
-            $values = collect();
-        } else {
-            // Build conditions for all unique combinations
-            $values = DB::table('s_product_attribute_values')
-                ->select(
-                    'attribute',
-                    'value',
-                    'valueid',
-                    DB::raw('COUNT(DISTINCT product) as count')
-                )
-                ->whereIn('product', $productIds)
-                ->where(function ($query) use ($uniqueAttributes) {
-                    foreach ($uniqueAttributes as $attr) {
-                        $query->orWhere(function ($q) use ($attr) {
-                            $q->where('attribute', $attr->attribute)
-                                ->where('value', $attr->value)
-                                ->where('valueid', $attr->valueid);
-                        });
-                    }
-                })
-                ->groupBy('attribute', 'value', 'valueid')
-                ->get();
-        }
 
         // Retrieve attributes that are marked as filters (asfilter=1)
         // and attributes that belong to these categories
@@ -553,21 +529,28 @@ class sFilter
     /**
      * Builds a select or color filter for the given attribute.
      *
-     * @param sAttribute $item   The attribute model.
-     * @param Collection $values Collection of attribute values with counts.
-     * @return sAttribute
+     * Index aggregate rows once for this attribute instead of scanning every row
+     * for each option. Preserve the first matching count, locale-label fallback,
+     * checked state and selected options with zero matching products.
+     *
+     * @param sAttribute $item Attribute whose loaded values are updated in place.
+     * @param Collection<int, object> $values Aggregate attribute/value rows with distinct product counts.
+     * @return sAttribute The same attribute with visible options and their counts.
      */
     protected function buildSelectFilter(sAttribute $item, Collection $values): sAttribute
     {
-        $item->values = $item->values->map(function ($val) use ($item, $values) {
-            $val->link = ($item->alias ?? '') . '=' . ($val->alias ?? '');
+        // Reverse before indexing to preserve the first matching group when valueid repeats.
+        $counts = $values->where('attribute', $item->id)->reverse()->keyBy('valueid');
+        $locale = evo()->getLocale();
+        $alias = $item->alias ?? '';
+        $selected = $this->filters[$alias] ?? [];
+
+        $item->values = $item->values->map(function ($val) use ($counts, $locale, $alias, $selected) {
+            $val->link = $alias . '=' . ($val->alias ?? '');
             $val->value = $val->alias ?? '';
-            $val->label = $val->{evo()->getLocale()} ?? $val->base ?? '';
-            $val->count = (int)$values
-                ->where('valueid', $val->avid)
-                ->where('attribute', $item->id)
-                ->first()?->count ?? 0;
-            $val->checked = (int)(isset($this->filters[$item->alias]) && in_array($val->alias, $this->filters[$item->alias]));
+            $val->label = $val->{$locale} ?? $val->base ?? '';
+            $val->count = (int)($counts->get($val->avid)?->count ?? 0);
+            $val->checked = (int)in_array($val->alias, $selected);
             return $val;
         })->filter(function ($val) {
             return (int)($val->count ?? 0) > 0 || (int)($val->checked ?? 0) === 1;

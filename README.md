@@ -18,7 +18,7 @@
 
 [![Latest Stable Version](https://img.shields.io/packagist/v/seiger/sCommerce?label=version)](https://packagist.org/packages/seiger/scommerce)
 [![CMS Evolution](https://img.shields.io/badge/CMS-Evolution-brightgreen.svg)](https://github.com/evolution-cms/evolution)
-[![PHP: 8.4 and 8.5](https://img.shields.io/badge/PHP-8.4_%7C_8.5-777BB4?logo=php&logoColor=white)](#compatibility)
+[![PHP: 8.4, 8.5 and 8.6](https://img.shields.io/badge/PHP-8.4_%7C_8.5_%7C_8.6-777BB4?logo=php&logoColor=white)](#compatibility)
 [![License](https://img.shields.io/packagist/l/seiger/scommerce)](https://packagist.org/packages/seiger/scommerce)
 [![Issues](https://img.shields.io/github/issues/Seiger/sCommerce)](https://github.com/Seiger/sCommerce/issues)
 [![Stars](https://img.shields.io/packagist/stars/Seiger/scommerce)](https://packagist.org/packages/seiger/scommerce)
@@ -177,6 +177,15 @@ of Evolution CMS for seamless and efficient **online commerce**.
 - PHP **8.4+**
 - Evolution CMS **3.5.8+**
 - Composer
+
+## Compatibility
+
+PHP 8.4 and 8.5 are supported. PHP 8.6 compatibility checks are described below.
+Package PHP files pass syntax checks on PHP 8.6.0, but strict regression tests with
+the installed Evolution dependency tree encounter deprecations in Illuminate
+(`mb_split()` and `spl_object_hash()`) and Carbon (`spl_object_hash()`). Full PHP 8.6
+support remains unconfirmed until the dependency stack passes these checks.
+The PHP 8.6 CI job reports regressions without blocking the supported-version jobs.
 
 ## Install by artisan package installer
 

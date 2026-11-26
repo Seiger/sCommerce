@@ -256,7 +256,7 @@ $mini = (new sCart())->getMiniCart();
 $byId = array_column($mini['items'], null, 'id');
 $check(!array_intersect_key($byId[11], array_flip(array_merge(MeasuredQuantity::LINE_KEYS, MeasuredQuantity::DISPLAY_KEYS))), 'Piece lines have no measured keys');
 $check($byId[13]['quantity'] === 2400 && $byId[13]['sumAsFloat'] === 23.76 && !isset($byId[13]['line_weight']) && $mini['totalSum'] === 3.04 + 25.0 + 23.76, 'Volume line without weight; totals add up');
-$capture = shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/fixtures/piece-cart-capture.php') . ' ' . escapeshellarg($package));
+$capture = shell_exec(escapeshellarg(PHP_BINARY) . ' -d display_errors=stderr ' . escapeshellarg(__DIR__ . '/fixtures/piece-cart-capture.php') . ' ' . escapeshellarg($package));
 $check($capture === str_replace("\r\n", "\n", file_get_contents(__DIR__ . '/fixtures/piece-cart-master.json')), 'Piece cart and order JSON match the established payload including physical fields (normalized line endings)');
 
 // 10. Quick order and checkout keep the snapshot keys and the exact total.

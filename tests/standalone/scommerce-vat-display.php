@@ -116,6 +116,26 @@ $check(str_contains($settings, 'data-feature-toggle="vat_display_on"') && str_co
 $check(str_contains(file_get_contents($package . '/src/Services/ProductListingService.php'), 'VatDisplay::pricing('), 'Listing cards carry the display values');
 
 // Manager product list: the price without VAT and the included excise, a column of its own.
+// A host autoloader may include sPricing. Supply its empty price lookup tables in
+// this isolated database so the real product model can fall back to retail prices.
+if (class_exists(\Seiger\sPricing\Models\ProductPrice::class)) {
+    $db->schema()->create('s_price_types', static function ($table): void {
+        $table->increments('id');
+        $table->string('code');
+        $table->boolean('is_active')->default(true);
+    });
+    $db->schema()->create('s_product_prices', static function ($table): void {
+        $table->increments('id');
+        $table->integer('product_id');
+        $table->integer('price_type_id');
+        $table->decimal('amount', 18, 4);
+        $table->string('currency', 3);
+        $table->boolean('is_active')->default(true);
+        $table->dateTime('valid_from')->nullable();
+        $table->dateTime('valid_to')->nullable();
+        $table->timestamps();
+    });
+}
 $shop->config['product.vat_rate'] = 23;
 $shop->config['product.retail_excise_on'] = 1;
 $listed = (new sProduct())->forceFill(['id' => 77, 'sku' => 'BEER', 'currency' => 'EUR', 'price_regular' => 129.15, 'price_special' => 0]);
